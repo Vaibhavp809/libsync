@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import Layout from '../components/Layout';
 
 export default function StockVerification() {
@@ -12,7 +12,7 @@ export default function StockVerification() {
   const fetchBooks = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/books');
+      const res = await api.get('/books');
       setBooks(res.data);
     } catch (err) {
       alert('Failed to load books');
@@ -24,7 +24,7 @@ export default function StockVerification() {
   const handleVerifyBook = async (bookId) => {
     try {
       setVerifying(bookId);
-      await axios.put(`http://localhost:5000/api/books/${bookId}/verify`);
+      await api.put(`/books/${bookId}/verify`);
       alert('Book marked as verified!');
       fetchBooks(); // Refresh the list
     } catch (err) {
@@ -40,10 +40,10 @@ export default function StockVerification() {
 
   const filteredBooks = books.filter(book => {
     const matchesSearch = book.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         book.author?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' || 
-                         (filterStatus === 'verified' && book.verified) ||
-                         (filterStatus === 'unverified' && !book.verified);
+      book.author?.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' ||
+      (filterStatus === 'verified' && book.verified) ||
+      (filterStatus === 'unverified' && !book.verified);
     return matchesSearch && matchesStatus;
   });
 
@@ -140,8 +140,8 @@ export default function StockVerification() {
           <span style={styles.searchIcon}>🔍</span>
         </div>
         <div style={styles.filterContainer}>
-          <select 
-            value={filterStatus} 
+          <select
+            value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
             style={styles.filterSelect}
           >
@@ -161,7 +161,7 @@ export default function StockVerification() {
           </span>
         </div>
         <div style={styles.progressBar}>
-          <div 
+          <div
             style={{
               ...styles.progressFill,
               width: `${books.length > 0 ? (verifiedCount / books.length) * 100 : 0}%`
@@ -223,7 +223,7 @@ export default function StockVerification() {
                 </div>
                 <div style={styles.verificationSection}>
                   <div style={styles.verificationStatus}>
-                    <strong>Verification:</strong> 
+                    <strong>Verification:</strong>
                     <span style={{
                       ...styles.statusBadge,
                       ...(book.verified ? styles.verified : styles.notVerified)
@@ -232,7 +232,7 @@ export default function StockVerification() {
                     </span>
                   </div>
                   {!book.verified && (
-                    <button 
+                    <button
                       onClick={() => handleVerifyBook(book._id)}
                       disabled={verifying === book._id}
                       style={{

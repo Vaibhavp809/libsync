@@ -105,13 +105,33 @@ exports.getOverdueLoans = async (req, res) => {
 
 exports.sendOverdueReminder = async (req, res) => {
   try {
-    const { id } = req.params;
+  const { loanId } = req.params;
     const settings = await Setting.findOne() || {};
     const finePerDay = settings.finePerDay || 10;
 
-    const loan = await Loan.findById(id).populate('book').populate('student');
-    if (!loan || loan.status !== 'Issued' || !loan.dueDate || loan.dueDate > new Date()) {
-      return res.status(400).json({ message: 'Loan is not overdue' });
+      const loan = await Loan.findById(loanId).populate('book').populate('student');
+      console.log('DEBUG sendOverdueReminder:', {
+        loanId: loanId,
+        status: loan?.status,
+        dueDate: loan?.dueDate,
+        now: new Date(),
+      });
+    if (!loan) {
+      return res.status(400).json({ message: 'Loan not found' });
+    }
+    if (loan.status !== 'Issued') {
+      return res.status(400).json({ message: `Loan status is not Issued, got: ${loan.status}` });
+    }
+    if (!loan.dueDate) {
+      return res.status(400).json({ message: 'Loan has no dueDate' });
+    }
+    // Compare only the date part (ignore time)
+    const today = new Date();
+    today.setHours(0,0,0,0);
+    const dueDate = new Date(loan.dueDate);
+    dueDate.setHours(0,0,0,0);
+    if (dueDate > today) {
+      return res.status(400).json({ message: `Loan dueDate is in the future: ${loan.dueDate}` });
     }
     const daysLate = Math.ceil((Date.now() - new Date(loan.dueDate).getTime()) / (1000 * 60 * 60 * 24));
     const fine = Math.max(0, daysLate * finePerDay);
@@ -131,11 +151,18 @@ exports.sendOverdueReminder = async (req, res) => {
 
 // NEW: Issue book by email and ISBN
 exports.issueBookByEmailAndISBN = async (req, res) => {
-  try {
-    const { studentEmail, bookISBN, dueDate } = req.body;
 
-    // Find student by email
-    const student = await User.findOne({ email: studentEmail, role: 'student' });
+  try {
+    const { studentEmail, studentID, bookISBN, dueDate } = req.body;
+
+    // Find student by studentID or email
+    let student = null;
+    if (studentID) {
+      student = await User.findOne({ studentID, role: 'student' });
+    }
+    if (!student && studentEmail) {
+      student = await User.findOne({ email: studentEmail, role: 'student' });
+    }
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }
@@ -188,11 +215,18 @@ exports.issueBookByEmailAndISBN = async (req, res) => {
 
 // NEW: Return book by email and ISBN
 exports.returnBookByEmailAndISBN = async (req, res) => {
-  try {
-    const { studentEmail, bookISBN } = req.body;
 
-    // Find student by email
-    const student = await User.findOne({ email: studentEmail, role: 'student' });
+  try {
+    const { studentEmail, studentID, bookISBN } = req.body;
+
+    // Find student by studentID or email
+    let student = null;
+    if (studentID) {
+      student = await User.findOne({ studentID, role: 'student' });
+    }
+    if (!student && studentEmail) {
+      student = await User.findOne({ email: studentEmail, role: 'student' });
+    }
     if (!student) {
       return res.status(404).json({ message: "Student not found" });
     }

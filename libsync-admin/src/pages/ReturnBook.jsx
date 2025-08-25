@@ -8,6 +8,7 @@ import api from '../utils/api';
 
 export default function ReturnBook() {
   const [studentEmail, setStudentEmail] = useState('');
+  const [studentID, setStudentID] = useState('');
   const [bookISBN, setBookISBN] = useState('');
   const [studentSuggestions, setStudentSuggestions] = useState([]);
   const [bookSuggestions, setBookSuggestions] = useState([]);
@@ -17,14 +18,15 @@ export default function ReturnBook() {
   const [returnResult, setReturnResult] = useState(null);
   const navigate = useNavigate();
 
-  const searchStudents = async (email) => {
-    if (email.length < 2) {
+  // Search by email or studentID/USN
+  const searchStudents = async (query) => {
+    if (query.length < 2) {
       setStudentSuggestions([]);
       return;
     }
-
     try {
-      const response = await api.get(`/auth/students?email=${email}`);
+      // Try both email and studentID
+      const response = await api.get(`/users?q=${query}`);
       setStudentSuggestions(response.data);
     } catch (error) {
       console.error('Error searching students:', error);
@@ -50,6 +52,7 @@ export default function ReturnBook() {
   const handleStudentSelect = (student) => {
     setSelectedStudent(student);
     setStudentEmail(student.email);
+    setStudentID(student.studentID);
     setStudentSuggestions([]);
   };
 
@@ -71,6 +74,7 @@ export default function ReturnBook() {
     try {
       const response = await api.post('/loans/return-by-email-isbn', {
         studentEmail: selectedStudent.email,
+        studentID: selectedStudent.studentID,
         bookISBN: selectedBook.isbn
       });
 
@@ -120,11 +124,11 @@ export default function ReturnBook() {
         <form onSubmit={handleReturn} style={styles.form}>
           <div style={styles.formRow}>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Student Email</label>
+              <label style={styles.label}>Student Email or USN</label>
               <SearchInput
-                placeholder="Search student by email..."
-                value={studentEmail}
-                onChange={setStudentEmail}
+                placeholder="Search student by email or USN..."
+                value={studentEmail || studentID}
+                onChange={val => { setStudentEmail(val); setStudentID(val); }}
                 onSearch={searchStudents}
                 suggestions={studentSuggestions}
                 onSuggestionSelect={handleStudentSelect}

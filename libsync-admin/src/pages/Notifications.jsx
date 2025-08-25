@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import Layout from '../components/Layout';
 
 export default function Notifications() {
@@ -7,12 +7,11 @@ export default function Notifications() {
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ title: '', message: '', audienceType: 'all', department: '', studentID: '', type: 'app' });
 
-  const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
 
   const fetchList = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/notifications', auth());
+      const res = await api.get('/notifications');
       setList(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       alert('Failed to load notifications');
@@ -26,7 +25,7 @@ export default function Notifications() {
   const submit = async (e) => {
     e.preventDefault();
     try {
-      await axios.post('http://localhost:5000/api/notifications', form, auth());
+      await api.post('/notifications', form);
       alert('Notification sent');
       setForm({ title: '', message: '', audienceType: 'all', department: '', studentID: '', type: 'app' });
       fetchList();

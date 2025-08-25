@@ -6,13 +6,14 @@ export default function Login() {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
+  const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
-    // Check if user is already logged in
-    const token = localStorage.getItem('adminToken');
+    // Check if user is already logged in (localStorage or sessionStorage)
+    const token = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
     if (token) {
       navigate('/dashboard');
     }
@@ -30,11 +31,16 @@ export default function Login() {
       });
 
       // Store authentication data
-      localStorage.setItem('adminToken', response.data.token);
-      localStorage.setItem('adminUser', JSON.stringify(response.data.user));
-      
-      // Redirect to dashboard
-      navigate('/dashboard');
+      if (rememberMe) {
+        localStorage.setItem('adminToken', response.data.token);
+        localStorage.setItem('adminUser', JSON.stringify(response.data.user));
+      } else {
+        sessionStorage.setItem('adminToken', response.data.token);
+        sessionStorage.setItem('adminUser', JSON.stringify(response.data.user));
+      }
+
+      // Redirect to dashboard (force reload to remount app)
+      window.location.replace('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
@@ -91,6 +97,17 @@ export default function Login() {
             </div>
 
             <form onSubmit={handleSubmit} style={styles.form}>
+              <div style={{ marginBottom: 16 }}>
+                <label style={{ display: 'flex', alignItems: 'center', fontSize: 14 }}>
+                  <input
+                    type="checkbox"
+                    checked={rememberMe}
+                    onChange={e => setRememberMe(e.target.checked)}
+                    style={{ marginRight: 8 }}
+                  />
+                  Remember Me
+                </label>
+              </div>
               {error && (
                 <div style={styles.errorMessage}>
                   <span style={styles.errorIcon}>⚠️</span>

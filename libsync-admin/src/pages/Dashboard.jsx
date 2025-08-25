@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../utils/api';
 import Layout from '../components/Layout';
 import Header from '../components/Header';
 import Card from '../components/Card';
@@ -16,13 +16,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
 
-  // Create axios instance with auth headers
-  const api = axios.create({
-    baseURL: 'http://localhost:5000/api',
-    headers: {
-      'Authorization': `Bearer ${localStorage.getItem('adminToken')}`
-    }
-  });
+  // Use shared api instance with auth interceptors
 
   useEffect(() => {
     const fetchStats = async () => {
@@ -114,8 +108,8 @@ export default function Dashboard() {
 
   return (
     <Layout>
-      <Header 
-        title="Dashboard" 
+      <Header
+        title="Dashboard"
         subtitle="Welcome to LibSync Admin Panel"
       />
 

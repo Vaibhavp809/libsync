@@ -7,6 +7,7 @@ import SearchInput from '../components/SearchInput';
 import api from '../utils/api';
 
 export default function ManageBooks() {
+  // Edit and Delete handlers and all state/hooks must be inside the component
   const [books, setBooks] = useState([]);
   const [form, setForm] = useState({
     title: '',
@@ -18,6 +19,35 @@ export default function ManageBooks() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [editingBook, setEditingBook] = useState(null);
+
+  const handleEditBook = (book) => {
+    if (!book) {
+      console.warn('Tried to edit undefined book');
+      return;
+    }
+    console.log('Editing book:', book);
+    setEditingBook(book);
+    setForm({
+      title: book.title || '',
+      author: book.author || '',
+      isbn: book.isbn || '',
+      category: book.category || '',
+      ddcNumber: book.ddcNumber || ''
+    });
+    setShowForm(true);
+  };
+
+  const handleDeleteBook = async (bookId) => {
+    if (!window.confirm('Are you sure you want to delete this book?')) return;
+    try {
+      await api.delete(`/books/${bookId}`);
+      alert('Book deleted successfully!');
+      fetchBooks();
+    } catch (err) {
+      alert('Failed to delete book');
+    }
+  };
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [filteredBooks, setFilteredBooks] = useState([]);
 
@@ -27,8 +57,9 @@ export default function ManageBooks() {
     try {
       setLoading(true);
       const res = await api.get('/books');
-      setBooks(res.data);
-      setFilteredBooks(res.data);
+  const validBooks = Array.isArray(res.data) ? res.data.filter(b => b && typeof b === 'object' && b._id) : [];
+  setBooks(validBooks);
+  setFilteredBooks(validBooks);
     } catch (err) {
       alert('Failed to load books');
     } finally {
@@ -38,14 +69,25 @@ export default function ManageBooks() {
 
   const handleAddBook = async (e) => {
     e.preventDefault();
+    if (editingBook) {
+      console.log('Submitting edit for book:', editingBook, 'with form:', form);
+    } else {
+      console.log('Submitting new book with form:', form);
+    }
     try {
-      await api.post('/books', form);
-      alert('Book added successfully!');
+      if (editingBook) {
+        await api.put(`/books/${editingBook._id}`, form);
+        alert('Book updated successfully!');
+      } else {
+        await api.post('/books', form);
+        alert('Book added successfully!');
+      }
       setForm({ title: '', author: '', isbn: '', category: '', ddcNumber: '' });
       setShowForm(false);
+      setEditingBook(null);
       fetchBooks();
     } catch (err) {
-      alert('Failed to add book');
+      alert('Failed to save book');
     }
   };
 
@@ -56,20 +98,20 @@ export default function ManageBooks() {
   // Filter books based on search term and category
   useEffect(() => {
     let filtered = books;
-    
+
     if (searchTerm.trim()) {
-      filtered = filtered.filter(book => 
+      filtered = filtered.filter(book =>
         book.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         book.author?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         book.isbn?.includes(searchTerm)
       );
     }
-    
+
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(book => book.category === selectedCategory);
     }
-    
-    setFilteredBooks(filtered);
+
+  setFilteredBooks(filtered.filter(b => b && typeof b === 'object' && b._id));
   }, [searchTerm, selectedCategory, books]);
 
   const tableColumns = [
@@ -77,36 +119,55 @@ export default function ManageBooks() {
     { key: 'author', header: 'Author' },
     { key: 'isbn', header: 'ISBN' },
     { key: 'category', header: 'Category' },
-    { 
-      key: 'status', 
+    {
+      key: 'status',
       header: 'Status',
-      render: (status) => (
+      render: (book) => (
         <span style={{
           ...styles.statusBadge,
-          backgroundColor: status === 'Available' ? '#10b981' : '#f59e0b'
+          backgroundColor: book.status === 'Available' ? '#10b981' : '#f59e0b'
         }}>
-          {status}
+          {book.status}
         </span>
       )
     },
-    { 
-      key: 'actions', 
+    {
+      key: 'actions',
       header: 'Actions',
-      render: (_, book) => (
-        <div style={styles.actionButtons}>
-          <button style={styles.editButton}>
-            ✏️ Edit
-          </button>
-          <button style={styles.deleteButton}>
-            🗑️ Delete
-          </button>
-        </div>
-      )
+      render: (_, book) => {
+        console.log('Table actions render book:', book);
+        return (
+          <div style={styles.actionButtons}>
+            <button style={styles.editButton} onClick={(e) => { e.stopPropagation(); handleEditBook(book); }}>
+              ✏️ Edit
+            </button>
+            <button style={styles.deleteButton} onClick={(e) => { e.stopPropagation(); handleDeleteBook(book._id); }}>
+              🗑️ Delete
+            </button>
+          </div>
+        );
+      }
     }
   ];
 
+  // Fetch books only if token is present, and retry if token becomes available
   useEffect(() => {
-    fetchBooks();
+    const getToken = () => localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
+    if (getToken()) {
+      fetchBooks();
+    } else {
+      // Retry every 500ms until token is available (max 10 tries)
+      let tries = 0;
+      const interval = setInterval(() => {
+        if (getToken()) {
+          fetchBooks();
+          clearInterval(interval);
+        } else if (++tries > 10) {
+          clearInterval(interval);
+        }
+      }, 500);
+      return () => clearInterval(interval);
+    }
   }, []);
 
   if (loading) {
@@ -122,11 +183,11 @@ export default function ManageBooks() {
 
   return (
     <Layout>
-      <Header 
+      <Header
         title="Manage Books"
         subtitle="Add, edit, and manage your library collection"
         actions={
-          <button 
+          <button
             onClick={() => setShowForm(!showForm)}
             style={styles.addButton}
           >
@@ -135,11 +196,11 @@ export default function ManageBooks() {
         }
       />
 
-      {/* Add Book Form */}
+      {/* Add/Edit Book Form */}
       {showForm && (
         <Card
-          title="Add New Book"
-          subtitle="Enter book details to add to the library"
+          title={editingBook ? "Edit Book" : "Add New Book"}
+          subtitle={editingBook ? "Update book details" : "Enter book details to add to the library"}
           icon="📚"
           color="#10b981"
           style={styles.formCard}
@@ -148,42 +209,42 @@ export default function ManageBooks() {
             <div style={styles.formGrid}>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Title *</label>
-                <input 
-                  name="title" 
-                  placeholder="Enter book title" 
-                  value={form.title} 
-                  onChange={handleChange} 
-                  required 
-                  style={styles.input} 
+                <input
+                  name="title"
+                  placeholder="Enter book title"
+                  value={form.title}
+                  onChange={handleChange}
+                  required
+                  style={styles.input}
                 />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Author *</label>
-                <input 
-                  name="author" 
-                  placeholder="Enter author name" 
-                  value={form.author} 
-                  onChange={handleChange} 
-                  required 
-                  style={styles.input} 
+                <input
+                  name="author"
+                  placeholder="Enter author name"
+                  value={form.author}
+                  onChange={handleChange}
+                  required
+                  style={styles.input}
                 />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>ISBN</label>
-                <input 
-                  name="isbn" 
-                  placeholder="Enter ISBN" 
-                  value={form.isbn} 
-                  onChange={handleChange} 
-                  style={styles.input} 
+                <input
+                  name="isbn"
+                  placeholder="Enter ISBN"
+                  value={form.isbn}
+                  onChange={handleChange}
+                  style={styles.input}
                 />
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>Category</label>
-                <select 
-                  name="category" 
-                  value={form.category} 
-                  onChange={handleChange} 
+                <select
+                  name="category"
+                  value={form.category}
+                  onChange={handleChange}
                   style={styles.select}
                 >
                   <option value="">Select category</option>
@@ -194,18 +255,18 @@ export default function ManageBooks() {
               </div>
               <div style={styles.formGroup}>
                 <label style={styles.label}>DDC Number</label>
-                <input 
-                  name="ddcNumber" 
-                  placeholder="Enter DDC number" 
-                  value={form.ddcNumber} 
-                  onChange={handleChange} 
-                  style={styles.input} 
+                <input
+                  name="ddcNumber"
+                  placeholder="Enter DDC number"
+                  value={form.ddcNumber}
+                  onChange={handleChange}
+                  style={styles.input}
                 />
               </div>
             </div>
             <div style={styles.formActions}>
               <button type="submit" style={styles.submitButton}>
-                ✅ Add Book
+                {editingBook ? "✅ Update Book" : "✅ Add Book"}
               </button>
             </div>
           </form>
@@ -227,8 +288,8 @@ export default function ManageBooks() {
             onChange={setSearchTerm}
             style={styles.searchInput}
           />
-          <select 
-            value={selectedCategory} 
+          <select
+            value={selectedCategory}
             onChange={(e) => setSelectedCategory(e.target.value)}
             style={styles.filterSelect}
           >
@@ -287,9 +348,9 @@ export default function ManageBooks() {
         color="#0ea5e9"
         style={styles.tableCard}
       >
-        <Table 
+        <Table
           columns={tableColumns}
-          data={filteredBooks}
+          data={filteredBooks.filter(b => b && typeof b === 'object' && b._id)}
           emptyMessage="No books found matching your criteria"
         />
       </Card>

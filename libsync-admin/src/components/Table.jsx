@@ -26,7 +26,7 @@ const Table = ({ columns, data, onRowClick, emptyMessage = "No data available" }
               >
                 {columns.map((column, colIndex) => (
                   <td key={colIndex} style={styles.dataCell}>
-                    {column.render ? column.render(row[column.key], row) : row[column.key]}
+                    {column.render ? column.render(row) : row[column.key]}
                   </td>
                 ))}
               </tr>

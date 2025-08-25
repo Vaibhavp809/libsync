@@ -1,17 +1,16 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import Layout from '../components/Layout';
 
 export default function Settings() {
   const [settings, setSettings] = useState({ loanDurationDays: 14, attendanceQrExpiryMinutes: 15, emailTemplates: { overdueReminder: '', reservationReady: '' } });
   const [loading, setLoading] = useState(true);
 
-  const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
 
   const fetchSettings = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/settings', auth());
+      const res = await api.get('/settings');
       setSettings(res.data || settings);
     } catch (err) {
       alert('Failed to load settings');
@@ -25,7 +24,7 @@ export default function Settings() {
   const save = async (e) => {
     e.preventDefault();
     try {
-      await axios.put('http://localhost:5000/api/settings', settings, auth());
+      await api.put('/settings', settings);
       alert('Settings saved');
     } catch (err) {
       alert('Save failed');

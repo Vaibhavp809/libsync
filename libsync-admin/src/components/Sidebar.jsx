@@ -33,6 +33,8 @@ const Sidebar = () => {
     // Clear any stored authentication data
     localStorage.removeItem('adminToken');
     localStorage.removeItem('adminUser');
+    sessionStorage.removeItem('adminToken');
+    sessionStorage.removeItem('adminUser');
     // Redirect to login
     navigate('/login');
   };

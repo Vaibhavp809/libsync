@@ -19,7 +19,10 @@ export default function ManageStudents() {
     try {
       setLoading(true);
       const res = await api.get('/users');
-      const studentData = Array.isArray(res.data) ? res.data.filter(user => user.role === 'student') : [];
+      // Only keep valid student objects
+      const studentData = Array.isArray(res.data)
+        ? res.data.filter(user => user && typeof user === 'object' && user.role === 'student' && user._id)
+        : [];
       setStudents(studentData);
       setFilteredStudents(studentData);
     } catch (err) {
@@ -29,22 +32,24 @@ export default function ManageStudents() {
     }
   };
 
-  useEffect(() => { 
-    fetchStudents(); 
+  useEffect(() => {
+    fetchStudents();
   }, []);
 
   // Filter students based on search term
   useEffect(() => {
     if (!searchTerm.trim()) {
-      setFilteredStudents(students);
+      setFilteredStudents(students.filter(s => s && typeof s === 'object' && s._id));
       return;
     }
 
-    const filtered = students.filter(student => 
-      student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.studentID?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      student.department?.toLowerCase().includes(searchTerm.toLowerCase())
+    const filtered = students.filter(student =>
+      student && typeof student === 'object' && student._id && (
+        student.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.studentID?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        student.department?.toLowerCase().includes(searchTerm.toLowerCase())
+      )
     );
     setFilteredStudents(filtered);
   }, [searchTerm, students]);
@@ -56,12 +61,16 @@ export default function ManageStudents() {
   };
 
   const openEdit = (stu) => {
+    if (!stu) {
+      console.warn('Tried to edit undefined student');
+      return;
+    }
     setEditing(stu);
-    setForm({ 
-      name: stu.name || '', 
-      email: stu.email || '', 
-      studentID: stu.studentID || '', 
-      department: stu.department || '' 
+    setForm({
+      name: stu.name || '',
+      email: stu.email || '',
+      studentID: stu.studentID || '',
+      department: stu.department || ''
     });
     setShowForm(true);
   };
@@ -100,18 +109,18 @@ export default function ManageStudents() {
     { key: 'email', header: 'Email' },
     { key: 'studentID', header: 'Student ID (USN)' },
     { key: 'department', header: 'Department' },
-    { 
-      key: 'actions', 
+    {
+      key: 'actions',
       header: 'Actions',
       render: (_, student) => (
         <div style={styles.actionButtons}>
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); openEdit(student); }}
             style={styles.editButton}
           >
             ✏️ Edit
           </button>
-          <button 
+          <button
             onClick={(e) => { e.stopPropagation(); deleteStudent(student._id); }}
             style={styles.deleteButton}
           >
@@ -135,7 +144,7 @@ export default function ManageStudents() {
 
   return (
     <Layout>
-      <Header 
+      <Header
         title="Manage Students"
         subtitle="Create, edit, and manage student records with USN"
         actions={
@@ -167,7 +176,7 @@ export default function ManageStudents() {
         color="#0ea5e9"
         style={styles.tableCard}
       >
-        <Table 
+        <Table
           columns={tableColumns}
           data={filteredStudents}
           emptyMessage="No students found"
@@ -188,40 +197,40 @@ export default function ManageStudents() {
                 <div style={styles.formGrid}>
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Full Name *</label>
-                    <input 
-                      value={form.name} 
-                      onChange={(e) => setForm({ ...form, name: e.target.value })} 
-                      required 
+                    <input
+                      value={form.name}
+                      onChange={(e) => setForm({ ...form, name: e.target.value })}
+                      required
                       style={styles.input}
                       placeholder="Enter full name"
                     />
                   </div>
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Email Address *</label>
-                    <input 
-                      type="email" 
-                      value={form.email} 
-                      onChange={(e) => setForm({ ...form, email: e.target.value })} 
-                      required 
+                    <input
+                      type="email"
+                      value={form.email}
+                      onChange={(e) => setForm({ ...form, email: e.target.value })}
+                      required
                       style={styles.input}
                       placeholder="Enter email address"
                     />
                   </div>
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Student ID (USN) *</label>
-                    <input 
-                      value={form.studentID} 
-                      onChange={(e) => setForm({ ...form, studentID: e.target.value })} 
-                      required 
+                    <input
+                      value={form.studentID}
+                      onChange={(e) => setForm({ ...form, studentID: e.target.value })}
+                      required
                       style={styles.input}
                       placeholder="e.g., 2MM22CS002"
                     />
                   </div>
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Department</label>
-                    <select 
-                      value={form.department} 
-                      onChange={(e) => setForm({ ...form, department: e.target.value })} 
+                    <select
+                      value={form.department}
+                      onChange={(e) => setForm({ ...form, department: e.target.value })}
                       style={styles.select}
                     >
                       <option value="">Select Department</option>
@@ -235,9 +244,9 @@ export default function ManageStudents() {
                   </div>
                 </div>
                 <div style={styles.formActions}>
-                  <button 
-                    type="button" 
-                    onClick={() => { setShowForm(false); setEditing(null); }} 
+                  <button
+                    type="button"
+                    onClick={() => { setShowForm(false); setEditing(null); }}
                     style={styles.cancelButton}
                   >
                     Cancel

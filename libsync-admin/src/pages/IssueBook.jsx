@@ -8,6 +8,7 @@ import api from '../utils/api';
 
 export default function IssueBook() {
   const [studentEmail, setStudentEmail] = useState('');
+  const [studentID, setStudentID] = useState('');
   const [bookISBN, setBookISBN] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [studentSuggestions, setStudentSuggestions] = useState([]);
@@ -24,14 +25,15 @@ export default function IssueBook() {
     setDueDate(defaultDate.toISOString().split('T')[0]);
   }, []);
 
-  const searchStudents = async (email) => {
-    if (email.length < 2) {
+  // Search by email or studentID/USN
+  const searchStudents = async (query) => {
+    if (query.length < 2) {
       setStudentSuggestions([]);
       return;
     }
-
     try {
-      const response = await api.get(`/auth/students?email=${email}`);
+      // Try both email and studentID
+      const response = await api.get(`/users?q=${query}`);
       setStudentSuggestions(response.data);
     } catch (error) {
       console.error('Error searching students:', error);
@@ -57,6 +59,7 @@ export default function IssueBook() {
   const handleStudentSelect = (student) => {
     setSelectedStudent(student);
     setStudentEmail(student.email);
+    setStudentID(student.studentID);
     setStudentSuggestions([]);
   };
 
@@ -68,8 +71,22 @@ export default function IssueBook() {
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
-    if (!selectedStudent || !selectedBook || !dueDate) {
+
+    // Try to auto-select student if not already selected
+    let student = selectedStudent;
+    if (!student && (studentEmail || studentID) && studentSuggestions.length > 0) {
+      student = studentSuggestions.find(s => s.email === studentEmail || s.studentID === studentID) || studentSuggestions[0];
+      setSelectedStudent(student);
+    }
+
+    // Try to auto-select book if not already selected
+    let book = selectedBook;
+    if (!book && bookISBN && bookSuggestions.length > 0) {
+      book = bookSuggestions.find(b => b.isbn === bookISBN) || bookSuggestions[0];
+      setSelectedBook(book);
+    }
+
+    if (!student || !book || !dueDate) {
       alert('Please fill in all fields');
       return;
     }
@@ -77,13 +94,14 @@ export default function IssueBook() {
     setLoading(true);
     try {
       const response = await api.post('/loans/issue-by-email-isbn', {
-        studentEmail: selectedStudent.email,
-        bookISBN: selectedBook.isbn,
+        studentEmail: student.email,
+        studentID: student.studentID,
+        bookISBN: book.isbn,
         dueDate
       });
 
       alert('Book issued successfully!');
-      
+
       // Reset form
       setStudentEmail('');
       setBookISBN('');
@@ -91,7 +109,7 @@ export default function IssueBook() {
       setSelectedBook(null);
       setStudentSuggestions([]);
       setBookSuggestions([]);
-      
+
       // Navigate to loans page
       navigate('/loans');
     } catch (error) {
@@ -126,11 +144,11 @@ export default function IssueBook() {
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.formRow}>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Student Email</label>
+              <label style={styles.label}>Student Email or USN</label>
               <SearchInput
-                placeholder="Search student by email..."
-                value={studentEmail}
-                onChange={setStudentEmail}
+                placeholder="Search student by email or USN..."
+                value={studentEmail || studentID}
+                onChange={val => { setStudentEmail(val); setStudentID(val); }}
                 onSearch={searchStudents}
                 suggestions={studentSuggestions}
                 onSuggestionSelect={handleStudentSelect}

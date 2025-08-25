@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api from '../utils/api';
 import Layout from '../components/Layout';
 
 export default function OverdueBooks() {
@@ -7,14 +7,13 @@ export default function OverdueBooks() {
   const [loading, setLoading] = useState(true);
   const [settings, setSettings] = useState({ finePerDay: 10 });
 
-  const auth = () => ({ headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` } });
 
   const fetchOverdue = async () => {
     try {
       setLoading(true);
-      const res = await axios.get('http://localhost:5000/api/loans/overdue', auth());
+      const res = await api.get('/loans/overdue');
       setLoans(Array.isArray(res.data) ? res.data : []);
-      const s = await axios.get('http://localhost:5000/api/settings', auth());
+      const s = await api.get('/settings');
       setSettings(s.data || { finePerDay: 10 });
     } catch (err) {
       alert('Failed to load overdue loans');
@@ -25,6 +24,16 @@ export default function OverdueBooks() {
 
   useEffect(() => { fetchOverdue(); }, []);
 
+  /* Debug: log loans array after fetch
+  useEffect(() => {
+    if (loans && loans.length > 0) {
+      console.log('DEBUG OverdueBooks loans:', loans);
+      loans.forEach((l, idx) => {
+        console.log(`Loan[${idx}] _id:`, l._id);
+      });
+    }
+  }, [loans]);*/
+
   const daysOverdue = (dueDate) => {
     if (!dueDate) return 0;
     const ms = Date.now() - new Date(dueDate).getTime();
@@ -33,9 +42,13 @@ export default function OverdueBooks() {
 
   const fineFor = (dueDate) => daysOverdue(dueDate) * (settings.finePerDay || 10);
 
-  const sendReminder = async (id) => {
+  const sendReminder = async (_id) => {
+    if (!_id) {
+      alert('Error: Loan ID is missing! Cannot send reminder.');
+      return;
+    }
     try {
-      await axios.post(`http://localhost:5000/api/loans/${id}/reminder`, {}, auth());
+      await api.post(`/loans/${_id}/reminder`);
       alert('Reminder sent');
     } catch (e) {
       alert(e.response?.data?.message || 'Failed to send reminder');
@@ -46,8 +59,8 @@ export default function OverdueBooks() {
     if (!window.confirm('Send reminders to all overdue loans?')) return;
     for (const l of loans) {
       try { // best-effort
-        await axios.post(`http://localhost:5000/api/loans/${l._id}/reminder`, {}, auth());
-      } catch (e) {}
+        await api.post(`/loans/${l._id}/reminder`);
+      } catch (e) { }
     }
     alert('Reminder job triggered for all');
   };

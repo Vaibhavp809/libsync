@@ -64,6 +64,7 @@ exports.searchBooks = async (req, res) => {
         { title: { $regex: query, $options: "i" } },
         { author: { $regex: query, $options: "i" } },
         { category: { $regex: query, $options: "i" } },
+        { isbn: { $regex: query, $options: "i" } }
       ]
     });
     res.json(books);
