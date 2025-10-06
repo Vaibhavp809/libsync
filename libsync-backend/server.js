@@ -24,6 +24,11 @@ app.get('/', (req, res) => {
   res.send('LibSync API is running...');
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+  res.json({ status: 'OK', message: 'LibSync API is healthy' });
+});
+
 const bookRoutes = require("./routes/books");
 app.use("/api/books", bookRoutes);
 
@@ -94,7 +99,7 @@ cron.schedule('0 9 * * *', async () => {
         const subject = "Overdue Book Reminder - LibSync";
         const body = `Dear ${loan.student.name},
 
-Your book "${loan.book?.title}" (ISBN: ${loan.book?.isbn}) is overdue.
+Your book "${loan.book?.title}" (Accession No.: ${loan.book?.accessionNumber}) is overdue.
 
 Due Date: ${new Date(loan.dueDate).toLocaleDateString()}
 Days Overdue: ${daysLate}

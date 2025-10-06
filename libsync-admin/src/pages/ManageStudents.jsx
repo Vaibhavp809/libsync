@@ -11,7 +11,7 @@ export default function ManageStudents() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editing, setEditing] = useState(null);
-  const [form, setForm] = useState({ name: '', email: '', studentID: '', department: '' });
+  const [form, setForm] = useState({ name: '', email: '', password: '', studentID: '', department: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredStudents, setFilteredStudents] = useState([]);
 
@@ -56,21 +56,40 @@ export default function ManageStudents() {
 
   const openCreate = () => {
     setEditing(null);
-    setForm({ name: '', email: '', studentID: '', department: '' });
+    setForm({ name: '', email: '', password: '', studentID: '', department: '' });
     setShowForm(true);
   };
 
   const openEdit = (stu) => {
-    if (!stu) {
-      console.warn('Tried to edit undefined student');
+    if (!stu || !stu._id) {
+      console.warn('Tried to edit invalid student:', stu);
+      alert('Invalid student data');
       return;
     }
+
+    // Validate required student fields
+    if (!stu.name || !stu.email || !stu.studentID) {
+      console.warn('Student missing required fields:', stu);
+      alert('Student data is incomplete');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(stu.email)) {
+      console.warn('Invalid email format:', stu.email);
+      alert('Invalid email format');
+      return;
+    }
+
+    console.log('Opening edit for student:', stu);
     setEditing(stu);
     setForm({
-      name: stu.name || '',
-      email: stu.email || '',
-      studentID: stu.studentID || '',
-      department: stu.department || ''
+      name: stu.name.trim(),
+      email: stu.email.trim(),
+      password: '',  // Password field starts empty when editing
+      studentID: stu.studentID.trim(),
+      department: stu.department ? stu.department.trim() : ''
     });
     setShowForm(true);
   };
@@ -78,11 +97,60 @@ export default function ManageStudents() {
   const saveStudent = async (e) => {
     e.preventDefault();
     try {
+      // Validate required fields
+      if (!form.name.trim() || !form.email.trim() || !form.studentID.trim()) {
+        alert('Name, Email, and Student ID are required');
+        return;
+      }
+
+      // Validate email format
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(form.email.trim())) {
+        alert('Please enter a valid email address');
+        return;
+      }
+
+      // Validate student ID format (assuming it should be alphanumeric)
+      if (!/^[A-Za-z0-9]+$/.test(form.studentID.trim())) {
+        alert('Student ID should only contain letters and numbers');
+        return;
+      }
+
       if (editing) {
-        await api.put(`/users/${editing._id}`, form);
+        // For editing: only include password if it's not empty
+        const updateData = {
+          name: form.name.trim(),
+          email: form.email.trim(),
+          studentID: form.studentID.trim(),
+          department: form.department.trim()
+        };
+
+        // Include password only if it was provided
+        if (form.password && form.password.trim()) {
+          updateData.password = form.password;
+        }
+
+        console.log('Updating student with data:', updateData);
+        await api.put(`/users/${editing._id}`, updateData);
         alert('Student updated successfully!');
       } else {
-        await api.post('/users', { ...form, role: 'student' });
+        // For new students: require password
+        if (!form.password || !form.password.trim()) {
+          alert('Password is required for new students');
+          return;
+        }
+
+        const newStudent = {
+          name: form.name.trim(),
+          email: form.email.trim(),
+          password: form.password,
+          studentID: form.studentID,
+          department: form.department,
+          role: 'student'
+        };
+
+        console.log('Creating student with data:', { ...newStudent, password: '***' });
+        const response = await api.post('/users', newStudent);
         alert('Student created successfully!');
       }
       setShowForm(false);
@@ -94,13 +162,19 @@ export default function ManageStudents() {
   };
 
   const deleteStudent = async (id) => {
+    if (!id) {
+      console.warn('Tried to delete student with invalid ID:', id);
+      return;
+    }
     if (!window.confirm('Are you sure you want to delete this student?')) return;
     try {
+      console.log('Deleting student with ID:', id);
       await api.delete(`/users/${id}`);
       alert('Student deleted successfully!');
-      fetchStudents();
+      await fetchStudents();
     } catch (err) {
-      alert('Delete failed');
+      console.error('Failed to delete student:', err);
+      alert('Delete failed: ' + (err.response?.data?.message || err.message || 'Unknown error'));
     }
   };
 
@@ -112,22 +186,44 @@ export default function ManageStudents() {
     {
       key: 'actions',
       header: 'Actions',
-      render: (_, student) => (
-        <div style={styles.actionButtons}>
-          <button
-            onClick={(e) => { e.stopPropagation(); openEdit(student); }}
-            style={styles.editButton}
-          >
-            ✏️ Edit
-          </button>
-          <button
-            onClick={(e) => { e.stopPropagation(); deleteStudent(student._id); }}
-            style={styles.deleteButton}
-          >
-            🗑️ Delete
-          </button>
-        </div>
-      )
+      render: (student) => {
+        // Validate student object
+        if (!student || !student._id) {
+          console.warn('Invalid student object in table row:', student);
+          return <div>Invalid data</div>;
+        }
+
+        return (
+          <div style={styles.actionButtons}>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (student && student._id) {
+                  openEdit(student);
+                } else {
+                  console.warn('Cannot edit: Invalid student data', student);
+                }
+              }}
+              style={styles.editButton}
+            >
+              Edit
+            </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                if (student && student._id) {
+                  deleteStudent(student._id);
+                } else {
+                  console.warn('Cannot delete: Invalid student data', student);
+                }
+              }}
+              style={styles.deleteButton}
+            >
+              Delete
+            </button>
+          </div>
+        );
+      }
     }
   ];
 
@@ -149,7 +245,7 @@ export default function ManageStudents() {
         subtitle="Create, edit, and manage student records with USN"
         actions={
           <button onClick={openCreate} style={styles.addButton}>
-            ➕ Add Student
+            Add Student
           </button>
         }
       />
@@ -157,7 +253,7 @@ export default function ManageStudents() {
       <Card
         title="Student Search"
         subtitle="Search students by name, email, USN, or department"
-        icon="🔍"
+        icon="search"
         color="#3b82f6"
         style={styles.searchCard}
       >
@@ -172,13 +268,13 @@ export default function ManageStudents() {
       <Card
         title={`Students (${filteredStudents.length})`}
         subtitle={`Showing ${filteredStudents.length} of ${students.length} students`}
-        icon="👩‍🎓"
+        icon="user-graduate"
         color="#0ea5e9"
         style={styles.tableCard}
       >
         <Table
           columns={tableColumns}
-          data={filteredStudents}
+          data={filteredStudents.filter(s => s && typeof s === 'object' && s._id)}
           emptyMessage="No students found"
         />
       </Card>
@@ -189,7 +285,7 @@ export default function ManageStudents() {
             <Card
               title={editing ? 'Edit Student' : 'Add New Student'}
               subtitle={editing ? 'Update student information' : 'Create a new student record'}
-              icon="👩‍🎓"
+              icon="user-graduate"
               color={editing ? "#f59e0b" : "#10b981"}
               style={styles.formCard}
             >
@@ -224,6 +320,18 @@ export default function ManageStudents() {
                       required
                       style={styles.input}
                       placeholder="e.g., 2MM22CS002"
+                    />
+                  </div>
+                  <div style={styles.formGroup}>
+                    <label style={styles.label}>Password {editing ? '(Leave empty to keep unchanged)' : '*'}</label>
+                    <input
+                      type="password"
+                      value={form.password}
+                      onChange={(e) => setForm({ ...form, password: e.target.value })}
+                      required={!editing}
+                      minLength={6}
+                      style={styles.input}
+                      placeholder={editing ? "Enter new password (optional)" : "Enter password (min. 6 characters)"}
                     />
                   </div>
                   <div style={styles.formGroup}>

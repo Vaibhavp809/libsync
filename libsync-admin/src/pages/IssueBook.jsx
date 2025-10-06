@@ -7,15 +7,17 @@ import SearchInput from '../components/SearchInput';
 import api from '../utils/api';
 
 export default function IssueBook() {
-  const [studentEmail, setStudentEmail] = useState('');
-  const [studentID, setStudentID] = useState('');
-  const [bookISBN, setBookISBN] = useState('');
+  const [studentUSN, setStudentUSN] = useState('');
+  const [accessionNumber, setAccessionNumber] = useState('');
   const [dueDate, setDueDate] = useState('');
-  const [studentSuggestions, setStudentSuggestions] = useState([]);
   const [bookSuggestions, setBookSuggestions] = useState([]);
+  const [usnSuggestions, setUsnSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
   const [selectedStudent, setSelectedStudent] = useState(null);
   const [selectedBook, setSelectedBook] = useState(null);
+  const [studentDetails, setStudentDetails] = useState(null);
+  const [fetchingStudent, setFetchingStudent] = useState(false);
+  const [studentNotFound, setStudentNotFound] = useState(false);
   const navigate = useNavigate();
 
   // Set default due date to 14 days from now
@@ -25,95 +27,151 @@ export default function IssueBook() {
     setDueDate(defaultDate.toISOString().split('T')[0]);
   }, []);
 
-  // Search by email or studentID/USN
-  const searchStudents = async (query) => {
-    if (query.length < 2) {
-      setStudentSuggestions([]);
+  // Fetch student details by USN
+  const fetchStudentDetails = async (usn) => {
+    // Only fetch if USN looks complete (at least 8 characters for pattern like 2MM22CS001)
+    if (!usn || usn.length < 8) {
+      setStudentDetails(null);
+      setSelectedStudent(null);
+      setStudentNotFound(false);
       return;
     }
+    
+    setFetchingStudent(true);
     try {
-      // Try both email and studentID
-      const response = await api.get(`/users?q=${query}`);
-      setStudentSuggestions(response.data);
+      const response = await api.get(`/users/student/${usn}`);
+      setStudentDetails(response.data);
+      setSelectedStudent(response.data.student);
+      setStudentNotFound(false);
+      console.log('✅ Student found:', response.data.student.name);
     } catch (error) {
-      console.error('Error searching students:', error);
-      setStudentSuggestions([]);
+      console.error('Error fetching student details:', error);
+      setStudentDetails(null);
+      setSelectedStudent(null);
+      
+      if (error.response?.status === 404) {
+        // Only show "not found" for complete-looking USNs
+        if (usn.length >= 10) {
+          setStudentNotFound(true);
+          console.log('Student not found for USN:', usn);
+        } else {
+          setStudentNotFound(false);
+        }
+      } else if (error.response?.status === 403 || error.response?.status === 401) {
+        setStudentNotFound(false);
+        console.error('Authentication error. Please login again.');
+        alert('Authentication error. Please login again.');
+      } else {
+        setStudentNotFound(false);
+      }
+    } finally {
+      setFetchingStudent(false);
     }
   };
 
-  const searchBooks = async (isbn) => {
-    if (isbn.length < 2) {
+  const searchBooks = async (query) => {
+    if (query.length < 2) {
       setBookSuggestions([]);
       return;
     }
 
     try {
-      const response = await api.get(`/books/search?q=${isbn}`);
-      setBookSuggestions(response.data.filter(book => book.isbn && book.isbn.includes(isbn)));
+      const response = await api.get(`/books/search?q=${query}`);
+      setBookSuggestions(response.data.filter(book => 
+        book.accessionNumber && book.accessionNumber.includes(query) || 
+        book.title?.toLowerCase().includes(query.toLowerCase()) ||
+        book.author?.toLowerCase().includes(query.toLowerCase())
+      ));
     } catch (error) {
       console.error('Error searching books:', error);
       setBookSuggestions([]);
     }
   };
 
-  const handleStudentSelect = (student) => {
-    setSelectedStudent(student);
-    setStudentEmail(student.email);
-    setStudentID(student.studentID);
-    setStudentSuggestions([]);
+  const searchStudentsByUSN = async (partial) => {
+    if (partial.length < 2) {
+      setUsnSuggestions([]);
+      return;
+    }
+
+    try {
+      const response = await api.get(`/users/search-usn/${partial}`);
+      setUsnSuggestions(response.data);
+    } catch (error) {
+      console.error('Error searching students by USN:', error);
+      setUsnSuggestions([]);
+    }
   };
+
+  // Effect to fetch student details when USN changes
+  useEffect(() => {
+    // Only set timeout for API call if USN is long enough
+    if (studentUSN.length >= 8) {
+      const timeoutId = setTimeout(() => {
+        fetchStudentDetails(studentUSN);
+      }, 500); // Debounce API calls
+      
+      return () => clearTimeout(timeoutId);
+    } else {
+      // Clear states immediately for short USNs
+      setStudentDetails(null);
+      setSelectedStudent(null);
+      setStudentNotFound(false);
+    }
+  }, [studentUSN]);
 
   const handleBookSelect = (book) => {
     setSelectedBook(book);
-    setBookISBN(book.isbn);
+    setAccessionNumber(book.accessionNumber);
     setBookSuggestions([]);
+  };
+
+  const handleUSNSelect = (student) => {
+    setStudentUSN(student.studentID);
+    setUsnSuggestions([]);
+    // This will trigger the useEffect to fetch student details
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    // Try to auto-select student if not already selected
-    let student = selectedStudent;
-    if (!student && (studentEmail || studentID) && studentSuggestions.length > 0) {
-      student = studentSuggestions.find(s => s.email === studentEmail || s.studentID === studentID) || studentSuggestions[0];
-      setSelectedStudent(student);
+    // Validate required fields
+    if (!selectedStudent || !selectedBook || !dueDate) {
+      alert('Please fill in all fields - Student USN, Book, and Due Date are required');
+      return;
     }
 
-    // Try to auto-select book if not already selected
-    let book = selectedBook;
-    if (!book && bookISBN && bookSuggestions.length > 0) {
-      book = bookSuggestions.find(b => b.isbn === bookISBN) || bookSuggestions[0];
-      setSelectedBook(book);
-    }
-
-    if (!student || !book || !dueDate) {
-      alert('Please fill in all fields');
+    // Check if student has reached the 4-book limit
+    if (studentDetails && studentDetails.activeLoanCount >= 4) {
+      alert('Issue limit reached — student must return a book before issuing another.');
       return;
     }
 
     setLoading(true);
     try {
-      const response = await api.post('/loans/issue-by-email-isbn', {
-        studentEmail: student.email,
-        studentID: student.studentID,
-        bookISBN: book.isbn,
+      const response = await api.post('/loans', {
+        studentId: selectedStudent.studentID, // Using studentID (USN)
+        bookId: selectedBook._id,
         dueDate
       });
 
-      alert('Book issued successfully!');
+      alert(`Book issued successfully! Student now has ${response.data.studentActiveLoans} active loans.`);
 
       // Reset form
-      setStudentEmail('');
-      setBookISBN('');
+      setStudentUSN('');
+      setAccessionNumber('');
       setSelectedStudent(null);
       setSelectedBook(null);
-      setStudentSuggestions([]);
+      setStudentDetails(null);
+      setStudentNotFound(false);
       setBookSuggestions([]);
 
       // Navigate to loans page
       navigate('/loans');
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to issue book');
+      console.error('Issue book error:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to issue book';
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -123,7 +181,7 @@ export default function IssueBook() {
     <Layout>
       <Header 
         title="Issue Book"
-        subtitle="Issue a book to a student using email and ISBN"
+        subtitle="Issue a book to a student using USN and accession number"
         actions={
           <button 
             style={styles.backButton} 
@@ -136,7 +194,7 @@ export default function IssueBook() {
 
       <Card
         title="Issue Book Form"
-        subtitle="Search for student and book, then set due date"
+        subtitle="Enter student USN and search for book, then set due date"
         icon="📚"
         color="#3b82f6"
         style={styles.formCard}
@@ -144,35 +202,58 @@ export default function IssueBook() {
         <form onSubmit={handleSubmit} style={styles.form}>
           <div style={styles.formRow}>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Student Email or USN</label>
+              <label style={styles.label}>Student USN *</label>
               <SearchInput
-                placeholder="Search student by email or USN..."
-                value={studentEmail || studentID}
-                onChange={val => { setStudentEmail(val); setStudentID(val); }}
-                onSearch={searchStudents}
-                suggestions={studentSuggestions}
-                onSuggestionSelect={handleStudentSelect}
+                placeholder="Enter student USN (e.g., 2MM22CS101)"
+                value={studentUSN}
+                onChange={(value) => setStudentUSN(value.toUpperCase())}
+                onSearch={searchStudentsByUSN}
+                suggestions={usnSuggestions}
+                onSuggestionSelect={handleUSNSelect}
+                renderSuggestion={(student) => (
+                  <div style={styles.usnSuggestion}>
+                    <div style={styles.usnSuggestionMain}>
+                      <strong>{student.studentID}</strong> - {student.name}
+                    </div>
+                    <div style={styles.usnSuggestionSub}>
+                      {student.department} • {student.email}
+                    </div>
+                  </div>
+                )}
+                style={{
+                  borderColor: fetchingStudent ? '#f59e0b' : '#e2e8f0'
+                }}
               />
-              {selectedStudent && (
-                <div style={styles.selectedInfo}>
-                  <strong>Selected:</strong> {selectedStudent.name} ({selectedStudent.studentID})
+              {fetchingStudent && (
+                <div style={styles.loadingInfo}>
+                  Loading student details...
+                </div>
+              )}
+              {studentNotFound && (
+                <div style={styles.errorInfo}>
+                  Student not found. Please check the USN.
+                </div>
+              )}
+              {studentUSN.length > 0 && studentUSN.length < 8 && (
+                <div style={styles.hintInfo}>
+                  Enter complete USN (e.g., 2MM22CS084)
                 </div>
               )}
             </div>
 
             <div style={styles.formGroup}>
-              <label style={styles.label}>Book ISBN</label>
+              <label style={styles.label}>Book Accession Number</label>
               <SearchInput
-                placeholder="Search book by ISBN..."
-                value={bookISBN}
-                onChange={setBookISBN}
+                placeholder="Search book by accession number, title, or author..."
+                value={accessionNumber}
+                onChange={setAccessionNumber}
                 onSearch={searchBooks}
                 suggestions={bookSuggestions}
                 onSuggestionSelect={handleBookSelect}
               />
               {selectedBook && (
                 <div style={styles.selectedInfo}>
-                  <strong>Selected:</strong> {selectedBook.title} by {selectedBook.author}
+                  <strong>Selected:</strong> {selectedBook.title} by {selectedBook.author} (#{selectedBook.accessionNumber})
                 </div>
               )}
             </div>
@@ -212,14 +293,79 @@ export default function IssueBook() {
             </button>
             <button
               type="submit"
-              disabled={loading || !selectedStudent || !selectedBook || !dueDate}
-              style={styles.submitButton}
+              disabled={loading || !selectedStudent || !selectedBook || !dueDate || (studentDetails && studentDetails.activeLoanCount >= 4)}
+              style={{
+                ...styles.submitButton,
+                ...(studentDetails && studentDetails.activeLoanCount >= 4 && styles.disabledButton)
+              }}
+              title={(studentDetails && studentDetails.activeLoanCount >= 4) ? 'Student has reached the 4-book limit' : ''}
             >
-              {loading ? 'Issuing...' : 'Issue Book'}
+              {loading ? 'Issuing...' : (studentDetails && studentDetails.activeLoanCount >= 4) ? 'Issue Limit Reached' : 'Issue Book'}
             </button>
           </div>
         </form>
       </Card>
+
+      {/* Student Details Card */}
+      {studentDetails && (
+        <Card
+          title="Student Information"
+          subtitle="Current student details and active loans"
+          icon="🎓"
+          color={studentDetails.activeLoanCount >= 4 ? "#ef4444" : "#10b981"}
+          style={styles.studentCard}
+        >
+          <div style={styles.studentInfo}>
+            <div style={styles.studentRow}>
+              <div style={styles.studentDetail}>
+                <span style={styles.detailLabel}>Student Name:</span>
+                <span style={styles.detailValue}>{studentDetails.student.name}</span>
+              </div>
+              <div style={styles.studentDetail}>
+                <span style={styles.detailLabel}>USN:</span>
+                <span style={styles.detailValue}>{studentDetails.student.studentID}</span>
+              </div>
+            </div>
+            <div style={styles.studentRow}>
+              <div style={styles.studentDetail}>
+                <span style={styles.detailLabel}>Department:</span>
+                <span style={styles.detailValue}>{studentDetails.student.department}</span>
+              </div>
+              <div style={styles.studentDetail}>
+                <span style={styles.detailLabel}>Books Currently Issued:</span>
+                <span style={{
+                  ...styles.detailValue,
+                  color: studentDetails.activeLoanCount >= 4 ? '#ef4444' : '#10b981',
+                  fontWeight: '600'
+                }}>
+                  {studentDetails.activeLoanCount} / 4
+                </span>
+              </div>
+            </div>
+            
+            {studentDetails.activeLoanCount >= 4 && (
+              <div style={styles.limitWarning}>
+                ⚠️ <strong>Issue Limit Reached:</strong> This student must return a book before issuing another.
+              </div>
+            )}
+            
+            {studentDetails.activeLoans.length > 0 && (
+              <div style={styles.activeBooksSection}>
+                <h4 style={styles.activeBooksTitle}>Currently Issued Books:</h4>
+                <div style={styles.activeBooksList}>
+                  {studentDetails.activeLoans.map((loan, index) => (
+                    <div key={loan._id || index} style={styles.activeBookItem}>
+                      <span style={styles.bookTitle}>{loan.book?.title || 'Unknown Title'}</span>
+                      <span style={styles.bookAccession}>#{loan.book?.accessionNumber}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      )}
+
 
       {/* Instructions Card */}
       <Card
@@ -233,13 +379,13 @@ export default function IssueBook() {
           <div style={styles.instructionStep}>
             <span style={styles.stepNumber}>1</span>
             <div>
-              <strong>Search for Student:</strong> Start typing the student's email address. The system will show matching students.
+              <strong>Enter Student USN:</strong> Type the student's USN (e.g., 2MM22CS101). The system will automatically fetch student details and show their current active loans.
             </div>
           </div>
           <div style={styles.instructionStep}>
             <span style={styles.stepNumber}>2</span>
             <div>
-              <strong>Search for Book:</strong> Enter the book's ISBN number. Available books will appear in the dropdown.
+              <strong>Search for Book:</strong> Enter the book's accession number, title, or author. Available books will appear in the dropdown.
             </div>
           </div>
           <div style={styles.instructionStep}>
@@ -401,6 +547,131 @@ const styles = {
     fontWeight: '600',
     flexShrink: 0,
     marginTop: '2px'
+  },
+  loadingInfo: {
+    fontSize: '13px',
+    color: '#f59e0b',
+    fontWeight: '500',
+    marginTop: '8px',
+    padding: '8px 12px',
+    background: '#fefbf3',
+    borderRadius: '8px',
+    border: '1px solid #fed7aa'
+  },
+  errorInfo: {
+    fontSize: '13px',
+    color: '#dc2626',
+    fontWeight: '500',
+    marginTop: '8px',
+    padding: '8px 12px',
+    background: '#fef2f2',
+    borderRadius: '8px',
+    border: '1px solid #fecaca'
+  },
+  hintInfo: {
+    fontSize: '13px',
+    color: '#6b7280',
+    fontWeight: '400',
+    marginTop: '8px',
+    padding: '8px 12px',
+    background: '#f9fafb',
+    borderRadius: '8px',
+    border: '1px solid #e5e7eb'
+  },
+  studentCard: {
+    marginBottom: '24px'
+  },
+  studentInfo: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px'
+  },
+  studentRow: {
+    display: 'grid',
+    gridTemplateColumns: '1fr 1fr',
+    gap: '24px'
+  },
+  studentDetail: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px'
+  },
+  detailLabel: {
+    fontSize: '13px',
+    fontWeight: '600',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  detailValue: {
+    fontSize: '16px',
+    fontWeight: '500',
+    color: '#1f2937'
+  },
+  limitWarning: {
+    padding: '12px 16px',
+    background: '#fef2f2',
+    border: '1px solid #fecaca',
+    borderRadius: '8px',
+    color: '#dc2626',
+    fontSize: '14px',
+    textAlign: 'center'
+  },
+  activeBooksSection: {
+    marginTop: '8px'
+  },
+  activeBooksTitle: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: '12px',
+    margin: '0 0 12px 0'
+  },
+  activeBooksList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px'
+  },
+  activeBookItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '8px 12px',
+    background: '#f8fafc',
+    borderRadius: '6px',
+    border: '1px solid #e2e8f0'
+  },
+  bookTitle: {
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#374151',
+    flex: 1
+  },
+  bookAccession: {
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#6b7280',
+    background: '#e5e7eb',
+    padding: '4px 8px',
+    borderRadius: '4px'
+  },
+  disabledButton: {
+    background: '#ef4444 !important',
+    cursor: 'not-allowed !important'
+  },
+  usnSuggestion: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px'
+  },
+  usnSuggestionMain: {
+    fontSize: '14px',
+    color: '#374151',
+    fontWeight: '500'
+  },
+  usnSuggestionSub: {
+    fontSize: '12px',
+    color: '#6b7280'
   }
 };
 

@@ -1,7 +1,0 @@
-{
-  "name": "LibSyncApp",
-  "displayName": "LibSyncApp",
-  "plugins": [
-    "expo-barcode-scanner"
-  ]
-}

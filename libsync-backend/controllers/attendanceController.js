@@ -227,3 +227,57 @@ exports.getAttendanceStats = async (req, res) => {
     });
   }
 };
+
+// Get current user's attendance history
+exports.getMyAttendance = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    
+    const attendance = await Attendance.find({
+      student: userId
+    }).sort({ date: -1 }).limit(30); // Get last 30 records
+    
+    res.json({
+      success: true,
+      data: attendance
+    });
+  } catch (error) {
+    console.error('Error getting user attendance:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch attendance records',
+      error: error.message
+    });
+  }
+};
+
+// Get current user's full attendance history
+exports.getMyAttendanceHistory = async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { startDate, endDate } = req.query;
+    
+    let query = { student: userId };
+    
+    if (startDate && endDate) {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      end.setHours(23, 59, 59, 999);
+      query.date = { $gte: start, $lte: end };
+    }
+    
+    const attendance = await Attendance.find(query).sort({ date: -1 });
+    
+    res.json({
+      success: true,
+      data: attendance
+    });
+  } catch (error) {
+    console.error('Error getting user attendance history:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch attendance history',
+      error: error.message
+    });
+  }
+};

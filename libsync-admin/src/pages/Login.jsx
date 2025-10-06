@@ -30,14 +30,24 @@ export default function Login() {
         password
       });
 
-      // Store authentication data
-      if (rememberMe) {
-        localStorage.setItem('adminToken', response.data.token);
-        localStorage.setItem('adminUser', JSON.stringify(response.data.user));
-      } else {
-        sessionStorage.setItem('adminToken', response.data.token);
-        sessionStorage.setItem('adminUser', JSON.stringify(response.data.user));
+      if (!response.data.token) {
+        throw new Error('No token received from server');
       }
+
+      // Verify admin role
+      if (!response.data.user || response.data.user.role !== 'admin') {
+        throw new Error('Access denied: Admin privileges required');
+      }
+
+      // Store tokens
+      const token = response.data.token;
+      localStorage.setItem('adminToken', token);
+      sessionStorage.setItem('adminToken', token);
+      
+      // Store user data
+      const userData = JSON.stringify(response.data.user);
+      localStorage.setItem('adminUser', userData);
+      sessionStorage.setItem('adminUser', userData);
 
       // Redirect to dashboard (force reload to remount app)
       window.location.replace('/dashboard');

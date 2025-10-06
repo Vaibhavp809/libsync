@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import Header from '../components/Header';
@@ -7,93 +7,102 @@ import SearchInput from '../components/SearchInput';
 import api from '../utils/api';
 
 export default function ReturnBook() {
-  const [studentEmail, setStudentEmail] = useState('');
-  const [studentID, setStudentID] = useState('');
-  const [bookISBN, setBookISBN] = useState('');
-  const [studentSuggestions, setStudentSuggestions] = useState([]);
-  const [bookSuggestions, setBookSuggestions] = useState([]);
+  const [accessionNumber, setAccessionNumber] = useState('');
+  const [accessionSuggestions, setAccessionSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
-  const [selectedStudent, setSelectedStudent] = useState(null);
-  const [selectedBook, setSelectedBook] = useState(null);
   const [returnResult, setReturnResult] = useState(null);
+  const [timeLeft, setTimeLeft] = useState(0);
   const navigate = useNavigate();
 
-  // Search by email or studentID/USN
-  const searchStudents = async (query) => {
-    if (query.length < 2) {
-      setStudentSuggestions([]);
-      return;
-    }
-    try {
-      // Try both email and studentID
-      const response = await api.get(`/users?q=${query}`);
-      setStudentSuggestions(response.data);
-    } catch (error) {
-      console.error('Error searching students:', error);
-      setStudentSuggestions([]);
-    }
+  // Auto-format accession number to 6 digits
+  const formatAccessionNumber = (input) => {
+    // Remove any non-numeric characters
+    const numericOnly = input.replace(/[^0-9]/g, '');
+    // Limit to 6 digits
+    const limited = numericOnly.slice(0, 6);
+    // Pad with leading zeros for display (but not for input)
+    return limited;
   };
 
-  const searchBooks = async (isbn) => {
-    if (isbn.length < 2) {
-      setBookSuggestions([]);
+  // Search accession numbers for autocomplete
+  const searchAccessionNumbers = async (partial) => {
+    if (partial.length === 0) {
+      setAccessionSuggestions([]);
       return;
     }
 
     try {
-      const response = await api.get(`/books/search?q=${isbn}`);
-      setBookSuggestions(response.data.filter(book => book.isbn && book.isbn.includes(isbn)));
+      const response = await api.get(`/books/search-accession/${partial}`);
+      setAccessionSuggestions(response.data);
     } catch (error) {
-      console.error('Error searching books:', error);
-      setBookSuggestions([]);
+      console.error('Error searching accession numbers:', error);
+      setAccessionSuggestions([]);
     }
   };
 
-  const handleStudentSelect = (student) => {
-    setSelectedStudent(student);
-    setStudentEmail(student.email);
-    setStudentID(student.studentID);
-    setStudentSuggestions([]);
+  // Handle accession number input change
+  const handleAccessionChange = (value) => {
+    const formatted = formatAccessionNumber(value);
+    setAccessionNumber(formatted);
+    
+    // Search for suggestions if input length > 0
+    if (formatted.length > 0) {
+      searchAccessionNumbers(formatted);
+    } else {
+      setAccessionSuggestions([]);
+    }
   };
 
-  const handleBookSelect = (book) => {
-    setSelectedBook(book);
-    setBookISBN(book.isbn);
-    setBookSuggestions([]);
+  // Handle suggestion selection
+  const handleAccessionSelect = (book) => {
+    setAccessionNumber(book.accessionNumber);
+    setAccessionSuggestions([]);
   };
+
+  // Timer effect for countdown
+  useEffect(() => {
+    let interval = null;
+    if (timeLeft > 0) {
+      interval = setInterval(() => {
+        setTimeLeft(timeLeft => timeLeft - 1);
+      }, 1000);
+    } else if (timeLeft === 0 && returnResult) {
+      // Hide result after timer expires
+      setReturnResult(null);
+    }
+    return () => clearInterval(interval);
+  }, [timeLeft, returnResult]);
 
   const handleReturn = async (e) => {
     e.preventDefault();
     
-    if (!selectedStudent || !selectedBook) {
-      alert('Please select both student and book');
+    if (!accessionNumber.trim()) {
+      alert('Please enter the accession number');
       return;
     }
 
+    // Format to 6-digit padded accession number
+    const formattedAccession = accessionNumber.padStart(6, '0');
+
     setLoading(true);
     try {
-      const response = await api.post('/loans/return-by-email-isbn', {
-        studentEmail: selectedStudent.email,
-        studentID: selectedStudent.studentID,
-        bookISBN: selectedBook.isbn
+      const response = await api.post('/loans/return-by-accession', {
+        accessionNumber: formattedAccession
       });
 
       setReturnResult(response.data);
       alert('Book returned successfully!');
       
-      // Reset form after successful return
-      setTimeout(() => {
-        setStudentEmail('');
-        setBookISBN('');
-        setSelectedStudent(null);
-        setSelectedBook(null);
-        setStudentSuggestions([]);
-        setBookSuggestions([]);
-        setReturnResult(null);
-      }, 3000);
+      // Start 30-second countdown
+      setTimeLeft(30);
+      
+      // Reset accession number field
+      setAccessionNumber('');
       
     } catch (error) {
-      alert(error.response?.data?.message || 'Failed to return book');
+      console.error('Return book error:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to return book';
+      alert(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -103,7 +112,7 @@ export default function ReturnBook() {
     <Layout>
       <Header 
         title="Return Book"
-        subtitle="Return a book using student email and book ISBN"
+        subtitle="Return a book using only the accession number"
         actions={
           <button 
             style={styles.backButton} 
@@ -116,43 +125,48 @@ export default function ReturnBook() {
 
       <Card
         title="Return Book Form"
-        subtitle="Search for student and book to return"
+        subtitle="Enter the accession number to return the book"
         icon="📚"
         color="#10b981"
         style={styles.formCard}
       >
         <form onSubmit={handleReturn} style={styles.form}>
-          <div style={styles.formRow}>
+          <div style={styles.singleInputRow}>
             <div style={styles.formGroup}>
-              <label style={styles.label}>Student Email or USN</label>
+              <label style={styles.label}>Book Accession Number *</label>
               <SearchInput
-                placeholder="Search student by email or USN..."
-                value={studentEmail || studentID}
-                onChange={val => { setStudentEmail(val); setStudentID(val); }}
-                onSearch={searchStudents}
-                suggestions={studentSuggestions}
-                onSuggestionSelect={handleStudentSelect}
+                placeholder="Enter number (e.g., 1 becomes 000001)"
+                value={accessionNumber}
+                onChange={handleAccessionChange}
+                onSearch={() => {}} // Search happens on change
+                suggestions={accessionSuggestions}
+                onSuggestionSelect={handleAccessionSelect}
+                renderSuggestion={(book) => (
+                  <div style={styles.accessionSuggestion}>
+                    <div style={styles.accessionSuggestionMain}>
+                      <strong>{book.accessionNumber}</strong> - {book.title}
+                    </div>
+                    <div style={styles.accessionSuggestionSub}>
+                      by {book.author} • Status: 
+                      <span style={{
+                        color: book.status === 'Issued' ? '#ef4444' : '#10b981',
+                        fontWeight: '600'
+                      }}>
+                        {book.status}
+                      </span>
+                    </div>
+                  </div>
+                )}
+                style={styles.accessionInput}
+                inputProps={{
+                  required: true,
+                  autoFocus: true,
+                  maxLength: 6
+                }}
               />
-              {selectedStudent && (
-                <div style={styles.selectedInfo}>
-                  <strong>Selected:</strong> {selectedStudent.name} ({selectedStudent.studentID})
-                </div>
-              )}
-            </div>
-
-            <div style={styles.formGroup}>
-              <label style={styles.label}>Book ISBN</label>
-              <SearchInput
-                placeholder="Search book by ISBN..."
-                value={bookISBN}
-                onChange={setBookISBN}
-                onSearch={searchBooks}
-                suggestions={bookSuggestions}
-                onSuggestionSelect={handleBookSelect}
-              />
-              {selectedBook && (
-                <div style={styles.selectedInfo}>
-                  <strong>Selected:</strong> {selectedBook.title} by {selectedBook.author}
+              {accessionNumber && (
+                <div style={styles.formatPreview}>
+                  📝 Formatted: <strong>{accessionNumber.padStart(6, '0')}</strong>
                 </div>
               )}
             </div>
@@ -168,59 +182,104 @@ export default function ReturnBook() {
             </button>
             <button
               type="submit"
-              disabled={loading || !selectedStudent || !selectedBook}
+              disabled={loading || !accessionNumber.trim()}
               style={styles.submitButton}
             >
-              {loading ? 'Returning...' : 'Return Book'}
+              {loading ? 'Processing...' : 'Return Book'}
             </button>
           </div>
         </form>
       </Card>
 
-      {/* Return Result */}
+      {/* Return Result with Timer */}
       {returnResult && (
         <Card
-          title="Return Summary"
-          subtitle="Book return details"
-          icon="✅"
+          title={`Book Return Success ✅`}
+          subtitle={`Student details will hide in ${timeLeft} seconds`}
+          icon="🎉"
           color="#10b981"
           style={styles.resultCard}
         >
-          <div style={styles.resultContent}>
-            <div style={styles.resultRow}>
-              <span style={styles.resultLabel}>Book:</span>
-              <span style={styles.resultValue}>{returnResult.loan?.book?.title}</span>
+          {/* Student Information Section */}
+          <div style={styles.studentSection}>
+            <h3 style={styles.sectionTitle}>🎓 Student Information</h3>
+            <div style={styles.studentGrid}>
+              <div style={styles.studentDetail}>
+                <span style={styles.detailLabel}>Full Name:</span>
+                <span style={styles.detailValue}>{returnResult.loan?.student?.name}</span>
+              </div>
+              <div style={styles.studentDetail}>
+                <span style={styles.detailLabel}>USN/Student ID:</span>
+                <span style={styles.detailValue}>{returnResult.loan?.student?.studentID}</span>
+              </div>
+              <div style={styles.studentDetail}>
+                <span style={styles.detailLabel}>Email:</span>
+                <span style={styles.detailValue}>{returnResult.loan?.student?.email}</span>
+              </div>
+              <div style={styles.studentDetail}>
+                <span style={styles.detailLabel}>Department:</span>
+                <span style={styles.detailValue}>{returnResult.loan?.student?.department || 'N/A'}</span>
+              </div>
             </div>
-            <div style={styles.resultRow}>
-              <span style={styles.resultLabel}>Student:</span>
-              <span style={styles.resultValue}>{returnResult.loan?.student?.name}</span>
+          </div>
+
+          {/* Book Information Section */}
+          <div style={styles.bookSection}>
+            <h3 style={styles.sectionTitle}>📚 Book Information</h3>
+            <div style={styles.bookGrid}>
+              <div style={styles.bookDetail}>
+                <span style={styles.detailLabel}>Title:</span>
+                <span style={styles.detailValue}>{returnResult.loan?.book?.title}</span>
+              </div>
+              <div style={styles.bookDetail}>
+                <span style={styles.detailLabel}>Author:</span>
+                <span style={styles.detailValue}>{returnResult.loan?.book?.author}</span>
+              </div>
+              <div style={styles.bookDetail}>
+                <span style={styles.detailLabel}>Accession Number:</span>
+                <span style={styles.detailValue}>#{returnResult.loan?.book?.accessionNumber}</span>
+              </div>
             </div>
-            <div style={styles.resultRow}>
-              <span style={styles.resultLabel}>Return Date:</span>
-              <span style={styles.resultValue}>
-                {new Date(returnResult.loan?.returnDate).toLocaleDateString()}
-              </span>
-            </div>
-            {returnResult.loan?.fine > 0 && (
-              <div style={styles.resultRow}>
-                <span style={styles.resultLabel}>Fine Amount:</span>
-                <span style={{ ...styles.resultValue, color: '#ef4444', fontWeight: '600' }}>
-                  ₹{returnResult.loan?.fine}
+          </div>
+
+          {/* Return Details Section */}
+          <div style={styles.returnSection}>
+            <h3 style={styles.sectionTitle}>⚙️ Return Details</h3>
+            <div style={styles.returnGrid}>
+              <div style={styles.returnDetail}>
+                <span style={styles.detailLabel}>Return Date & Time:</span>
+                <span style={styles.detailValue}>
+                  {new Date(returnResult.loan?.returnDate).toLocaleString()}
                 </span>
               </div>
-            )}
-            <div style={styles.resultRow}>
-              <span style={styles.resultLabel}>Status:</span>
-              <span style={{ 
-                ...styles.resultValue, 
-                color: '#10b981', 
-                fontWeight: '600',
-                background: '#ecfdf5',
-                padding: '4px 8px',
-                borderRadius: '4px'
-              }}>
-                Returned
-              </span>
+              <div style={styles.returnDetail}>
+                <span style={styles.detailLabel}>Status:</span>
+                <span style={styles.statusBadge}>
+                  ✅ Returned Successfully
+                </span>
+              </div>
+              {returnResult.loan?.fine > 0 ? (
+                <div style={styles.returnDetail}>
+                  <span style={styles.detailLabel}>Fine Amount:</span>
+                  <span style={styles.fineAmount}>
+                    ₹{returnResult.loan?.fine}
+                  </span>
+                </div>
+              ) : (
+                <div style={styles.returnDetail}>
+                  <span style={styles.detailLabel}>Fine Status:</span>
+                  <span style={styles.noFine}>
+                    ✨ No Fine - Returned on Time!
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Countdown Timer */}
+          <div style={styles.timerSection}>
+            <div style={styles.timerBox}>
+              ⏱️ This information will automatically disappear in: <strong>{timeLeft} seconds</strong>
             </div>
           </div>
         </Card>
@@ -229,8 +288,8 @@ export default function ReturnBook() {
       {/* Instructions Card */}
       <Card
         title="How to Return a Book"
-        subtitle="Step-by-step instructions"
-        icon="📖"
+        subtitle="Simplified return process - just one step!"
+        icon="📚"
         color="#3b82f6"
         style={styles.instructionsCard}
       >
@@ -238,19 +297,19 @@ export default function ReturnBook() {
           <div style={styles.instructionStep}>
             <span style={styles.stepNumber}>1</span>
             <div>
-              <strong>Search for Student:</strong> Start typing the student's email address. The system will show matching students.
+              <strong>Enter Just the Number:</strong> Type "1" and it becomes "000001", type "123" and it becomes "000123". The system auto-formats and shows available books.
             </div>
           </div>
           <div style={styles.instructionStep}>
             <span style={styles.stepNumber}>2</span>
             <div>
-              <strong>Search for Book:</strong> Enter the book's ISBN number. The system will find the book being returned.
+              <strong>View Student Details:</strong> After successful return, complete student and book details will be displayed for 30 seconds.
             </div>
           </div>
           <div style={styles.instructionStep}>
             <span style={styles.stepNumber}>3</span>
             <div>
-              <strong>Return Book:</strong> Click "Return Book" to complete the return process. Any overdue fines will be calculated automatically.
+              <strong>Automatic Processing:</strong> Fines are calculated automatically, and the book becomes available for other students immediately.
             </div>
           </div>
         </div>
@@ -268,36 +327,42 @@ const styles = {
     flexDirection: 'column',
     gap: '24px'
   },
-  formRow: {
-    display: 'grid',
-    gridTemplateColumns: '1fr 1fr',
-    gap: '24px'
+  singleInputRow: {
+    display: 'flex',
+    justifyContent: 'center'
   },
   formGroup: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '8px'
+    gap: '8px',
+    width: '100%',
+    maxWidth: '500px'
   },
   label: {
-    fontSize: '14px',
+    fontSize: '16px',
     fontWeight: '600',
     color: '#374151',
-    marginBottom: '4px'
+    marginBottom: '8px',
+    textAlign: 'center'
   },
-  selectedInfo: {
-    fontSize: '13px',
-    color: '#10b981',
+  accessionInput: {
+    padding: '18px 24px',
+    border: '2px solid #e2e8f0',
+    borderRadius: '12px',
+    fontSize: '16px',
     fontWeight: '500',
-    marginTop: '8px',
-    padding: '8px 12px',
-    background: '#ecfdf5',
-    borderRadius: '8px',
-    border: '1px solid #d1fae5'
+    textAlign: 'center',
+    outline: 'none',
+    transition: 'all 0.3s ease',
+    backgroundColor: 'white',
+    letterSpacing: '0.5px',
+    boxShadow: '0 2px 4px rgba(0, 0, 0, 0.1)',
+    width: '100%'
   },
   formActions: {
     display: 'flex',
     gap: '16px',
-    justifyContent: 'flex-end',
+    justifyContent: 'center',
     paddingTop: '16px',
     borderTop: '1px solid #e2e8f0'
   },
@@ -317,13 +382,13 @@ const styles = {
     }
   },
   submitButton: {
-    padding: '12px 24px',
+    padding: '12px 32px',
     border: 'none',
     borderRadius: '8px',
     background: 'linear-gradient(135deg, #10b981, #059669)',
     color: 'white',
-    fontSize: '14px',
-    fontWeight: '500',
+    fontSize: '16px',
+    fontWeight: '600',
     cursor: 'pointer',
     transition: 'all 0.2s ease',
     ':hover': {
@@ -353,28 +418,169 @@ const styles = {
     }
   },
   resultCard: {
-    marginBottom: '24px'
+    marginBottom: '24px',
+    border: '1px solid #e2e8f0',
+    borderRadius: '16px',
+    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)'
   },
-  resultContent: {
+  studentSection: {
+    marginBottom: '20px',
+    padding: '20px',
+    background: 'linear-gradient(145deg, #f0fdf4 0%, #ecfdf5 100%)',
+    borderRadius: '12px',
+    border: '1px solid #bbf7d0',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+  },
+  bookSection: {
+    marginBottom: '20px',
+    padding: '20px',
+    background: 'linear-gradient(145deg, #eff6ff 0%, #dbeafe 100%)',
+    borderRadius: '12px',
+    border: '1px solid #bfdbfe',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+  },
+  returnSection: {
+    marginBottom: '20px',
+    padding: '20px',
+    background: 'linear-gradient(145deg, #fefbf3 0%, #fef3c7 100%)',
+    borderRadius: '12px',
+    border: '1px solid #fed7aa',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+  },
+  sectionTitle: {
+    fontSize: '18px',
+    fontWeight: '700',
+    color: '#374151',
+    marginBottom: '16px',
+    margin: '0 0 16px 0'
+  },
+  studentGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))',
+    gap: '16px'
+  },
+  bookGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px'
+  },
+  returnGrid: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '16px'
+  },
+  studentDetail: {
     display: 'flex',
     flexDirection: 'column',
-    gap: '12px'
+    gap: '6px',
+    padding: '8px',
+    background: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: '8px'
   },
-  resultRow: {
+  bookDetail: {
     display: 'flex',
-    justifyContent: 'space-between',
-    alignItems: 'center',
+    flexDirection: 'column',
+    gap: '6px',
+    padding: '8px',
+    background: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: '8px'
+  },
+  returnDetail: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    padding: '8px',
+    background: 'rgba(255, 255, 255, 0.5)',
+    borderRadius: '8px'
+  },
+  detailLabel: {
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#6b7280',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  detailValue: {
+    fontSize: '15px',
+    fontWeight: '600',
+    color: '#1f2937',
+    lineHeight: '1.4'
+  },
+  statusBadge: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#10b981',
+    background: '#ecfdf5',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: '1px solid #d1fae5',
+    textAlign: 'center'
+  },
+  fineAmount: {
+    fontSize: '16px',
+    fontWeight: '700',
+    color: '#ef4444',
+    background: '#fef2f2',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: '1px solid #fecaca',
+    textAlign: 'center'
+  },
+  noFine: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#10b981',
+    background: '#ecfdf5',
+    padding: '6px 12px',
+    borderRadius: '6px',
+    border: '1px solid #d1fae5',
+    textAlign: 'center'
+  },
+  timerSection: {
+    borderTop: '1px solid #e2e8f0',
+    paddingTop: '16px',
+    textAlign: 'center'
+  },
+  timerBox: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#92400e',
+    background: 'linear-gradient(145deg, #fef3c7 0%, #fde68a 100%)',
+    padding: '12px 20px',
+    borderRadius: '8px',
+    border: '1px solid #f59e0b',
+    display: 'inline-block',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+  },
+  formatPreview: {
+    fontSize: '13px',
+    color: '#059669',
+    fontWeight: '500',
+    textAlign: 'center',
+    padding: '6px 12px',
+    background: '#f0fdf4',
+    borderRadius: '6px',
+    border: '1px solid #bbf7d0',
+    marginTop: '8px',
+    display: 'inline-block'
+  },
+  accessionSuggestion: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
     padding: '8px 0',
     borderBottom: '1px solid #f1f5f9'
   },
-  resultLabel: {
+  accessionSuggestionMain: {
     fontSize: '14px',
+    color: '#1f2937',
     fontWeight: '600',
-    color: '#374151'
+    lineHeight: '1.4'
   },
-  resultValue: {
-    fontSize: '14px',
-    color: '#475569'
+  accessionSuggestionSub: {
+    fontSize: '12px',
+    color: '#6b7280',
+    lineHeight: '1.3'
   },
   instructionsCard: {
     marginBottom: '24px'

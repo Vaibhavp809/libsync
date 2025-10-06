@@ -197,22 +197,40 @@ export default function StockVerification() {
                   <h4 style={styles.bookTitle}>{book.title}</h4>
                   <p style={styles.bookAuthor}>by {book.author || 'Unknown Author'}</p>
                   <div style={styles.bookDetails}>
-                    {book.isbn && (
+                    {book.accessionNumber && (
                       <div style={styles.detailItem}>
-                        <span style={styles.detailLabel}>📖 ISBN:</span>
-                        <span style={styles.detailValue}>{book.isbn}</span>
+                        <span style={styles.detailLabel}>🏷️ Accession No.:</span>
+                        <span style={styles.detailValue}>{book.accessionNumber}</span>
                       </div>
                     )}
-                    {(book.ddc || book.ddcNumber) && (
+                    {book.publisher && (
                       <div style={styles.detailItem}>
-                        <span style={styles.detailLabel}>🏷️ DDC:</span>
-                        <span style={styles.detailValue}>{book.ddc || book.ddcNumber}</span>
+                        <span style={styles.detailLabel}>📚 Publisher:</span>
+                        <span style={styles.detailValue}>{book.publisher}</span>
+                      </div>
+                    )}
+                    {book.yearOfPublishing && (
+                      <div style={styles.detailItem}>
+                        <span style={styles.detailLabel}>📅 Year:</span>
+                        <span style={styles.detailValue}>{book.yearOfPublishing}</span>
+                      </div>
+                    )}
+                    {book.edition && (
+                      <div style={styles.detailItem}>
+                        <span style={styles.detailLabel}>📖 Edition:</span>
+                        <span style={styles.detailValue}>{book.edition}</span>
                       </div>
                     )}
                     {book.category && (
                       <div style={styles.detailItem}>
                         <span style={styles.detailLabel}>📂 Category:</span>
                         <span style={styles.detailValue}>{book.category}</span>
+                      </div>
+                    )}
+                    {book.price && (
+                      <div style={styles.detailItem}>
+                        <span style={styles.detailLabel}>💰 Price:</span>
+                        <span style={styles.detailValue}>₹{book.price}</span>
                       </div>
                     )}
                     <div style={styles.detailItem}>

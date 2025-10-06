@@ -75,7 +75,7 @@ export default function ViewLoans() {
             {loan.book?.title || "Deleted Book"}
           </div>
           <div style={{ fontSize: '12px', color: '#6b7280' }}>
-            ISBN: {loan.book?.isbn || 'N/A'}
+            Accession No.: {loan.book?.accessionNumber || 'N/A'}
           </div>
         </div>
       )
@@ -123,7 +123,13 @@ export default function ViewLoans() {
     {
       header: 'Return Date',
       key: 'returnDate',
-      render: (loan) => loan.returnDate ? new Date(loan.returnDate).toLocaleDateString() : '-'
+      render: (loan) => {
+        try {
+          return loan?.returnDate ? new Date(loan.returnDate).toLocaleDateString() : '-';
+        } catch (err) {
+          return '-';
+        }
+      }
     },
     {
       header: 'Fine',

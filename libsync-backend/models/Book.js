@@ -2,14 +2,19 @@
 const mongoose = require("mongoose");
 
 const bookSchema = new mongoose.Schema({
+  accessionNumber: { type: String, unique: true, required: true },
   title: { type: String, required: true },
-  author: String,
-  isbn: String,
-  ddc: String,
-  category: String,
-  status: { type: String, enum: ['Available', 'Issued'], default: 'Available' },
+  author: { type: String, required: true },
+  publisher: { type: String, required: true },
+  yearOfPublishing: { type: Number, required: true },
+  edition: { type: String, required: true },
+  category: { type: String, required: true },
+  price: { type: Number, required: true },
+  status: { type: String, enum: ['Available', 'Reserved', 'Issued'], default: 'Available' },
   available: { type: Boolean, default: true },
   verified: { type: Boolean, default: false }
+}, {
+  timestamps: true
 });
 
 module.exports = mongoose.model("Book", bookSchema);

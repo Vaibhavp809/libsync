@@ -4,9 +4,53 @@ import Layout from '../components/Layout';
 export default function Reports() {
   const download = async (path, filename) => {
     try {
+      // Try both storage locations
+      const localToken = localStorage.getItem('adminToken');
+      const sessionToken = sessionStorage.getItem('adminToken');
+      const token = localToken || sessionToken;
+      
+      if (!token) {
+        alert('No authentication token found. Please login again.');
+        window.location.href = '/login';
+        return;
+      }
+      
       const res = await fetch(`http://localhost:5000${path}`, {
-        headers: { Authorization: `Bearer ${localStorage.getItem('adminToken')}` }
+        headers: { 
+          'Authorization': `Bearer ${token}`
+        }
       });
+      
+      // Check content type of response
+      const contentType = res.headers.get('content-type');
+      
+      if (!res.ok || contentType?.includes('application/json')) {
+        // Handle error response
+        const text = await res.text();
+        let errorMessage = 'Download failed';
+        
+        try {
+          const errorData = JSON.parse(text);
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          errorMessage = text || `Server returned status ${res.status}`;
+        }
+        
+        alert(errorMessage);
+        
+        if (res.status === 401 || res.status === 403) {
+          localStorage.removeItem('adminToken');
+          sessionStorage.removeItem('adminToken');
+          window.location.href = '/login';
+        }
+        return;
+      }
+      
+      // Only proceed with download if content type is CSV
+      if (!contentType?.includes('text/csv')) {
+        alert('Invalid response format from server');
+        return;
+      }
       const blob = await res.blob();
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
