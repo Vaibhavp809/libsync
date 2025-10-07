@@ -15,6 +15,8 @@ import Notifications from './pages/Notifications';
 import Settings from './pages/Settings';
 import IssueBook from './pages/IssueBook';
 import ReturnBook from './pages/ReturnBook';
+import EResourcesPage from './pages/EResourcesPage';
+import PlacementNewsPage from './pages/PlacementNewsPage';
 
 function App() {
   return (
@@ -34,6 +36,8 @@ function App() {
         <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
         <Route path="/issue-book" element={<ProtectedRoute><IssueBook /></ProtectedRoute>} />
         <Route path="/return-book" element={<ProtectedRoute><ReturnBook /></ProtectedRoute>} />
+        <Route path="/eresources" element={<ProtectedRoute><EResourcesPage /></ProtectedRoute>} />
+        <Route path="/placement-news" element={<ProtectedRoute><PlacementNewsPage /></ProtectedRoute>} />
         <Route path="/" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
       </Routes>
     </Router>

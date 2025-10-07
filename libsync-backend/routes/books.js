@@ -1,7 +1,25 @@
 const express = require("express");
 const router = express.Router();
+const multer = require("multer");
 const verifyToken = require("../middleware/auth");
 const { verifyStudentOrAdmin } = require("../middleware/studentAuth");
+
+// Configure multer for file uploads
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: {
+    fileSize: 10 * 1024 * 1024, // 10MB limit
+  },
+  fileFilter: (req, file, cb) => {
+    if (file.mimetype === 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' || 
+        file.mimetype === 'application/vnd.ms-excel' ||
+        file.mimetype === 'text/csv') {
+      cb(null, true);
+    } else {
+      cb(new Error('Only Excel (.xlsx, .xls) and CSV files are allowed'));
+    }
+  }
+});
 
 const {
   addBook,
@@ -11,12 +29,16 @@ const {
   updateBookStatus,
   verifyBook,
   searchBooks,
-  deleteBook
+  deleteBook,
+  bulkImportBooks,
+  getBookStatistics
 } = require("../controllers/bookController");
 
 // 📚 Existing routes with authentication
 router.post("/", verifyToken, addBook);
+router.post("/bulk-import", verifyToken, upload.single('file'), bulkImportBooks);
 router.get("/", verifyStudentOrAdmin, getBooks);
+router.get("/statistics", verifyStudentOrAdmin, getBookStatistics);
 router.get("/search", verifyStudentOrAdmin, searchBooks);
 router.get("/:id", verifyStudentOrAdmin, getBookById);
 router.put("/:id", verifyToken, updateBook);
@@ -56,10 +78,17 @@ router.get("/search-accession/:partial", verifyStudentOrAdmin, async (req, res) 
 router.get("/accession/:accessionNumber", verifyStudentOrAdmin, async (req, res) => {
   try {
     const Book = require("../models/Book");
-    const book = await Book.findOne({ accessionNumber: req.params.accessionNumber });
+    let accessionNumber = req.params.accessionNumber;
+    
+    // Pad accession number to 6 digits with leading zeros if needed
+    if (!isNaN(accessionNumber)) {
+      accessionNumber = accessionNumber.toString().padStart(6, '0');
+    }
+    
+    const book = await Book.findOne({ accessionNumber: accessionNumber });
 
     if (!book) {
-      return res.status(404).json({ message: "Book not found" });
+      return res.status(404).json({ message: "Book not found with accession number: " + accessionNumber });
     }
 
     res.json(book);

@@ -21,43 +21,127 @@ import { colors, typography, spacing, borderRadius, shadows, components, layout,
 
 export default function BookListScreen() {
   const [books, setBooks] = useState([]);
-  const [allBooks, setAllBooks] = useState([]); // Store all books for filtering
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [loadingMore, setLoadingMore] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [searchLoading, setSearchLoading] = useState(false);
   const [studentId, setStudentId] = useState('');
   const [user, setUser] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [hasNextPage, setHasNextPage] = useState(true);
+  const [totalBooks, setTotalBooks] = useState(0);
+  const [isSearching, setIsSearching] = useState(false);
+  
+  // Statistics state
+  const [statistics, setStatistics] = useState({
+    totalBooks: 0,
+    availableBooks: 0,
+    issuedBooks: 0
+  });
 
+
+  // Fetch statistics for dashboard
+  const fetchStatistics = async () => {
+    try {
+      const stats = await apiService.getBookStatistics();
+      setStatistics({
+        totalBooks: stats.totalBooks || 0,
+        availableBooks: stats.availableBooks || 0,
+        issuedBooks: stats.issuedBooks || 0
+      });
+    } catch (error) {
+      console.error('Failed to fetch statistics:', error);
+    }
+  };
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchBooks();
+    setCurrentPage(1);
+    setHasNextPage(true);
+    await fetchBooks(1, true);
+    await fetchStatistics();
     setRefreshing(false);
   };
 
-  const fetchBooks = async (isRefresh = false) => {
-    if (!isRefresh) setLoading(true);
+  const fetchBooks = async (page = 1, isRefresh = false) => {
+    if (page === 1 && !isRefresh) setLoading(true);
+    if (page > 1) setLoadingMore(true);
+    
     try {
-      const data = await apiService.getBooks();
+      const response = await apiService.getBooks({ 
+        page, 
+        limit: 20,
+        sortBy: 'accessionNumber',
+        sortOrder: 'asc'
+      });
       
-      if (Array.isArray(data)) {
-        setBooks(data);
-        setAllBooks(data);
-      } else {
-        throw new Error('Invalid data format received');
+      let booksData = [];
+      let pagination = {};
+      
+      // Handle both old array response and new paginated response
+      if (response && typeof response === 'object') {
+        if (response.books && Array.isArray(response.books)) {
+          // New paginated response
+          booksData = response.books;
+          pagination = response.pagination || {};
+        } else if (Array.isArray(response)) {
+          // Old array response
+          booksData = response;
+        }
       }
+      
+      // Filter out null/invalid items and log any issues
+      const originalCount = booksData.length;
+      booksData = booksData.filter((book, index) => {
+        const isValid = book && typeof book === 'object' && book._id && book.title;
+        if (!isValid) {
+          console.warn(`Invalid book at index ${index}:`, book);
+        }
+        return isValid;
+      });
+      
+      console.log(`Filtered books: ${originalCount} -> ${booksData.length}`);
+      
+      if (page === 1 || isRefresh) {
+        console.log('Setting books (page 1 or refresh):', booksData.length);
+        setBooks(booksData);
+      } else {
+        // Append to existing books for pagination
+        console.log('Appending books for pagination:', booksData.length);
+        setBooks(prevBooks => {
+          const newBooks = [...prevBooks, ...booksData];
+          console.log(`Total books after append: ${newBooks.length}`);
+          return newBooks;
+        });
+      }
+      
+      // Update pagination state
+      setCurrentPage(pagination.currentPage || page);
+      setHasNextPage(pagination.hasNextPage || false);
+      setTotalBooks(pagination.totalBooks || booksData.length);
+      
     } catch (err) {
       Alert.alert(
         'Error Loading Books',
         err.message || 'Failed to load books from server. Please check your connection and try again.',
         [
-          { text: 'Retry', onPress: () => fetchBooks() },
+          { text: 'Retry', onPress: () => fetchBooks(page, isRefresh) },
           { text: 'Cancel' }
         ]
       );
     } finally {
       setLoading(false);
+      setLoadingMore(false);
+    }
+  };
+  
+  // Load more books when reaching end of list
+  const loadMoreBooks = async () => {
+    if (!loadingMore && hasNextPage && !isSearching) {
+      await fetchBooks(currentPage + 1);
     }
   };
 
@@ -95,27 +179,41 @@ export default function BookListScreen() {
     setSearchQuery(query);
     
     if (!query.trim()) {
-      // If search query is empty, show all books
-      setBooks(allBooks);
+      // If search query is empty, reset to paginated view
+      setIsSearching(false);
+      setCurrentPage(1);
+      setHasNextPage(true);
+      await fetchBooks(1, true);
       return;
     }
     
     setSearchLoading(true);
+    setIsSearching(true);
+    
     try {
       const data = await apiService.searchBooks(query);
+      // Handle both array response and paginated response
+      let booksData = [];
       if (Array.isArray(data)) {
-        setBooks(data);
-      } else {
-        throw new Error('Invalid search results format');
+        booksData = data;
+      } else if (data && data.books && Array.isArray(data.books)) {
+        booksData = data.books;
       }
+      
+      // Filter out null/invalid items
+      booksData = booksData.filter(book => {
+        return book && typeof book === 'object' && book._id && book.title;
+      });
+      
+      setBooks(booksData);
+      setHasNextPage(false); // Disable pagination for search results
+      
     } catch (error) {
       Alert.alert(
         'Search Error',
         error.message || 'Failed to search books. Please try again.',
         [{ text: 'OK' }]
       );
-      // Reset to show all books on search error
-      setBooks(allBooks);
     } finally {
       setSearchLoading(false);
     }
@@ -128,7 +226,7 @@ export default function BookListScreen() {
     }, 300);
     
     return () => clearTimeout(searchTimeout);
-  }, [searchQuery, allBooks]);
+  }, [searchQuery]);
 
   useEffect(() => {
     const loadStudentData = async () => {
@@ -150,47 +248,57 @@ export default function BookListScreen() {
     };
 
     loadStudentData();
-    fetchBooks();
+    fetchBooks(1);
+    fetchStatistics();
   }, []);
 
-  const renderItem = ({ item }) => (
-    <View style={styles.bookCard}>
-      <View style={styles.bookHeader}>
-        <View style={styles.bookIcon}>
-          <Text style={styles.bookEmoji}>📚</Text>
-        </View>
-        <View style={styles.bookInfo}>
-          <Text style={styles.bookTitle}>{item.title}</Text>
-          <Text style={styles.bookAuthor}>by {item.author}</Text>
-          <Text style={styles.bookISBN}>ISBN: {item.isbn || 'N/A'}</Text>
-          <Text style={styles.bookCategory}>{item.category}</Text>
-        </View>
-      </View>
-      
-      <View style={styles.bookFooter}>
-        <View style={styles.availabilityContainer}>
-          <Text style={styles.availabilityLabel}>Availability:</Text>
-          <View style={[styles.statusBadge, { backgroundColor: getStatusBackgroundColor(item.status || item.availability) }]}>
-            <Text style={[styles.statusText, { color: getStatusColor(item.status || item.availability) }]}>
-              {(item.status || item.availability)?.toUpperCase()}
-            </Text>
+  const renderItem = ({ item }) => {
+    // Add null check and validation
+    if (!item || !item._id) {
+      console.warn('Invalid book item:', item);
+      return null;
+    }
+
+    return (
+      <View style={styles.bookCard}>
+        <View style={styles.bookHeader}>
+          <View style={styles.bookIcon}>
+            <Text style={styles.bookEmoji}>📚</Text>
+          </View>
+          <View style={styles.bookInfo}>
+            <Text style={styles.bookTitle}>{item.title || 'Untitled Book'}</Text>
+            <Text style={styles.bookAuthor}>by {item.author || 'Unknown Author'}</Text>
+            <Text style={styles.bookISBN}>Acc. No: {item.accessionNumber || 'N/A'}</Text>
+            <Text style={styles.bookCategory}>{item.category || 'Uncategorized'}</Text>
           </View>
         </View>
         
-        {(item.status === "Available" || item.availability === "Available") && (
-          <TouchableOpacity 
-            style={styles.reserveButton}
-            onPress={() => reserveBook(item._id)}
-            activeOpacity={0.8}
-          >
-            <Text style={styles.reserveButtonText}>Reserve Book</Text>
-          </TouchableOpacity>
-        )}
+        <View style={styles.bookFooter}>
+          <View style={styles.availabilityContainer}>
+            <Text style={styles.availabilityLabel}>Availability:</Text>
+            <View style={[styles.statusBadge, { backgroundColor: getStatusBackgroundColor(item.status || item.availability || 'Available') }]}>
+              <Text style={[styles.statusText, { color: getStatusColor(item.status || item.availability || 'Available') }]}>
+                {(item.status || item.availability || 'Available').toUpperCase()}
+              </Text>
+            </View>
+          </View>
+          
+          {(item.status === "Available" || item.availability === "Available" || !item.status) && (
+            <TouchableOpacity 
+              style={styles.reserveButton}
+              onPress={() => reserveBook(item._id)}
+              activeOpacity={0.8}
+            >
+              <Text style={styles.reserveButtonText}>Reserve Book</Text>
+            </TouchableOpacity>
+          )}
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
-  if (loading) {
+  // Early return for loading state - prevents null access issues
+  if (loading && (!books || books.length === 0)) {
     return (
       <SafeAreaView style={styles.container}>
         <StatusBar barStyle="light-content" backgroundColor={colors.primary} />
@@ -237,22 +345,33 @@ export default function BookListScreen() {
       
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{books.length}</Text>
-          <Text style={styles.statLabel}>Total Books</Text>
+          <Text style={styles.statNumber}>{isSearching ? books.length : (statistics.totalBooks || 0).toLocaleString()}</Text>
+          <Text style={styles.statLabel}>{isSearching ? 'Search Results' : 'Total Books'}</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{books.filter(b => (b.status === 'Available' || b.availability === 'Available')).length}</Text>
+          <Text style={styles.statNumber}>
+            {isSearching 
+              ? books.filter(b => b && (b.status === 'Available' || b.availability === 'Available')).length 
+              : (statistics.availableBooks || 0).toLocaleString()}
+          </Text>
           <Text style={styles.statLabel}>Available</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>{books.filter(b => (b.status === 'Reserved' || b.availability === 'Reserved' || b.status === 'Borrowed' || b.availability === 'Borrowed')).length}</Text>
-          <Text style={styles.statLabel}>Not Available</Text>
+          <Text style={styles.statNumber}>
+            {isSearching 
+              ? books.filter(b => b && (b.status !== 'Available' && b.availability !== 'Available')).length 
+              : (statistics.issuedBooks || 0).toLocaleString()}
+          </Text>
+          <Text style={styles.statLabel}>{isSearching ? 'Not Available' : 'Issued'}</Text>
         </View>
       </View>
       
       <FlatList
-        data={books}
-        keyExtractor={item => item._id}
+        data={Array.isArray(books) ? books.filter(book => book && book._id) : []}
+        keyExtractor={(item, index) => {
+          // Safe keyExtractor with fallback
+          return item?._id || `book-${index}`;
+        }}
         renderItem={renderItem}
         contentContainerStyle={styles.listContainer}
         showsVerticalScrollIndicator={false}
@@ -264,11 +383,30 @@ export default function BookListScreen() {
             tintColor={colors.primary}
           />
         }
+        onEndReached={loadMoreBooks}
+        onEndReachedThreshold={0.5}
+        ListFooterComponent={
+          loadingMore && hasNextPage ? (
+            <View style={styles.loadMoreContainer}>
+              <ActivityIndicator size="small" color={colors.primary} />
+              <Text style={styles.loadMoreText}>Loading more books...</Text>
+            </View>
+          ) : !isSearching && totalBooks > 0 ? (
+            <View style={styles.paginationInfo}>
+              <Text style={styles.paginationText}>
+                Showing {books.length} of {totalBooks.toLocaleString()} books
+              </Text>
+              {!hasNextPage && (
+                <Text style={styles.endOfListText}>📚 You've reached the end!</Text>
+              )}
+            </View>
+          ) : null
+        }
         ListEmptyComponent={
           <View style={styles.emptyContainer}>
             <Text style={styles.emptyEmoji}>📚</Text>
             <Text style={styles.emptyTitle}>No Books Found</Text>
-            <Text style={styles.emptySubtitle}>Try refreshing or check your connection</Text>
+            <Text style={styles.emptySubtitle}>{isSearching ? 'Try a different search term' : 'Try refreshing or check your connection'}</Text>
           </View>
         }
       />
@@ -476,5 +614,36 @@ const styles = StyleSheet.create({
     ...typography.bodyMedium,
     color: colors.textSecondary,
     textAlign: 'center',
+  },
+  
+  loadMoreContainer: {
+    ...layout.center,
+    paddingVertical: spacing.lg,
+  },
+  
+  loadMoreText: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    marginTop: spacing.sm,
+  },
+  
+  paginationInfo: {
+    ...layout.center,
+    paddingVertical: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  
+  paginationText: {
+    ...typography.bodyMedium,
+    color: colors.textSecondary,
+    textAlign: 'center',
+    marginBottom: spacing.sm,
+  },
+  
+  endOfListText: {
+    ...typography.bodySmall,
+    color: colors.textTertiary,
+    textAlign: 'center',
+    fontStyle: 'italic',
   },
 });

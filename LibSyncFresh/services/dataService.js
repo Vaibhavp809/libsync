@@ -5,30 +5,33 @@ class DataService {
   
   // ===== BOOKS API =====
   
-  async getBooks(query = '', filters = {}) {
+  async getBooks(params = {}) {
     try {
-      let endpoint = '/api/managebooks';
-      const params = new URLSearchParams();
-      
-      if (query) {
-        params.append('search', query);
-      }
-      
-      if (filters.category) {
-        params.append('category', filters.category);
-      }
-      
-      if (filters.author) {
-        params.append('author', filters.author);
-      }
-      
-      if (params.toString()) {
-        endpoint += `?${params.toString()}`;
-      }
-      
-      return await authService.makeAuthenticatedRequest('GET', endpoint);
+      // Use the apiService which now supports pagination
+      const { apiService } = await import('./apiService');
+      return await apiService.getBooks(params);
     } catch (error) {
       console.error('Failed to fetch books:', error);
+      throw error;
+    }
+  }
+  
+  async getAllBooks() {
+    try {
+      const { apiService } = await import('./apiService');
+      return await apiService.getAllBooks();
+    } catch (error) {
+      console.error('Failed to fetch all books:', error);
+      throw error;
+    }
+  }
+  
+  async searchBooks(query) {
+    try {
+      const { apiService } = await import('./apiService');
+      return await apiService.searchBooks(query);
+    } catch (error) {
+      console.error('Failed to search books:', error);
       throw error;
     }
   }

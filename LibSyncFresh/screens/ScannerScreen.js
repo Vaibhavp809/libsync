@@ -7,12 +7,14 @@ import { apiService } from '../services/apiService';
 import { colors, typography, spacing, borderRadius, shadows, components, layout } from '../styles/designSystem';
 
 export default function ScannerScreen() {
-  const [isbn, setIsbn] = useState('');
+  const [accessionNumber, setAccessionNumber] = useState('');
   const [book, setBook] = useState(null);
   const [loading, setLoading] = useState(false);
   const [hasPermission, setHasPermission] = useState(null);
   const [scanned, setScanned] = useState(false);
   const [showCamera, setShowCamera] = useState(false);
+  const [reserving, setReserving] = useState(false);
+  const [studentId, setStudentId] = useState('');
 
   const getCameraPermissions = async () => {
     const { status } = await Camera.requestCameraPermissionsAsync();
@@ -21,10 +23,25 @@ export default function ScannerScreen() {
 
   const handleCameraScan = ({ type, data }) => {
     setScanned(true);
-    setIsbn(data);
+    
+    // Validate scanned data is within accession number range (000000-026542)
+    const scannedNumber = parseInt(data);
+    if (isNaN(scannedNumber) || scannedNumber < 0 || scannedNumber > 26542) {
+      Alert.alert(
+        "Invalid Accession Number", 
+        `Scanned code "${data}" is not a valid accession number. Expected range: 000000-026542`
+      );
+      setShowCamera(false);
+      return;
+    }
+    
+    // Pad to 6 digits
+    const paddedAccession = data.toString().padStart(6, '0');
+    setAccessionNumber(paddedAccession);
     setShowCamera(false);
-    // Auto-search the scanned ISBN
-    searchByISBN(data);
+    
+    // Auto-search the scanned accession number
+    searchByAccessionNumber(paddedAccession);
   };
 
   const openCamera = async () => {
@@ -48,21 +65,29 @@ export default function ScannerScreen() {
     setShowCamera(true);
   };
 
-  const searchByISBN = async (isbnCode) => {
-    if (!isbnCode.trim()) {
-      Alert.alert("Error", "Please enter an ISBN");
+  const searchByAccessionNumber = async (accessionCode) => {
+    if (!accessionCode.trim()) {
+      Alert.alert("Error", "Please enter an accession number");
+      return;
+    }
+    
+    // Validate accession number range
+    const accessionNum = parseInt(accessionCode);
+    if (isNaN(accessionNum) || accessionNum < 0 || accessionNum > 26542) {
+      Alert.alert("Invalid Range", "Accession number must be between 000000 and 026542");
       return;
     }
     
     setLoading(true);
     try {
-      // Search for book by ISBN using the new API service
-      const response = await apiService.get(`/books/isbn/${isbnCode}`);
+      // Search for book by accession number
+      const paddedAccession = accessionCode.toString().padStart(6, '0');
+      const response = await apiService.get(`/books/accession/${paddedAccession}`);
       setBook(response);
     } catch (error) {
       Alert.alert(
         "Book Not Found", 
-        "No book matches this ISBN or unable to connect to server."
+        `No book found with accession number: ${accessionCode.toString().padStart(6, '0')}`
       );
       setBook(null);
     } finally {
@@ -71,7 +96,47 @@ export default function ScannerScreen() {
   };
 
   const handleManualSearch = () => {
-    searchByISBN(isbn);
+    searchByAccessionNumber(accessionNumber);
+  };
+  
+  // Load student ID on component mount
+  React.useEffect(() => {
+    const loadStudentData = async () => {
+      try {
+        let userData = await AsyncStorage.getItem('user_data');
+        if (!userData) {
+          userData = await AsyncStorage.getItem('userData');
+        }
+        if (userData) {
+          const parsedUser = JSON.parse(userData);
+          setStudentId(parsedUser._id || parsedUser.id);
+        }
+      } catch (error) {
+        console.error('Failed to load student data:', error);
+      }
+    };
+    loadStudentData();
+  }, []);
+  
+  const reserveBook = async (bookId) => {
+    if (!studentId) {
+      Alert.alert("Error", "Unable to get student information. Please try logging in again.");
+      return;
+    }
+    
+    setReserving(true);
+    try {
+      await apiService.createReservation(studentId, bookId);
+      Alert.alert(
+        "Success!", 
+        "Book reserved successfully. You can view your reservations in the My Reservations section.",
+        [{ text: "OK" }]
+      );
+    } catch (error) {
+      Alert.alert("Reservation Failed", error.message);
+    } finally {
+      setReserving(false);
+    }
   };
 
   return (
@@ -108,15 +173,15 @@ export default function ScannerScreen() {
           </View>
           
           <View style={styles.manualSection}>
-            <Text style={styles.manualTitle}>Manual ISBN Entry</Text>
-            <Text style={styles.manualDescription}>Enter the 13-digit ISBN number manually</Text>
+            <Text style={styles.manualTitle}>Manual Accession Number Entry</Text>
+            <Text style={styles.manualDescription}>Enter the 6-digit accession number manually</Text>
             
             <TextInput
               style={styles.input}
-              placeholder="Enter ISBN (e.g., 9781234567890)"
+              placeholder="Enter Accession Number (e.g., 000123)"
               placeholderTextColor={colors.textTertiary}
-              value={isbn}
-              onChangeText={setIsbn}
+              value={accessionNumber}
+              onChangeText={setAccessionNumber}
               keyboardType="numeric"
             />
             
@@ -139,7 +204,7 @@ export default function ScannerScreen() {
               <Text style={styles.resultTitle}>📖 Book Found!</Text>
               <TouchableOpacity 
                 style={styles.clearButton}
-                onPress={() => { setBook(null); setIsbn(''); }}
+                onPress={() => { setBook(null); setAccessionNumber(''); }}
                 activeOpacity={0.8}
               >
                 <Text style={styles.clearButtonText}>✕</Text>
@@ -162,12 +227,25 @@ export default function ScannerScreen() {
                   }]} />
                   <Text style={styles.statusText}>{book.status}</Text>
                 </View>
+                
+                {book.status === 'Available' && (
+                  <TouchableOpacity 
+                    style={[styles.reserveButton, reserving && styles.reserveButtonDisabled]}
+                    onPress={() => reserveBook(book._id)}
+                    disabled={reserving}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={styles.reserveButtonText}>
+                      {reserving ? "📋 Reserving..." : "📋 Reserve Book"}
+                    </Text>
+                  </TouchableOpacity>
+                )}
               </View>
             </View>
             
             <TouchableOpacity 
               style={styles.newSearchButton}
-              onPress={() => { setBook(null); setIsbn(''); }}
+              onPress={() => { setBook(null); setAccessionNumber(''); }}
               activeOpacity={0.8}
             >
               <Text style={styles.newSearchButtonText}>🔍 Search Another Book</Text>
@@ -489,6 +567,25 @@ const styles = StyleSheet.create({
   newSearchButtonText: {
     ...typography.buttonMedium,
     color: colors.primary,
+  },
+  
+  reserveButton: {
+    backgroundColor: colors.secondary,
+    borderRadius: borderRadius.medium,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+    marginTop: spacing.md,
+    ...shadows.small,
+  },
+  
+  reserveButtonDisabled: {
+    backgroundColor: colors.gray400,
+  },
+  
+  reserveButtonText: {
+    ...typography.buttonMedium,
+    color: colors.textInverse,
   },
   cameraContainer: {
     flex: 1,

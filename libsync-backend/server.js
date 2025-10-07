@@ -11,7 +11,8 @@ connectDB();
 const app = express();
 
 // Middleware
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 app.use(cors());
 
 // Register routes BEFORE listen()
@@ -52,6 +53,12 @@ app.use("/api/notifications", notificationRoutes);
 
 const settingsRoutes = require("./routes/settings");
 app.use("/api/settings", settingsRoutes);
+
+const eResourceRoutes = require("./routes/eresources");
+app.use("/api/eresources", eResourceRoutes);
+
+const placementNewsRoutes = require("./routes/placementNews");
+app.use("/api/placement-news", placementNewsRoutes);
 
 // Schedule daily cleanup of expired QR codes
 scheduleCleanup();

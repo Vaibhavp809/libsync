@@ -94,7 +94,7 @@ export default function ManageBooks() {
     try {
       await api.delete(`/books/${bookId}`);
       alert('Book deleted successfully!');
-      fetchBooks();
+      fetchBooks(currentPage, itemsPerPage, searchTerm, selectedCategory, sortBy, sortOrder);
     } catch (err) {
       console.error('Error deleting book:', err);
       const errorMessage = err.response?.data?.message || 'Failed to delete book';
@@ -103,6 +103,30 @@ export default function ManageBooks() {
   };
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [filteredBooks, setFilteredBooks] = useState([]);
+  const [showBulkImport, setShowBulkImport] = useState(false);
+  const [bulkFile, setBulkFile] = useState(null);
+  const [importProgress, setImportProgress] = useState(null);
+  const [importResults, setImportResults] = useState(null);
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalBooks, setTotalBooks] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPrevPage, setHasPrevPage] = useState(false);
+  
+  // Sorting state
+  const [sortBy, setSortBy] = useState('accessionNumber');
+  const [sortOrder, setSortOrder] = useState('asc');
+  
+  // Statistics state for performance
+  const [statistics, setStatistics] = useState({
+    totalBooks: 0,
+    availableBooks: 0,
+    issuedBooks: 0,
+    reservedBooks: 0
+  });
 
   const categories = [
     'CHEMISTRY',
@@ -118,12 +142,29 @@ export default function ManageBooks() {
     'Robotics'
   ];
 
-  const fetchBooks = async () => {
+  const fetchBooks = async (page = 1, limit = itemsPerPage, search = searchTerm, category = selectedCategory, sort = sortBy, order = sortOrder) => {
     try {
       setLoading(true);
-      const res = await api.get('/books');
+      
+      // Build query parameters
+      const params = {
+        page: page,
+        limit: limit,
+        search: search,
+        category: category !== 'all' ? category : '',
+        sortBy: sort,
+        sortOrder: order
+      };
+      
+      // Remove empty parameters
+      Object.keys(params).forEach(key => {
+        if (!params[key]) delete params[key];
+      });
+      
+      const queryString = new URLSearchParams(params).toString();
+      const res = await api.get(`/books?${queryString}`);
 
-      console.log('API Response:', res);
+      console.log('Paginated API Response:', res);
 
       if (!res.data) {
         console.error('No data received from books API');
@@ -132,25 +173,33 @@ export default function ManageBooks() {
         return;
       }
 
-      // Log the raw data structure
-      console.log('Raw books data:', res.data);
-
-      // Validate and clean the books data
-      const validBooks = Array.isArray(res.data)
-        ? res.data.filter(book => {
+      // Handle the new paginated response structure
+      const responseData = res.data;
+      const validBooks = Array.isArray(responseData.books)
+        ? responseData.books.filter(book => {
           if (!book || typeof book !== 'object' || !book._id) {
             console.warn('Invalid book data:', book);
             return false;
           }
-          // Log each book structure to understand what we're working with
-          console.log('Valid book:', book);
           return true;
         })
         : [];
 
-      console.log(`Fetched ${validBooks.length} valid books out of ${res.data.length} total`);
+      console.log(`Fetched ${validBooks.length} books for page ${page}`);
+      
+      // Update state
       setBooks(validBooks);
       setFilteredBooks(validBooks);
+      
+      // Update pagination info
+      if (responseData.pagination) {
+        setCurrentPage(responseData.pagination.currentPage);
+        setTotalPages(responseData.pagination.totalPages);
+        setTotalBooks(responseData.pagination.totalBooks);
+        setHasNextPage(responseData.pagination.hasNextPage);
+        setHasPrevPage(responseData.pagination.hasPrevPage);
+      }
+      
     } catch (err) {
       console.error('Failed to load books:', err);
       if (err.response?.status === 401) {
@@ -160,6 +209,24 @@ export default function ManageBooks() {
       }
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Separate function to fetch statistics
+  const fetchStatistics = async () => {
+    try {
+      const res = await api.get('/books/statistics');
+      if (res.data) {
+        setStatistics({
+          totalBooks: res.data.totalBooks || 0,
+          availableBooks: res.data.availableBooks || 0,
+          issuedBooks: res.data.issuedBooks || 0,
+          reservedBooks: res.data.reservedBooks || 0
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load statistics:', err);
+      // Don't show error to user for statistics as it's not critical
     }
   };
 
@@ -234,7 +301,7 @@ export default function ManageBooks() {
         setEditingBook(null);
 
         // Refresh book list
-        await fetchBooks();
+        await fetchBooks(1, itemsPerPage, searchTerm, selectedCategory, sortBy, sortOrder);
       } else {
         throw new Error('No response from server');
       }
@@ -248,26 +315,125 @@ export default function ManageBooks() {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
-  // Filter books based on search term and category
-  useEffect(() => {
-    let filtered = books;
-
-    if (searchTerm.trim()) {
-      filtered = filtered.filter(book =>
-        book.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        book.author?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        book.accessionNumber?.includes(searchTerm) ||
-        book.publisher?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        book.category?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
+  const handleBulkImport = async () => {
+    if (!bulkFile) {
+      alert('Please select a file first');
+      return;
     }
 
-    if (selectedCategory !== 'all') {
-      filtered = filtered.filter(book => book.category === selectedCategory);
-    }
+    const formData = new FormData();
+    formData.append('file', bulkFile);
 
-    setFilteredBooks(filtered.filter(b => b && typeof b === 'object' && b._id));
-  }, [searchTerm, selectedCategory, books]);
+    try {
+      setImportProgress('Uploading file...');
+      
+      const token = localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
+      if (!token) {
+        alert('Authentication failed. Please login again.');
+        return;
+      }
+
+      const response = await fetch('http://localhost:5000/api/books/bulk-import', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
+        body: formData
+      });
+
+      const result = await response.json();
+      
+      if (!response.ok) {
+        throw new Error(result.message || 'Import failed');
+      }
+
+      setImportProgress(null);
+      setImportResults(result);
+      setBulkFile(null);
+      
+      // Refresh the book list
+      await fetchBooks(1, itemsPerPage, searchTerm, selectedCategory, sortBy, sortOrder);
+      
+    } catch (error) {
+      console.error('Bulk import error:', error);
+      setImportProgress(null);
+      alert('Import failed: ' + error.message);
+    }
+  };
+
+  const handleFileSelect = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      const validTypes = [
+        'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        'application/vnd.ms-excel',
+        'text/csv'
+      ];
+      
+      if (!validTypes.includes(file.type)) {
+        alert('Please select an Excel (.xlsx, .xls) or CSV file');
+        e.target.value = '';
+        return;
+      }
+      
+      setBulkFile(file);
+      setImportResults(null);
+    }
+  };
+  
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    fetchBooks(page, itemsPerPage, searchTerm, selectedCategory, sortBy, sortOrder);
+  };
+  
+  const handleItemsPerPageChange = (newLimit) => {
+    setItemsPerPage(newLimit);
+    setCurrentPage(1);
+    fetchBooks(1, newLimit, searchTerm, selectedCategory, sortBy, sortOrder);
+  };
+  
+  // Debounced search handler
+  const [searchTimeout, setSearchTimeout] = useState(null);
+  
+  const handleSearchChange = (newSearchTerm) => {
+    setSearchTerm(newSearchTerm);
+    
+    // Clear previous timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Set new timeout for debounced search
+    const timeout = setTimeout(() => {
+      setCurrentPage(1);
+      fetchBooks(1, itemsPerPage, newSearchTerm, selectedCategory, sortBy, sortOrder);
+    }, 300); // 300ms delay
+    
+    setSearchTimeout(timeout);
+  };
+  
+  const handleCategoryChange = (newCategory) => {
+    setSelectedCategory(newCategory);
+    setCurrentPage(1);
+    fetchBooks(1, itemsPerPage, searchTerm, newCategory, sortBy, sortOrder);
+  };
+  
+  // Sorting handlers
+  const handleSortChange = (newSortBy) => {
+    setSortBy(newSortBy);
+    setCurrentPage(1);
+    fetchBooks(1, itemsPerPage, searchTerm, selectedCategory, newSortBy, sortOrder);
+  };
+  
+  const handleSortOrderChange = (newSortOrder) => {
+    setSortOrder(newSortOrder);
+    setCurrentPage(1);
+    fetchBooks(1, itemsPerPage, searchTerm, selectedCategory, sortBy, newSortOrder);
+  };
+
+  // Remove the old filtering useEffect since we're now doing server-side filtering
+  // The filtering is now handled in the fetchBooks function with API parameters
 
   const tableColumns = [
     { 
@@ -403,7 +569,7 @@ export default function ManageBooks() {
                     console.log('Deleting book:', book._id);
                     await api.delete(`/books/${book._id}`);
                     alert('Book deleted successfully');
-                    await fetchBooks(); // Refresh the list
+                    await fetchBooks(currentPage, itemsPerPage, searchTerm, selectedCategory, sortBy, sortOrder); // Refresh the list
                   }
                 } catch (err) {
                   console.error('Delete failed:', err);
@@ -420,17 +586,19 @@ export default function ManageBooks() {
     }
   ];
 
-  // Fetch books only if token is present, and retry if token becomes available
+  // Initialize data fetching
   useEffect(() => {
     const getToken = () => localStorage.getItem('adminToken') || sessionStorage.getItem('adminToken');
     if (getToken()) {
-      fetchBooks();
+      fetchBooks(1, itemsPerPage, '', 'all', sortBy, sortOrder); // Start with page 1
+      fetchStatistics(); // Load statistics separately
     } else {
       // Retry every 500ms until token is available (max 10 tries)
       let tries = 0;
       const interval = setInterval(() => {
         if (getToken()) {
-          fetchBooks();
+          fetchBooks(1, itemsPerPage, '', 'all', sortBy, sortOrder);
+          fetchStatistics();
           clearInterval(interval);
         } else if (++tries > 10) {
           clearInterval(interval);
@@ -438,6 +606,13 @@ export default function ManageBooks() {
       }, 500);
       return () => clearInterval(interval);
     }
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
   }, []);
 
   if (loading) {
@@ -457,12 +632,20 @@ export default function ManageBooks() {
         title="Manage Books"
         subtitle="Add, edit, and manage your library collection"
         actions={
-          <button
-            onClick={() => setShowForm(!showForm)}
-            style={styles.addButton}
-          >
-            {showForm ? 'Cancel' : 'Add New Book'}
-          </button>
+          <div style={styles.headerActions}>
+            <button
+              onClick={() => setShowBulkImport(!showBulkImport)}
+              style={styles.bulkImportButton}
+            >
+              📄 Bulk Import
+            </button>
+            <button
+              onClick={() => setShowForm(!showForm)}
+              style={styles.addButton}
+            >
+              {showForm ? 'Cancel' : 'Add New Book'}
+            </button>
+          </div>
         }
       />
 
@@ -593,10 +776,134 @@ export default function ManageBooks() {
         </div>
       )}
 
+      {/* Bulk Import Modal */}
+      {showBulkImport && (
+        <div style={styles.modalOverlay}>
+          <div style={styles.modalContent}>
+            <Card
+              title="Bulk Import Books"
+              subtitle="Upload Excel (.xlsx, .xls) or CSV file to import multiple books"
+              icon="📄"
+              color="#8b5cf6"
+              style={styles.formCard}
+            >
+              <div style={styles.bulkImportContainer}>
+                <div style={styles.uploadSection}>
+                  <h4 style={styles.sectionTitle}>1. File Format Requirements</h4>
+                  <div style={styles.requirements}>
+                    <p>Your file should have columns with these names (case insensitive):</p>
+                    <ul style={styles.requirementsList}>
+                      <li><strong>Accession Number</strong> (or "Acc No", "accessionNumber")</li>
+                      <li><strong>Title</strong> (or "Book Title")</li>
+                      <li><strong>Author</strong> (or "Authors")</li>
+                      <li><strong>Publisher</strong></li>
+                      <li><strong>Year of Publishing</strong> (or "Year", "Publication Year")</li>
+                      <li><strong>Edition</strong> (or "Ed") - defaults to "1st Edition"</li>
+                      <li><strong>Category</strong> (or "Subject") - defaults to "GENERAL"</li>
+                      <li><strong>Price</strong> (or "Cost") - defaults to 0</li>
+                    </ul>
+                  </div>
+                  
+                  <h4 style={styles.sectionTitle}>2. Select File</h4>
+                  <div style={styles.fileUpload}>
+                    <input
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={handleFileSelect}
+                      style={styles.fileInput}
+                    />
+                    {bulkFile && (
+                      <div style={styles.selectedFile}>
+                        ✅ Selected: {bulkFile.name} ({(bulkFile.size / 1024 / 1024).toFixed(2)} MB)
+                      </div>
+                    )}
+                  </div>
+                  
+                  {importProgress && (
+                    <div style={styles.progressContainer}>
+                      <div style={styles.progressText}>{importProgress}</div>
+                      <div style={styles.progressBar}>
+                        <div style={styles.progressFill}></div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {importResults && (
+                    <div style={styles.resultsContainer}>
+                      <h4 style={styles.sectionTitle}>Import Results</h4>
+                      <div style={styles.resultsSummary}>
+                        <div style={styles.resultItem}>
+                          <span style={styles.resultLabel}>Total Rows:</span>
+                          <span style={styles.resultValue}>{importResults.summary.totalRows}</span>
+                        </div>
+                        <div style={styles.resultItem}>
+                          <span style={styles.resultLabel}>Successfully Imported:</span>
+                          <span style={styles.resultValueSuccess}>{importResults.summary.successful}</span>
+                        </div>
+                        <div style={styles.resultItem}>
+                          <span style={styles.resultLabel}>Failed:</span>
+                          <span style={styles.resultValueError}>{importResults.summary.failed}</span>
+                        </div>
+                        <div style={styles.resultItem}>
+                          <span style={styles.resultLabel}>Duplicates Skipped:</span>
+                          <span style={styles.resultValueWarning}>{importResults.summary.duplicates}</span>
+                        </div>
+                      </div>
+                      
+                      {importResults.errors && importResults.errors.length > 0 && (
+                        <div style={styles.errorsList}>
+                          <h5>First Few Errors:</h5>
+                          {importResults.errors.slice(0, 5).map((error, index) => (
+                            <div key={index} style={styles.errorItem}>
+                              <strong>Row {error.row}:</strong> {error.error}
+                            </div>
+                          ))}
+                          {importResults.errors.length > 5 && (
+                            <div style={styles.moreErrors}>
+                              ... and {importResults.errors.length - 5} more errors
+                            </div>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+                
+                <div style={styles.formActions}>
+                  <button 
+                    onClick={handleBulkImport} 
+                    disabled={!bulkFile || importProgress}
+                    style={{
+                      ...styles.submitButton,
+                      opacity: (!bulkFile || importProgress) ? 0.5 : 1,
+                      cursor: (!bulkFile || importProgress) ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    {importProgress ? 'Importing...' : 'Start Import'}
+                  </button>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setShowBulkImport(false);
+                      setBulkFile(null);
+                      setImportResults(null);
+                      setImportProgress(null);
+                    }} 
+                    style={styles.cancelButton}
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
+
       {/* Search and Filters */}
       <Card
-        title="Search & Filter"
-        subtitle="Find books by accession number, title, author, or publisher"
+        title="Search, Filter & Sort"
+        subtitle="Find and organize books by accession number, title, author, category, or date"
         icon="🔍"
         color="#3b82f6"
         style={styles.searchCard}
@@ -605,12 +912,13 @@ export default function ManageBooks() {
           <SearchInput
             placeholder="Search books by accession number, title, author, or publisher..."
             value={searchTerm}
-            onChange={setSearchTerm}
+            onChange={handleSearchChange}
             style={styles.searchInput}
           />
+          
           <select
             value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
+            onChange={(e) => handleCategoryChange(e.target.value)}
             style={styles.filterSelect}
           >
             <option value="all">All Categories</option>
@@ -618,6 +926,26 @@ export default function ManageBooks() {
               <option key={cat} value={cat}>{cat}</option>
             ))}
           </select>
+          
+          <select
+            value={sortBy}
+            onChange={(e) => handleSortChange(e.target.value)}
+            style={styles.filterSelect}
+          >
+            <option value="accessionNumber">Sort by Acc. Number</option>
+            <option value="title">Sort by Title</option>
+            <option value="author">Sort by Author</option>
+            <option value="createdAt">Sort by Date Added</option>
+            <option value="category">Sort by Category</option>
+          </select>
+          
+          <button
+            onClick={() => handleSortOrderChange(sortOrder === 'asc' ? 'desc' : 'asc')}
+            style={styles.sortOrderButton}
+            title={`Currently sorting ${sortOrder === 'asc' ? 'ascending' : 'descending'}. Click to reverse.`}
+          >
+            {sortOrder === 'asc' ? '🔼' : '🔽'} {sortOrder === 'asc' ? 'A→Z' : 'Z→A'}
+          </button>
         </div>
       </Card>
 
@@ -629,7 +957,7 @@ export default function ManageBooks() {
           subtitle="In library"
           color="#3b82f6"
         >
-          <div style={styles.statNumber}>{books.length}</div>
+          <div style={styles.statNumber}>{statistics.totalBooks.toLocaleString()}</div>
         </Card>
 
         <Card
@@ -638,7 +966,7 @@ export default function ManageBooks() {
           subtitle="Ready to borrow"
           color="#10b981"
         >
-          <div style={styles.statNumber}>{books.filter(b => b.status === 'Available').length}</div>
+          <div style={styles.statNumber}>{statistics.availableBooks.toLocaleString()}</div>
         </Card>
 
         <Card
@@ -647,13 +975,13 @@ export default function ManageBooks() {
           subtitle="Currently borrowed"
           color="#f59e0b"
         >
-          <div style={styles.statNumber}>{books.filter(b => b.status === 'Issued').length}</div>
+          <div style={styles.statNumber}>{statistics.issuedBooks.toLocaleString()}</div>
         </Card>
 
         <Card
           icon="🔍"
-          title="Filtered"
-          subtitle="Search results"
+          title="Current Page"
+          subtitle={`Page ${currentPage} of ${totalPages}`}
           color="#8b5cf6"
         >
           <div style={styles.statNumber}>{filteredBooks.length}</div>
@@ -662,8 +990,8 @@ export default function ManageBooks() {
 
       {/* Books Table */}
       <Card
-        title={`Book Collection (${filteredBooks.length} books)`}
-        subtitle={`Showing ${filteredBooks.length} of ${books.length} books ${filteredBooks.length > 0 ? '• Scroll horizontally to see all columns' : ''}`}
+        title={`Book Collection`}
+        subtitle={`Showing ${filteredBooks.length} books on page ${currentPage} of ${totalPages} • Total: ${totalBooks.toLocaleString()} books`}
         icon="📚"
         color="#0ea5e9"
         style={styles.tableCard}
@@ -673,11 +1001,105 @@ export default function ManageBooks() {
           console.log('Final table data being passed to Table component:', tableData);
           console.log('Table columns:', tableColumns);
           return (
-            <Table
-              columns={tableColumns}
-              data={tableData}
-              emptyMessage="No books found matching your criteria"
-            />
+            <div>
+              <Table
+                columns={tableColumns}
+                data={tableData}
+                emptyMessage="No books found matching your criteria"
+              />
+              
+              {/* Pagination Controls */}
+              {totalPages > 1 && (
+                <div style={styles.paginationContainer}>
+                  <div style={styles.paginationInfo}>
+                    <select
+                      value={itemsPerPage}
+                      onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+                      style={styles.itemsPerPageSelect}
+                    >
+                      <option value={10}>10 per page</option>
+                      <option value={20}>20 per page</option>
+                      <option value={50}>50 per page</option>
+                      <option value={100}>100 per page</option>
+                    </select>
+                  </div>
+                  
+                  <div style={styles.paginationControls}>
+                    <button
+                      onClick={() => handlePageChange(1)}
+                      disabled={!hasPrevPage}
+                      style={{
+                        ...styles.paginationButton,
+                        opacity: !hasPrevPage ? 0.5 : 1,
+                        cursor: !hasPrevPage ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      First
+                    </button>
+                    
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={!hasPrevPage}
+                      style={{
+                        ...styles.paginationButton,
+                        opacity: !hasPrevPage ? 0.5 : 1,
+                        cursor: !hasPrevPage ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      Previous
+                    </button>
+                    
+                    <div style={styles.pageNumbers}>
+                      {(() => {
+                        const pages = [];
+                        const startPage = Math.max(1, currentPage - 2);
+                        const endPage = Math.min(totalPages, currentPage + 2);
+                        
+                        for (let i = startPage; i <= endPage; i++) {
+                          pages.push(
+                            <button
+                              key={i}
+                              onClick={() => handlePageChange(i)}
+                              style={{
+                                ...styles.paginationButton,
+                                ...(i === currentPage ? styles.activePage : {})
+                              }}
+                            >
+                              {i}
+                            </button>
+                          );
+                        }
+                        return pages;
+                      })()} 
+                    </div>
+                    
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={!hasNextPage}
+                      style={{
+                        ...styles.paginationButton,
+                        opacity: !hasNextPage ? 0.5 : 1,
+                        cursor: !hasNextPage ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      Next
+                    </button>
+                    
+                    <button
+                      onClick={() => handlePageChange(totalPages)}
+                      disabled={!hasNextPage}
+                      style={{
+                        ...styles.paginationButton,
+                        opacity: !hasNextPage ? 0.5 : 1,
+                        cursor: !hasNextPage ? 'not-allowed' : 'pointer'
+                      }}
+                    >
+                      Last
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
           );
         })()}
       </Card>
@@ -911,5 +1333,221 @@ const styles = {
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
     marginBottom: '16px'
+  },
+  headerActions: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center'
+  },
+  bulkImportButton: {
+    background: 'linear-gradient(135deg, #8b5cf6, #7c3aed)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '12px 20px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '14px',
+    transition: 'all 0.2s ease',
+    ':hover': {
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
+    }
+  },
+  bulkImportContainer: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '24px'
+  },
+  uploadSection: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '16px'
+  },
+  sectionTitle: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#374151',
+    margin: '0 0 8px 0'
+  },
+  requirements: {
+    backgroundColor: '#f8fafc',
+    padding: '16px',
+    borderRadius: '8px',
+    border: '1px solid #e2e8f0'
+  },
+  requirementsList: {
+    margin: '8px 0 0 16px',
+    color: '#4b5563'
+  },
+  fileUpload: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px'
+  },
+  fileInput: {
+    padding: '12px 16px',
+    border: '2px dashed #d1d5db',
+    borderRadius: '8px',
+    backgroundColor: '#fafafa',
+    cursor: 'pointer',
+    fontSize: '14px'
+  },
+  selectedFile: {
+    padding: '8px 12px',
+    backgroundColor: '#d1fae5',
+    color: '#065f46',
+    borderRadius: '6px',
+    fontSize: '14px'
+  },
+  progressContainer: {
+    padding: '16px',
+    backgroundColor: '#fef3c7',
+    borderRadius: '8px',
+    border: '1px solid #f59e0b'
+  },
+  progressText: {
+    fontSize: '14px',
+    fontWeight: '500',
+    color: '#92400e',
+    marginBottom: '8px'
+  },
+  progressBar: {
+    width: '100%',
+    height: '8px',
+    backgroundColor: '#fed7aa',
+    borderRadius: '4px',
+    overflow: 'hidden'
+  },
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#f59e0b',
+    width: '100%',
+    animation: 'pulse 1.5s ease-in-out infinite'
+  },
+  resultsContainer: {
+    padding: '16px',
+    backgroundColor: '#f0f9ff',
+    borderRadius: '8px',
+    border: '1px solid #3b82f6'
+  },
+  resultsSummary: {
+    display: 'grid',
+    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+    gap: '12px',
+    marginBottom: '16px'
+  },
+  resultItem: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '8px 12px',
+    backgroundColor: 'white',
+    borderRadius: '6px'
+  },
+  resultLabel: {
+    fontSize: '14px',
+    color: '#6b7280'
+  },
+  resultValue: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#374151'
+  },
+  resultValueSuccess: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#059669'
+  },
+  resultValueError: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#dc2626'
+  },
+  resultValueWarning: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#d97706'
+  },
+  errorsList: {
+    backgroundColor: '#fef2f2',
+    padding: '12px',
+    borderRadius: '6px',
+    border: '1px solid #fecaca'
+  },
+  errorItem: {
+    fontSize: '13px',
+    color: '#b91c1c',
+    marginBottom: '4px'
+  },
+  moreErrors: {
+    fontSize: '13px',
+    color: '#991b1b',
+    fontStyle: 'italic',
+    marginTop: '8px'
+  },
+  paginationContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginTop: '24px',
+    padding: '16px 0',
+    borderTop: '1px solid #e2e8f0'
+  },
+  paginationInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px'
+  },
+  itemsPerPageSelect: {
+    padding: '8px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '14px',
+    backgroundColor: 'white',
+    cursor: 'pointer'
+  },
+  paginationControls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  paginationButton: {
+    padding: '8px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    backgroundColor: 'white',
+    color: '#374151',
+    fontSize: '14px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    ':hover': {
+      backgroundColor: '#f9fafb',
+      borderColor: '#9ca3af'
+    }
+  },
+  activePage: {
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    borderColor: '#3b82f6'
+  },
+  pageNumbers: {
+    display: 'flex',
+    gap: '4px'
+  },
+  sortOrderButton: {
+    padding: '8px 16px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    backgroundColor: 'white',
+    color: '#374151',
+    fontSize: '14px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    whiteSpace: 'nowrap',
+    ':hover': {
+      backgroundColor: '#f9fafb',
+      borderColor: '#9ca3af'
+    }
   }
 };

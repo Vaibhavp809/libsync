@@ -105,9 +105,9 @@ export default function MyReservationsScreen() {
             <Text style={styles.bookIcon}>📖</Text>
           </View>
           <View style={styles.reservationInfo}>
-            <Text style={styles.bookTitle}>{item.book.title}</Text>
-            <Text style={styles.bookAuthor}>by {item.book.author}</Text>
-            <Text style={styles.bookCategory}>{item.book.category}</Text>
+            <Text style={styles.bookTitle}>{item.book?.title || 'Unknown Book'}</Text>
+            <Text style={styles.bookAuthor}>by {item.book?.author || 'Unknown Author'}</Text>
+            <Text style={styles.bookCategory}>{item.book?.category || 'Unknown Category'}</Text>
           </View>
           <View style={[styles.statusBadge, { backgroundColor: getStatusBackgroundColor(item.status) }]}>
             <Text style={[styles.statusText, { color: getStatusColor(item.status) }]}>

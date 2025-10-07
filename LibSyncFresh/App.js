@@ -4,17 +4,21 @@ import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { apiConfig } from './config/apiConfig';
 import { authService } from './services/authService';
 import { apiService } from './services/apiService';
+import { notificationService } from './services/notificationService';
 import MyReservationsScreen from './screens/MyReservationsScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
 import HomeScreen from './screens/HomeScreen';
-import BookListScreen from './screens/BookListScreen'; // ✅ Added
+import BookListScreen from './screens/BookListScreen';
 import ScannerScreen from './screens/ScannerScreen';
 import AttendanceScannerScreen from './screens/AttendanceScannerScreen';
 import LoanHistoryScreen from './screens/LoanHistoryScreen';
 import NewArrivalsScreen from './screens/NewArrivalsScreen';
 import SettingsScreen from './screens/SettingsScreen';
 import DebugScreen from './screens/DebugScreen';
+import EResourcesScreen from './screens/EResourcesScreen';
+import PlacementNewsScreen from './screens/PlacementNewsScreen';
+import NotificationsScreen from './screens/NotificationsScreen';
 
 const Stack = createNativeStackNavigator();
 
@@ -28,6 +32,9 @@ export default function App() {
         
         // Initialize API service
         await apiService.initialize();
+        
+        // Initialize Notification service
+        await notificationService.initialize();
         
         // Configure API to use the correct server
         const currentIP = await apiConfig.getCurrentServerIP();
@@ -51,6 +58,9 @@ export default function App() {
         <Stack.Screen name="Books" component={BookListScreen} /> 
         <Stack.Screen name="MyReservations" component={MyReservationsScreen} />
         <Stack.Screen name="Scanner" component={ScannerScreen} />
+        <Stack.Screen name="EResources" component={EResourcesScreen} />
+        <Stack.Screen name="PlacementNews" component={PlacementNewsScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="AttendanceScanner" component={AttendanceScannerScreen} />
         <Stack.Screen name="LoanHistory" component={LoanHistoryScreen} />
         <Stack.Screen name="NewArrivals" component={NewArrivalsScreen} />

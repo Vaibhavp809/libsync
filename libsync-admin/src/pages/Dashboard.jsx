@@ -22,20 +22,21 @@ export default function Dashboard() {
     const fetchStats = async () => {
       try {
         setLoading(true);
-        const [booksRes, loansRes, reservationsRes, studentsRes] = await Promise.all([
-          api.get('/books'),
+        // Use optimized statistics endpoints for better performance
+        const [bookStatsRes, loansRes, reservationsRes, studentsRes] = await Promise.all([
+          api.get('/books/statistics'), // Use the new optimized endpoint
           api.get('/loans'),
           api.get('/reservations'),
           api.get('/users')
         ]);
 
-        const books = Array.isArray(booksRes.data) ? booksRes.data : [];
+        const bookStats = bookStatsRes.data || {};
         const loans = Array.isArray(loansRes.data) ? loansRes.data : [];
         const reservations = Array.isArray(reservationsRes.data) ? reservationsRes.data : [];
         const students = Array.isArray(studentsRes.data) ? studentsRes.data.filter(u => u.role === 'student') : [];
 
         setStats({
-          totalBooks: books.length,
+          totalBooks: bookStats.totalBooks || 0,
           activeLoans: loans.filter(l => l.status === 'Issued').length,
           activeReservations: reservations.filter(r => r.status === 'Active').length,
           totalStudents: students.length,
@@ -93,6 +94,18 @@ export default function Dashboard() {
       description: 'Return a book from a student',
       action: () => navigate('/return-book'),
       color: '#84cc16'
+    },
+    {
+      title: '💾 E-Resources',
+      description: 'Manage digital resources and e-books',
+      action: () => navigate('/eresources'),
+      color: '#8b5cf6'
+    },
+    {
+      title: '📰 Placement News',
+      description: 'Manage placement and career news',
+      action: () => navigate('/placement-news'),
+      color: '#06b6d4'
     }
   ];
 
@@ -121,7 +134,7 @@ export default function Dashboard() {
           subtitle="In library"
           color="#3b82f6"
         >
-          <div style={styles.statNumber}>{stats.totalBooks}</div>
+          <div style={styles.statNumber}>{stats.totalBooks.toLocaleString()}</div>
         </Card>
 
         <Card

@@ -77,10 +77,15 @@ export default function IssueBook() {
 
     try {
       const response = await api.get(`/books/search?q=${query}`);
-      setBookSuggestions(response.data.filter(book => 
-        book.accessionNumber && book.accessionNumber.includes(query) || 
-        book.title?.toLowerCase().includes(query.toLowerCase()) ||
-        book.author?.toLowerCase().includes(query.toLowerCase())
+      // Handle both array response (from search endpoint) and paginated response
+      const booksData = Array.isArray(response.data) ? response.data : (response.data?.books || []);
+      
+      setBookSuggestions(booksData.filter(book => 
+        book && (
+          (book.accessionNumber && book.accessionNumber.includes(query)) || 
+          (book.title?.toLowerCase().includes(query.toLowerCase())) ||
+          (book.author?.toLowerCase().includes(query.toLowerCase()))
+        )
       ));
     } catch (error) {
       console.error('Error searching books:', error);

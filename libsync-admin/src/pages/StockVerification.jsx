@@ -8,16 +8,120 @@ export default function StockVerification() {
   const [verifying, setVerifying] = useState(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
+  
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(20);
+  const [totalPages, setTotalPages] = useState(0);
+  const [totalBooks, setTotalBooks] = useState(0);
+  const [hasNextPage, setHasNextPage] = useState(false);
+  const [hasPrevPage, setHasPrevPage] = useState(false);
+  
+  // Statistics state (separate from paginated books)
+  const [statistics, setStatistics] = useState({
+    totalBooks: 0,
+    verifiedBooks: 0,
+    unverifiedBooks: 0,
+    verificationPercentage: 0
+  });
 
-  const fetchBooks = async () => {
+  // Fetch paginated books
+  const fetchBooks = async (page = 1, limit = itemsPerPage, search = searchTerm, status = filterStatus) => {
     try {
       setLoading(true);
-      const res = await api.get('/books');
-      setBooks(res.data);
+      
+      // Build query parameters
+      const params = {
+        page: page,
+        limit: limit,
+        sortBy: 'accessionNumber',
+        sortOrder: 'asc'
+      };
+      
+      if (search.trim()) {
+        params.search = search;
+      }
+      
+      // Handle verification status filter
+      if (status === 'verified') {
+        // We'll filter on frontend for verification status since it's not indexed
+      } else if (status === 'unverified') {
+        // We'll filter on frontend for verification status since it's not indexed
+      }
+      
+      // Remove empty parameters
+      Object.keys(params).forEach(key => {
+        if (!params[key]) delete params[key];
+      });
+      
+      const queryString = new URLSearchParams(params).toString();
+      const res = await api.get(`/books?${queryString}`);
+      
+      console.log('Paginated API Response:', res);
+      
+      if (!res.data) {
+        console.error('No data received from books API');
+        setBooks([]);
+        return;
+      }
+      
+      // Handle the paginated response structure
+      const responseData = res.data;
+      let booksData = [];
+      
+      if (responseData.books && Array.isArray(responseData.books)) {
+        booksData = responseData.books;
+      } else if (Array.isArray(responseData)) {
+        booksData = responseData; // Fallback for old API
+      }
+      
+      // Apply frontend verification status filter if needed
+      if (status === 'verified') {
+        booksData = booksData.filter(book => book.verified === true);
+      } else if (status === 'unverified') {
+        booksData = booksData.filter(book => book.verified !== true);
+      }
+      
+      console.log(`Loaded ${booksData.length} books for stock verification (page ${page})`);
+      setBooks(booksData);
+      
+      // Update pagination info
+      if (responseData.pagination) {
+        setCurrentPage(responseData.pagination.currentPage);
+        setTotalPages(responseData.pagination.totalPages);
+        setTotalBooks(responseData.pagination.totalBooks);
+        setHasNextPage(responseData.pagination.hasNextPage);
+        setHasPrevPage(responseData.pagination.hasPrevPage);
+      }
+      
     } catch (err) {
-      alert('Failed to load books');
+      console.error('Failed to load books:', err);
+      alert('Failed to load books. Please try refreshing the page.');
+      setBooks([]);
     } finally {
       setLoading(false);
+    }
+  };
+  
+  // Fetch statistics separately for better performance
+  const fetchStatistics = async () => {
+    try {
+      const res = await api.get('/books/statistics');
+      if (res.data) {
+        const totalBooks = res.data.totalBooks || 0;
+        const verifiedBooks = res.data.verifiedBooks || 0; // We need to add this to backend
+        const unverifiedBooks = totalBooks - verifiedBooks;
+        
+        setStatistics({
+          totalBooks,
+          verifiedBooks,
+          unverifiedBooks,
+          verificationPercentage: totalBooks > 0 ? Math.round((verifiedBooks / totalBooks) * 100) : 0
+        });
+      }
+    } catch (err) {
+      console.error('Failed to load statistics:', err);
+      // Don't show error to user for statistics as it's not critical
     }
   };
 
@@ -26,29 +130,73 @@ export default function StockVerification() {
       setVerifying(bookId);
       await api.put(`/books/${bookId}/verify`);
       alert('Book marked as verified!');
-      fetchBooks(); // Refresh the list
+      // Refresh current page and statistics
+      await fetchBooks(currentPage, itemsPerPage, searchTerm, filterStatus);
+      await fetchStatistics();
     } catch (err) {
       alert('Failed to verify book');
     } finally {
       setVerifying(null);
     }
   };
+  
+  // Pagination handlers
+  const handlePageChange = (page) => {
+    setCurrentPage(page);
+    fetchBooks(page, itemsPerPage, searchTerm, filterStatus);
+  };
+  
+  const handleItemsPerPageChange = (newLimit) => {
+    setItemsPerPage(newLimit);
+    setCurrentPage(1);
+    fetchBooks(1, newLimit, searchTerm, filterStatus);
+  };
+  
+  // Debounced search handler
+  const [searchTimeout, setSearchTimeout] = useState(null);
+  
+  const handleSearchChange = (newSearchTerm) => {
+    setSearchTerm(newSearchTerm);
+    
+    // Clear previous timeout
+    if (searchTimeout) {
+      clearTimeout(searchTimeout);
+    }
+    
+    // Set new timeout for debounced search
+    const timeout = setTimeout(() => {
+      setCurrentPage(1);
+      fetchBooks(1, itemsPerPage, newSearchTerm, filterStatus);
+    }, 300); // 300ms delay
+    
+    setSearchTimeout(timeout);
+  };
+  
+  const handleStatusFilterChange = (newStatus) => {
+    setFilterStatus(newStatus);
+    setCurrentPage(1);
+    fetchBooks(1, itemsPerPage, searchTerm, newStatus);
+  };
 
   useEffect(() => {
-    fetchBooks();
+    fetchBooks(1, itemsPerPage, '', 'all');
+    fetchStatistics();
+    
+    // Cleanup timeout on unmount
+    return () => {
+      if (searchTimeout) {
+        clearTimeout(searchTimeout);
+      }
+    };
   }, []);
 
-  const filteredBooks = books.filter(book => {
-    const matchesSearch = book.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      book.author?.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = filterStatus === 'all' ||
-      (filterStatus === 'verified' && book.verified) ||
-      (filterStatus === 'unverified' && !book.verified);
-    return matchesSearch && matchesStatus;
-  });
-
-  const verifiedCount = books.filter(book => book.verified).length;
-  const unverifiedCount = books.filter(book => !book.verified).length;
+  // Books are now pre-filtered by the API and pagination
+  const booksArray = Array.isArray(books) ? books : [];
+  const filteredBooks = booksArray; // No need for additional filtering since it's done server-side
+  
+  // Use statistics from the separate API call
+  const verifiedCount = statistics.verifiedBooks;
+  const unverifiedCount = statistics.unverifiedBooks;
 
   if (loading) {
     return (
@@ -83,7 +231,7 @@ export default function StockVerification() {
         <div style={styles.statCard}>
           <div style={styles.statIcon}>📚</div>
           <div style={styles.statContent}>
-            <h3 style={styles.statNumber}>{books.length}</h3>
+            <h3 style={styles.statNumber}>{statistics.totalBooks.toLocaleString()}</h3>
             <p style={styles.statLabel}>Total Books</p>
           </div>
           <div style={styles.statTrend}>
@@ -94,12 +242,12 @@ export default function StockVerification() {
         <div style={styles.statCard}>
           <div style={styles.statIcon}>✅</div>
           <div style={styles.statContent}>
-            <h3 style={styles.statNumber}>{verifiedCount}</h3>
+            <h3 style={styles.statNumber}>{statistics.verifiedBooks.toLocaleString()}</h3>
             <p style={styles.statLabel}>Verified</p>
           </div>
           <div style={styles.statTrend}>
             <span style={styles.trendText}>
-              {books.length > 0 ? Math.round((verifiedCount / books.length) * 100) : 0}%
+              {statistics.verificationPercentage}%
             </span>
           </div>
         </div>
@@ -107,7 +255,7 @@ export default function StockVerification() {
         <div style={styles.statCard}>
           <div style={styles.statIcon}>⏳</div>
           <div style={styles.statContent}>
-            <h3 style={styles.statNumber}>{unverifiedCount}</h3>
+            <h3 style={styles.statNumber}>{statistics.unverifiedBooks.toLocaleString()}</h3>
             <p style={styles.statLabel}>Pending Verification</p>
           </div>
           <div style={styles.statTrend}>
@@ -132,9 +280,9 @@ export default function StockVerification() {
         <div style={styles.searchContainer}>
           <input
             type="text"
-            placeholder="Search books by title or author..."
+            placeholder="Search books by title, author, or accession number..."
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             style={styles.searchInput}
           />
           <span style={styles.searchIcon}>🔍</span>
@@ -142,7 +290,7 @@ export default function StockVerification() {
         <div style={styles.filterContainer}>
           <select
             value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
+            onChange={(e) => handleStatusFilterChange(e.target.value)}
             style={styles.filterSelect}
           >
             <option value="all">All Books</option>
@@ -157,14 +305,14 @@ export default function StockVerification() {
         <div style={styles.progressHeader}>
           <h3 style={styles.progressTitle}>Verification Progress</h3>
           <span style={styles.progressText}>
-            {verifiedCount} of {books.length} books verified
+            {statistics.verifiedBooks.toLocaleString()} of {statistics.totalBooks.toLocaleString()} books verified
           </span>
         </div>
         <div style={styles.progressBar}>
           <div
             style={{
               ...styles.progressFill,
-              width: `${books.length > 0 ? (verifiedCount / books.length) * 100 : 0}%`
+              width: `${statistics.verificationPercentage}%`
             }}
           />
         </div>
@@ -172,9 +320,107 @@ export default function StockVerification() {
 
       {/* Book Inventory */}
       <div style={styles.section}>
-        <h3 style={styles.sectionTitle}>
-          📚 Book Inventory ({filteredBooks.length} books)
-        </h3>
+        <div style={styles.inventoryHeader}>
+          <h3 style={styles.sectionTitle}>
+            📚 Book Inventory
+          </h3>
+          <div style={styles.inventoryInfo}>
+            Showing {filteredBooks.length} books on page {currentPage} of {totalPages} • Total: {totalBooks.toLocaleString()} books
+          </div>
+        </div>
+        
+        {/* Pagination Controls - Top */}
+        {totalPages > 1 && (
+          <div style={styles.paginationContainer}>
+            <div style={styles.paginationInfo}>
+              <select
+                value={itemsPerPage}
+                onChange={(e) => handleItemsPerPageChange(parseInt(e.target.value))}
+                style={styles.itemsPerPageSelect}
+              >
+                <option value={10}>10 per page</option>
+                <option value={20}>20 per page</option>
+                <option value={50}>50 per page</option>
+                <option value={100}>100 per page</option>
+              </select>
+            </div>
+            
+            <div style={styles.paginationControls}>
+              <button
+                onClick={() => handlePageChange(1)}
+                disabled={!hasPrevPage}
+                style={{
+                  ...styles.paginationButton,
+                  opacity: !hasPrevPage ? 0.5 : 1,
+                  cursor: !hasPrevPage ? 'not-allowed' : 'pointer'
+                }}
+              >
+                First
+              </button>
+              
+              <button
+                onClick={() => handlePageChange(currentPage - 1)}
+                disabled={!hasPrevPage}
+                style={{
+                  ...styles.paginationButton,
+                  opacity: !hasPrevPage ? 0.5 : 1,
+                  cursor: !hasPrevPage ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Previous
+              </button>
+              
+              <div style={styles.pageNumbers}>
+                {(() => {
+                  const pages = [];
+                  const startPage = Math.max(1, currentPage - 2);
+                  const endPage = Math.min(totalPages, currentPage + 2);
+                  
+                  for (let i = startPage; i <= endPage; i++) {
+                    pages.push(
+                      <button
+                        key={i}
+                        onClick={() => handlePageChange(i)}
+                        style={{
+                          ...styles.paginationButton,
+                          ...(i === currentPage ? styles.activePage : {})
+                        }}
+                      >
+                        {i}
+                      </button>
+                    );
+                  }
+                  return pages;
+                })()} 
+              </div>
+              
+              <button
+                onClick={() => handlePageChange(currentPage + 1)}
+                disabled={!hasNextPage}
+                style={{
+                  ...styles.paginationButton,
+                  opacity: !hasNextPage ? 0.5 : 1,
+                  cursor: !hasNextPage ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Next
+              </button>
+              
+              <button
+                onClick={() => handlePageChange(totalPages)}
+                disabled={!hasNextPage}
+                style={{
+                  ...styles.paginationButton,
+                  opacity: !hasNextPage ? 0.5 : 1,
+                  cursor: !hasNextPage ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Last
+              </button>
+            </div>
+          </div>
+        )}
+        
         {filteredBooks.length === 0 ? (
           <div style={styles.emptyState}>
             <div style={styles.emptyIcon}>📭</div>
@@ -639,5 +885,68 @@ const styles = {
     borderRadius: '50%',
     animation: 'spin 1s linear infinite',
     marginBottom: '16px'
+  },
+  inventoryHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '20px',
+    flexWrap: 'wrap',
+    gap: '12px'
+  },
+  inventoryInfo: {
+    fontSize: '14px',
+    color: '#6b7280',
+    fontWeight: '500'
+  },
+  paginationContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '24px',
+    padding: '16px 0',
+    borderTop: '1px solid #e2e8f0',
+    borderBottom: '1px solid #e2e8f0'
+  },
+  paginationInfo: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px'
+  },
+  itemsPerPageSelect: {
+    padding: '8px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    fontSize: '14px',
+    backgroundColor: 'white',
+    cursor: 'pointer'
+  },
+  paginationControls: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px'
+  },
+  paginationButton: {
+    padding: '8px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '6px',
+    backgroundColor: 'white',
+    color: '#374151',
+    fontSize: '14px',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    ':hover': {
+      backgroundColor: '#f9fafb',
+      borderColor: '#9ca3af'
+    }
+  },
+  activePage: {
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    borderColor: '#3b82f6'
+  },
+  pageNumbers: {
+    display: 'flex',
+    gap: '4px'
   }
 };

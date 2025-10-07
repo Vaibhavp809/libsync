@@ -23,6 +23,8 @@ const Sidebar = () => {
     { path: '/reservations', label: 'Reservations', icon: '📌', color: '#ef4444' },
     { path: '/overdue', label: 'Overdue Books', icon: '⏰', color: '#dc2626' },
     { path: '/reports', label: 'Reports', icon: '📈', color: '#22c55e' },
+    { path: '/eresources', label: 'E-Resources', icon: '💾', color: '#8b5cf6' },
+    { path: '/placement-news', label: 'Placement News', icon: '📰', color: '#06b6d4' },
     { path: '/notifications', label: 'Notifications', icon: '🔔', color: '#f97316' },
     { path: '/settings', label: 'Settings', icon: '⚙️', color: '#6b7280' }
   ];

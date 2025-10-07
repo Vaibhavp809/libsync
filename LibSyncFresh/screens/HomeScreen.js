@@ -101,6 +101,30 @@ export default function HomeScreen({ navigation }) {
       onPress: () => navigation.navigate('LoanHistory')
     },
     {
+      id: 'eresources',
+      title: 'E-Resources',
+      subtitle: 'Digital learning materials',
+      icon: '💻',
+      color: colors.info,
+      onPress: () => navigation.navigate('EResources')
+    },
+    {
+      id: 'placementNews',
+      title: 'Placement News',
+      subtitle: 'Career opportunities',
+      icon: '💼',
+      color: colors.warning,
+      onPress: () => navigation.navigate('PlacementNews')
+    },
+    {
+      id: 'notifications',
+      title: 'Notifications',
+      subtitle: 'Stay updated',
+      icon: '🔔',
+      color: colors.secondary,
+      onPress: () => navigation.navigate('Notifications')
+    },
+    {
       id: 'logout',
       title: 'Logout',
       subtitle: 'Sign out safely',

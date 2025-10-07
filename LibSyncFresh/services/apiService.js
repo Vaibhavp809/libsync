@@ -80,12 +80,52 @@ class ApiService {
   // Specific API methods for LibSync
 
   // Books API
-  async getBooks() {
-    return await this.get('/books');
+  async getBooks(params = {}) {
+    // Support pagination and filtering
+    const defaultParams = {
+      page: 1,
+      limit: 20,
+      sortBy: 'accessionNumber',
+      sortOrder: 'asc'
+    };
+    
+    const queryParams = { ...defaultParams, ...params };
+    
+    try {
+      const response = await this.get('/books', queryParams);
+      
+      // Validate response structure
+      if (!response) {
+        throw new Error('No response received from server');
+      }
+      
+      // Log response structure for debugging
+      console.log('API Response structure:', {
+        hasBooks: !!response.books,
+        isArray: Array.isArray(response),
+        hasPagination: !!response.pagination,
+        type: typeof response
+      });
+      
+      return response;
+    } catch (error) {
+      console.error('Error in getBooks:', error);
+      throw error;
+    }
+  }
+  
+  async getAllBooks() {
+    // For cases where we need all books (use with caution)
+    return await this.get('/books', { limit: 50000, page: 1 });
   }
 
   async searchBooks(query) {
-    return await this.get('/books/search', { query });
+    return await this.get('/books/search', { q: query });
+  }
+  
+  // Get book statistics for dashboard
+  async getBookStatistics() {
+    return await this.get('/books/statistics');
   }
 
   // Reservations API
