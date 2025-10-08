@@ -12,7 +12,8 @@ class ApiConfig {
       '172.22.132.218',
       '10.98.30.218',    // Your current network IP
       '192.168.1.131',   // Your existing server IP
-      '172.19.139.218',  // Your existing server IP
+      '172.19.139.218', 
+      '172.22.132.21', // Your existing server IP
     ];
     
     // Flag to track if we've expanded the IP list
