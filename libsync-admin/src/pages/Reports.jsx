@@ -31,7 +31,8 @@ export default function Reports() {
         return;
       }
       
-      const res = await fetch(`http://localhost:5000${path}`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'https://libsync-o0s8.onrender.com/api';
+      const res = await fetch(`${API_URL}${path.replace('/api', '')}`, {
         headers: { 
           'Authorization': `Bearer ${token}`
         }
@@ -134,7 +135,8 @@ export default function Reports() {
         return;
       }
       
-      const res = await fetch(`http://localhost:5000${path}`, {
+      const API_URL = import.meta.env.VITE_API_URL || 'https://libsync-o0s8.onrender.com/api';
+      const res = await fetch(`${API_URL}${path.replace('/api', '')}`, {
         headers: { 
           'Authorization': `Bearer ${token}`
         }

@@ -7,6 +7,8 @@ const userSchema = new mongoose.Schema({
   role: { type: String, enum: ['student', 'librarian'], default: 'student' },
   studentID: String, // Only for students
   department: String,
+  pushToken: String, // Expo push notification token
+  pushTokenUpdatedAt: Date, // When push token was last updated
   createdAt: { type: Date, default: Date.now }
 });
 

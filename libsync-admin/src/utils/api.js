@@ -1,8 +1,8 @@
 import axios from 'axios';
 
-// Get API URL from environment variable or use localhost for development
+// Get API URL from environment variable or use Render production URL
 // In Vite, environment variables must be prefixed with VITE_ and accessed via import.meta.env
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://libsync-o0s8.onrender.com/api';
 
 // Create axios instance with interceptors
 const api = axios.create({

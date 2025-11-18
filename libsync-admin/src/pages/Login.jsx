@@ -92,9 +92,9 @@ export default function Login() {
     setError('');
 
     try {
-      // Use environment variable for API URL or default to localhost
+      // Use environment variable for API URL or default to Render production URL
       // In Vite, environment variables must be prefixed with VITE_ and accessed via import.meta.env
-      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+      const API_URL = import.meta.env.VITE_API_URL || 'https://libsync-o0s8.onrender.com/api';
       const response = await axios.post(`${API_URL}/auth/login`, {
         email,
         password

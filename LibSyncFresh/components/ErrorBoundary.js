@@ -1,6 +1,5 @@
 import React from 'react';
-import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
-import { colors, typography, spacing, borderRadius } from '../styles/designSystem';
+import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
 
 class ErrorBoundary extends React.Component {
   constructor(props) {
@@ -16,28 +15,21 @@ class ErrorBoundary extends React.Component {
     console.error('ErrorBoundary caught an error:', error, errorInfo);
   }
 
+  handleReset = () => {
+    this.setState({ hasError: false, error: null });
+  };
+
   render() {
     if (this.state.hasError) {
       return (
         <View style={styles.container}>
-          <View style={styles.errorCard}>
-            <Text style={styles.errorEmoji}>⚠️</Text>
-            <Text style={styles.errorTitle}>Something went wrong</Text>
-            <Text style={styles.errorMessage}>
-              {this.state.error?.message || 'An unexpected error occurred'}
-            </Text>
-            <TouchableOpacity
-              style={styles.retryButton}
-              onPress={() => {
-                this.setState({ hasError: false, error: null });
-                if (this.props.onRetry) {
-                  this.props.onRetry();
-                }
-              }}
-            >
-              <Text style={styles.retryButtonText}>Try Again</Text>
-            </TouchableOpacity>
-          </View>
+          <Text style={styles.title}>Something went wrong</Text>
+          <Text style={styles.message}>
+            {this.state.error?.message || 'An unexpected error occurred'}
+          </Text>
+          <TouchableOpacity style={styles.button} onPress={this.handleReset}>
+            <Text style={styles.buttonText}>Try Again</Text>
+          </TouchableOpacity>
         </View>
       );
     }
@@ -51,41 +43,31 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: colors.background,
-    padding: spacing.lg,
+    padding: 20,
+    backgroundColor: '#fff',
   },
-  errorCard: {
-    backgroundColor: colors.surface,
-    padding: spacing.xl,
-    borderRadius: borderRadius.large,
-    alignItems: 'center',
-    maxWidth: 300,
+  title: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    color: '#333',
   },
-  errorEmoji: {
-    fontSize: 48,
-    marginBottom: spacing.md,
-  },
-  errorTitle: {
-    ...typography.heading2,
-    color: colors.error,
+  message: {
+    fontSize: 16,
+    color: '#666',
     textAlign: 'center',
-    marginBottom: spacing.sm,
+    marginBottom: 20,
   },
-  errorMessage: {
-    ...typography.bodyMedium,
-    color: colors.textSecondary,
-    textAlign: 'center',
-    marginBottom: spacing.lg,
+  button: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
   },
-  retryButton: {
-    backgroundColor: colors.primary,
-    paddingHorizontal: spacing.lg,
-    paddingVertical: spacing.sm,
-    borderRadius: borderRadius.medium,
-  },
-  retryButtonText: {
-    ...typography.buttonMedium,
-    color: colors.textInverse,
+  buttonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

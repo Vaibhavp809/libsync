@@ -16,8 +16,8 @@ export default function RegisterScreen({ navigation }) {
     const fetchDepartments = async () => {
       try {
         setLoadingDepartments(true);
-        const baseURL = await apiConfig.getBaseURL();
-        const response = await fetch(`${baseURL}/departments`);
+        const endpoint = await apiConfig.getEndpoint('/departments');
+        const response = await fetch(endpoint);
         const data = await response.json();
         if (data.success && data.departments) {
           setDepartments(data.departments);

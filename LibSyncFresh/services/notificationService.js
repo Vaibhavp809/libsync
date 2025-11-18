@@ -69,16 +69,19 @@ export async function registerForPushNotificationsAsync() {
 
     // Step 4: Configure Android notification channel (required for Android 8.0+)
     if (Platform.OS === 'android') {
+      // Main default channel - MAX importance for lock screen visibility
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'Default',
-        importance: Notifications.AndroidImportance.MAX, // Highest priority for notifications
+        name: 'LibSync Notifications',
+        description: 'General library notifications',
+        importance: Notifications.AndroidImportance.MAX, // Highest priority - shows on lock screen
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
         sound: 'default',
         enableVibrate: true,
         showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC, // Show on lock screen
       });
-      console.log('✅ Android notification channel configured');
+      console.log('✅ Android notification channel configured with lock screen visibility');
     }
 
     // Step 5: Get Expo push token
@@ -120,11 +123,16 @@ class NotificationService {
   // Configure notification behavior
   configure() {
     Notifications.setNotificationHandler({
-      handleNotification: async () => ({
-        shouldShowAlert: true,
-        shouldPlaySound: true,
-        shouldSetBadge: true,
-      }),
+      handleNotification: async (notification) => {
+        // Always show notifications, even when app is in foreground
+        return {
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          // For Android: ensure notification appears in system tray
+          priority: Notifications.AndroidNotificationPriority.MAX,
+        };
+      },
     });
   }
 
@@ -138,8 +146,9 @@ class NotificationService {
       if (token) {
         this.expoPushToken = token;
         await this.savePushTokenToStorage(token);
-        // TODO: Send token to your server
-        console.log('Push token registered:', token);
+        // Send token to server
+        await this.sendPushTokenToServer(token);
+        console.log('✅ Push token registered and sent to server:', token);
       }
 
       // Set up notification listeners
@@ -160,40 +169,66 @@ class NotificationService {
     let token;
 
     if (Platform.OS === 'android') {
+      // Main default channel
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'default',
+        name: 'LibSync Notifications',
+        description: 'General library notifications',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC, // Show on lock screen
       });
 
       // Create specific channels for different notification types
       await Notifications.setNotificationChannelAsync('reservations', {
         name: 'Book Reservations',
+        description: 'Notifications about book reservations',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#007bff',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
 
       await Notifications.setNotificationChannelAsync('due_dates', {
         name: 'Due Date Reminders',
-        importance: Notifications.AndroidImportance.MAX,
+        description: 'Reminders about book due dates',
+        importance: Notifications.AndroidImportance.MAX, // MAX for urgent due dates
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#ffc107',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
 
-      await Notifications.setNotificationChannelAsync('placements', {
-        name: 'Placement News',
+      await Notifications.setNotificationChannelAsync('announcements', {
+        name: 'Library Announcements',
+        description: 'Important library announcements',
         importance: Notifications.AndroidImportance.HIGH,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#28a745',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
 
       await Notifications.setNotificationChannelAsync('urgent', {
         name: 'Urgent Alerts',
+        description: 'Urgent and critical notifications',
         importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 100, 100, 100, 100, 100],
         lightColor: '#dc3545',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
     }
 
@@ -325,18 +360,16 @@ class NotificationService {
         return;
       }
 
-      const user = JSON.parse(userData);
-
       // Send token to your backend
       await apiService.post('/users/push-token', {
-        userId: user._id || user.id,
         pushToken: token,
         platform: Platform.OS
       });
 
-      console.log('Push token sent to server successfully');
+      console.log('✅ Push token sent to server successfully');
     } catch (error) {
       console.error('Failed to send push token to server:', error);
+      // Don't throw - app should continue even if token save fails
     }
   }
 

@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { View, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
@@ -8,6 +9,7 @@ import { apiService } from './services/apiService';
 import { notificationService, registerForPushNotificationsAsync } from './services/notificationService';
 import CustomHeader from './components/CustomHeader';
 import CustomDrawerContent from './components/CustomDrawerContent';
+import ErrorBoundary from './components/ErrorBoundary';
 import MyReservationsScreen from './screens/MyReservationsScreen';
 import LoginScreen from './src/screens/LoginScreen';
 import RegisterScreen from './src/screens/RegisterScreen';
@@ -26,16 +28,36 @@ import NotificationsScreen from './screens/NotificationsScreen';
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
-export default function App() {
+function App() {
+  const [isReady, setIsReady] = React.useState(false);
+
   useEffect(() => {
-    // Initialize API and Auth services
+    // Initialize API and Auth services (non-blocking)
     const initializeServices = async () => {
       try {
         // Initialize Auth service (load saved token and user)
-        const authData = await authService.initialize();
+        try {
+          await authService.initialize();
+        } catch (authError) {
+          console.warn('Auth service initialization failed:', authError.message);
+          // Continue without auth - user can login later
+        }
         
         // Initialize API service
-        await apiService.initialize();
+        try {
+          await apiService.initialize();
+        } catch (apiError) {
+          console.warn('API service initialization failed:', apiError.message);
+          // Continue - will use default production URL
+        }
+        
+        // Configure API to use the correct server (defaults to production URL)
+        try {
+          await apiConfig.getCurrentServerIP();
+        } catch (configError) {
+          console.warn('API config initialization failed:', configError.message);
+          // Continue with default production URL
+        }
         
         // Register for push notifications (non-blocking)
         // This will work in EAS dev-client builds, not in Expo Go
@@ -69,19 +91,34 @@ export default function App() {
           console.log('Notification service initialization failed:', notificationError.message);
           console.log('Continuing without push notifications...');
         }
-        
-        // Configure API to use the correct server
-        const currentIP = await apiConfig.getCurrentServerIP();
-        if (!currentIP) {
-          await apiConfig.setServerIP('172.22.132.218');
-        }
       } catch (error) {
         console.error('Service initialization failed:', error);
+        // Don't crash the app - continue with default configuration
       }
     };
     
-    initializeServices();
+    // Initialize services asynchronously without blocking app render
+    initializeServices()
+      .then(() => {
+        setIsReady(true);
+      })
+      .catch(err => {
+        console.error('Fatal initialization error:', err);
+        // App will still render even if initialization fails
+        setIsReady(true);
+      });
   }, []);
+
+  // Show loading screen while initializing
+  if (!isReady) {
+    return (
+      <ErrorBoundary>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
+          <Text style={{ fontSize: 18, color: '#333' }}>Loading LibSync...</Text>
+        </View>
+      </ErrorBoundary>
+    );
+  }
 
   // Create a drawer navigator for authenticated screens
   const DrawerNavigator = () => {
@@ -140,15 +177,19 @@ export default function App() {
   };
 
   return (
-    <NavigationContainer>
-      <Stack.Navigator 
-        initialRouteName="Login"
-        screenOptions={{ headerShown: false }}
-      >
-        <Stack.Screen name="Login" component={LoginScreen} />
-        <Stack.Screen name="Register" component={RegisterScreen} />
-        <Stack.Screen name="Main" component={DrawerNavigator} />
-      </Stack.Navigator>
-    </NavigationContainer>
+    <ErrorBoundary>
+      <NavigationContainer>
+        <Stack.Navigator 
+          initialRouteName="Login"
+          screenOptions={{ headerShown: false }}
+        >
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Main" component={DrawerNavigator} />
+        </Stack.Navigator>
+      </NavigationContainer>
+    </ErrorBoundary>
   );
 }
+
+export default App;

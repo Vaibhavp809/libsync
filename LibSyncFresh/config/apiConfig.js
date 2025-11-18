@@ -4,137 +4,60 @@ import { Alert } from 'react-native';
 class ApiConfig {
   constructor() {
     this.baseURL = null;
-    this.port = '5000';
-    this.defaultIPs = [
-      '127.0.0.1',       // localhost first (for local development)
-      'localhost',       // localhost alias
-      '10.0.2.2',        // Android emulator host access
-      '172.22.132.218',
-      '10.98.30.218',,'172.27.125.74',    // Your current network IP
-      '192.168.1.131',   // Your existing server IP
-      '172.19.139.218', 
-      '172.22.132.21',
-      '10.76.154.74', // Your existing server IP
-    ];
-    
-    // Flag to track if we've expanded the IP list
-    this.expandedIPs = false;
+    // Production Render URL (HTTPS)
+    this.productionURL = 'https://libsync-o0s8.onrender.com';
   }
 
-  // Get stored server IP or detect automatically
+  // Get base URL - uses production URL by default, or custom URL if set
   async getBaseURL() {
-    // Always try to auto-detect first
-    console.log('Attempting to auto-detect server...');
-    const detectedIP = await this.autoDetectServer();
-    if (detectedIP) {
-      this.baseURL = `http://${detectedIP}:${this.port}`;
-      console.log('Auto-detected server at:', this.baseURL);
-      await AsyncStorage.setItem('server_ip', detectedIP);
-      return this.baseURL;
-    }
-
-    // If auto-detection fails, try stored IP as fallback
+    // Check if a custom URL/IP is stored (for development/testing)
     try {
-      const storedIP = await AsyncStorage.getItem('server_ip');
-      console.log('Falling back to stored IP from AsyncStorage:', storedIP);
-      if (storedIP) {
-        this.baseURL = `http://${storedIP}:${this.port}`;
-        console.log('Using stored IP, baseURL set to:', this.baseURL);
-        return this.baseURL;
+      const storedURL = await AsyncStorage.getItem('server_ip');
+      if (storedURL) {
+        // Check if stored value is a full URL (production) or IP address (local)
+        if (storedURL.startsWith('http://') || storedURL.startsWith('https://')) {
+          this.baseURL = storedURL;
+          console.log('Using stored custom URL:', this.baseURL);
+          return this.baseURL;
+        } else {
+          // Legacy IP address format - convert to HTTP URL
+          this.baseURL = `http://${storedURL}:5000`;
+          console.log('Using stored IP address:', this.baseURL);
+          return this.baseURL;
+        }
       }
     } catch (error) {
-      console.log('No stored IP found:', error.message);
+      console.log('Error reading stored URL:', error.message);
     }
 
-    // If both auto-detect and stored IP fail, use default IP
-    console.log('Both auto-detection and stored IP failed, using default IP...');
-
-    // Fallback to first default IP
-    console.log('Auto-detection failed, using fallback IP:', this.defaultIPs[0]);
-    this.baseURL = `http://${this.defaultIPs[0]}:${this.port}`;
-    console.log('Fallback baseURL set to:', this.baseURL);
+    // Default to production URL
+    this.baseURL = this.productionURL;
+    console.log('Using production Render URL:', this.baseURL);
     return this.baseURL;
   }
 
-  // Get local network IP addresses for testing
-  expandIPList() {
-    if (this.expandedIPs) return;
-    
-    try {
-      // Try to get local network IP ranges
-      const commonRanges = [
-        '192.168.1.',   // Most common home router range
-        '192.168.0.',   // Another common range
-        '10.0.0.',      // Corporate/VPN range
-        '172.16.',      // Another private range
-      ];
-      
-      // Add common IPs from each range
-      commonRanges.forEach(range => {
-        [1, 100, 101, 102, 103, 104, 105].forEach(last => {
-          const ip = `${range}${last}`;
-          if (!this.defaultIPs.includes(ip)) {
-            this.defaultIPs.push(ip);
-          }
-        });
-      });
-      
-      this.expandedIPs = true;
-    } catch (error) {
-      console.log('Could not expand IP ranges:', error.message);
-    }
-  }
 
-  // Auto-detect server by testing multiple IPs
-  async autoDetectServer() {
-    console.log('Auto-detecting server...');
-    
-    // Expand IP list before testing
-    this.expandIPList();
-    
-    for (const ip of this.defaultIPs) {
-      try {
-        const testURL = `http://${ip}:${this.port}/api/health`;
-        
-        // Simple fetch with basic timeout for React Native compatibility
-        let timeoutId;
-        const fetchPromise = fetch(testURL, {
-          method: 'GET',
-        });
-        
-        const timeoutPromise = new Promise((_, reject) => {
-          timeoutId = setTimeout(() => reject(new Error('Request timeout')), 3000);
-        });
-        
-        const response = await Promise.race([fetchPromise, timeoutPromise]);
-        clearTimeout(timeoutId);
-        
-        if (response.ok) {
-          console.log(`Server found at ${ip}`);
-          return ip;
+  // Manually set server URL (for development/testing)
+  async setServerIP(ipOrUrl) {
+    try {
+      let testURL;
+      let baseURL;
+      
+      // Check if it's a full URL (production) or IP address
+      if (ipOrUrl.startsWith('http://') || ipOrUrl.startsWith('https://')) {
+        // It's a full URL
+        testURL = `${ipOrUrl}/api/health`;
+        baseURL = ipOrUrl;
+      } else {
+        // It's an IP address (local development) - convert to HTTP URL
+        if (!this.isValidIP(ipOrUrl)) {
+          throw new Error('Invalid IP address format');
         }
-      } catch (error) {
-        console.log(`Failed to connect to ${ip}: ${error.message}`);
-        continue;
+        testURL = `http://${ipOrUrl}:5000/api/health`;
+        baseURL = `http://${ipOrUrl}:5000`;
       }
-    }
-    
-    console.log('No server auto-detected');
-    return null;
-  }
-
-  // Manually set server IP
-  async setServerIP(ip) {
-    try {
-      // Validate IP format
-      if (!this.isValidIP(ip)) {
-        throw new Error('Invalid IP address format');
-      }
-
-      // Test connection
-      const testURL = `http://${ip}:${this.port}/api/health`;
       
-      // Simple fetch with basic timeout for React Native compatibility
+      // Test connection
       let timeoutId;
       const fetchPromise = fetch(testURL, {
         method: 'GET',
@@ -152,24 +75,29 @@ class ApiConfig {
       }
 
       // Save if successful
-      this.baseURL = `http://${ip}:${this.port}`;
-      await AsyncStorage.setItem('server_ip', ip);
+      this.baseURL = baseURL;
+      await AsyncStorage.setItem('server_ip', ipOrUrl);
       return true;
     } catch (error) {
-      Alert.alert('Connection Error', `Failed to connect to ${ip}: ${error.message}`);
+      Alert.alert('Connection Error', `Failed to connect to ${ipOrUrl}: ${error.message}`);
       return false;
     }
   }
 
-  // Get current server IP
+  // Get current server URL/IP
   async getCurrentServerIP() {
-    const storedIP = await AsyncStorage.getItem('server_ip');
-    return storedIP || this.defaultIPs[0];
+    try {
+      const storedURL = await AsyncStorage.getItem('server_ip');
+      return storedURL || this.productionURL;
+    } catch (error) {
+      return this.productionURL;
+    }
   }
 
-  // Reset to auto-detection
+  // Reset to production URL
   async resetServerConfig() {
     await AsyncStorage.removeItem('server_ip');
+    await AsyncStorage.removeItem('use_production_api');
     this.baseURL = null;
     return await this.getBaseURL();
   }

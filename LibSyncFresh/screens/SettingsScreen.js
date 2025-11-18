@@ -31,15 +31,15 @@ export default function SettingsScreen({ navigation }) {
     }
   };
 
-  const handleAutoDetect = async () => {
+  const handleResetToProduction = async () => {
     setLoading(true);
     try {
       const newBaseURL = await apiConfig.resetServerConfig();
       const newIP = await apiConfig.getCurrentServerIP();
       setServerIP(newIP);
-      Alert.alert('Success', `Server auto-detected at ${newIP}`);
+      Alert.alert('Success', `Reset to production server: ${newIP}`);
     } catch (error) {
-      Alert.alert('Auto-Detection Failed', 'Could not automatically find server. Please set IP manually.');
+      Alert.alert('Reset Failed', 'Could not reset to production server.');
     }
     setLoading(false);
   };
@@ -66,7 +66,15 @@ export default function SettingsScreen({ navigation }) {
 
     setTesting(true);
     try {
-      const testURL = `http://${serverIP.trim()}:5000/api/health`;
+      // Handle both IP addresses and full URLs
+      let testURL;
+      if (serverIP.trim().startsWith('http://') || serverIP.trim().startsWith('https://')) {
+        // It's a full URL (production)
+        testURL = `${serverIP.trim()}/api/health`;
+      } else {
+        // It's an IP address (local development)
+        testURL = `http://${serverIP.trim()}:5000/api/health`;
+      }
       
       // Simple fetch with basic timeout for React Native compatibility
       let timeoutId;
@@ -121,24 +129,24 @@ export default function SettingsScreen({ navigation }) {
         {autoDetect ? (
           <View style={styles.autoSection}>
             <Text style={styles.description}>
-              The app will automatically find your LibSync server on the network.
+              The app uses the production server by default. Click below to reset to production.
             </Text>
             <Button
-              title={loading ? 'Detecting...' : 'Auto-Detect Server'}
-              onPress={handleAutoDetect}
+              title={loading ? 'Resetting...' : 'Reset to Production'}
+              onPress={handleResetToProduction}
               disabled={loading}
             />
             {loading && <ActivityIndicator style={styles.loader} />}
           </View>
         ) : (
           <View style={styles.manualSection}>
-            <Text style={styles.label}>Server IP Address:</Text>
+            <Text style={styles.label}>Server URL or IP Address:</Text>
             <TextInput
               style={styles.input}
               value={serverIP}
               onChangeText={setServerIP}
-              placeholder="e.g., 192.168.1.100"
-              keyboardType="numeric"
+              placeholder="e.g., https://libsync-o0s8.onrender.com or 192.168.1.100"
+              keyboardType="default"
             />
             
             <View style={styles.buttonRow}>
@@ -159,8 +167,7 @@ export default function SettingsScreen({ navigation }) {
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Current Configuration</Text>
-        <Text style={styles.info}>Server IP: {serverIP}</Text>
-        <Text style={styles.info}>Port: 5000</Text>
+        <Text style={styles.info}>Server URL: {serverIP || 'https://libsync-o0s8.onrender.com'}</Text>
       </View>
 
       <View style={styles.section}>
@@ -174,10 +181,10 @@ export default function SettingsScreen({ navigation }) {
       <View style={styles.section}>
         <Text style={styles.helpTitle}>Help</Text>
         <Text style={styles.helpText}>
-          • Auto-detect will scan common IP addresses on your network{'\n'}
-          • If auto-detect fails, enter your server's IP address manually{'\n'}
-          • Ask your IT admin for the LibSync server IP if needed{'\n'}
-          • The server must be running on port 5000
+          • The app uses the production server by default{'\n'}
+          • For local development, enter your server's IP address (e.g., 192.168.1.100){'\n'}
+          • For production, enter the full URL (e.g., https://libsync-o0s8.onrender.com){'\n'}
+          • Local IP addresses will use port 5000 automatically
         </Text>
       </View>
     </ScrollView>

@@ -145,6 +145,21 @@ export default function ApiSettingsScreen() {
     }
   };
 
+  const setProductionURL = async () => {
+    try {
+      const success = await apiConfig.setServerIP('https://libsync-o0s8.onrender.com');
+      if (success) {
+        await loadCurrentSettings();
+        Alert.alert(
+          'Production URL Set ✅',
+          'The app will now use the production Render backend: https://libsync-o0s8.onrender.com'
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to set production URL');
+    }
+  };
+
   if (loading) {
     return (
       <SafeAreaView style={styles.container}>
@@ -270,6 +285,22 @@ export default function ApiSettingsScreen() {
                   {testingConnection ? 'Testing Connection...' : 'Test Server Connection'}
                 </Text>
                 <Text style={styles.toolDescription}>Check API endpoints and diagnose connection issues</Text>
+              </View>
+            </View>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.toolButton}
+            onPress={setProductionURL}
+            activeOpacity={0.8}
+          >
+            <View style={styles.toolButtonContent}>
+              <View style={styles.toolIconContainer}>
+                <Text style={styles.toolIcon}>🌐</Text>
+              </View>
+              <View style={styles.toolTextContainer}>
+                <Text style={styles.toolTitle}>Use Production Server</Text>
+                <Text style={styles.toolDescription}>Connect to Render production backend (https://libsync-o0s8.onrender.com)</Text>
               </View>
             </View>
           </TouchableOpacity>

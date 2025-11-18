@@ -140,6 +140,15 @@ cron.schedule('0 9 * * *', async () => {
           });
           await notification.save();
           
+          // Send push notification for overdue reminder
+          try {
+            const { sendPushNotificationForNotification } = require('./utils/pushNotifications');
+            await sendPushNotificationForNotification(notification);
+          } catch (pushError) {
+            console.error('Failed to send push notification for overdue reminder:', pushError);
+            // Continue even if push notification fails
+          }
+          
           loan.lastReminderSentAt = now;
           await loan.save();
           
@@ -200,6 +209,15 @@ cron.schedule('0 8 * * *', async () => {
           status: 'active'
         });
         await notification.save();
+        
+        // Send push notification for due today reminder
+        try {
+          const { sendPushNotificationForNotification } = require('./utils/pushNotifications');
+          await sendPushNotificationForNotification(notification);
+        } catch (pushError) {
+          console.error('Failed to send push notification for due today reminder:', pushError);
+          // Continue even if push notification fails
+        }
         
         console.log(`Created due today notification for ${loan.student.name || loan.student.studentID} for book: ${loan.book?.title}`);
       } catch (e) {

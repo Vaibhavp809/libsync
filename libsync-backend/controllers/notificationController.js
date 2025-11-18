@@ -1,5 +1,6 @@
 const Notification = require('../models/Notification');
 const User = require('../models/User');
+const { sendPushNotificationForNotification } = require('../utils/pushNotifications');
 
 exports.createNotification = async (req, res) => {
   try {
@@ -35,6 +36,25 @@ exports.createNotification = async (req, res) => {
     // Create single notification with proper targeting
     const notification = new Notification(notificationData);
     await notification.save();
+
+    // Send push notifications to targeted users (non-blocking)
+    try {
+      sendPushNotificationForNotification(notification)
+        .then(result => {
+          if (result.success) {
+            console.log(`✅ Push notifications sent: ${result.sent || 0} users notified`);
+          } else {
+            console.warn(`⚠️ Push notification failed: ${result.error || 'Unknown error'}`);
+          }
+        })
+        .catch(err => {
+          console.error('Error sending push notifications:', err);
+          // Don't fail the request if push notification fails
+        });
+    } catch (pushError) {
+      console.error('Error setting up push notifications:', pushError);
+      // Continue even if push notification setup fails
+    }
 
     res.status(201).json({
       message: 'Notification created successfully',

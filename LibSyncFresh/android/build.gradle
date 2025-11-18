@@ -33,5 +33,28 @@ allprojects {
   }
 }
 
+subprojects {
+  afterEvaluate { project ->
+    if (project.hasProperty("android")) {
+      def android = project.extensions.findByName("android")
+      if (android != null) {
+        // Set compileSdk if not already set
+        if (android.compileSdk == null && android.compileSdkVersion == null) {
+          android.compileSdk rootProject.ext.compileSdkVersion
+        }
+        // Set defaultConfig properties if not already set
+        if (android.defaultConfig != null) {
+          if (android.defaultConfig.minSdkVersion == null) {
+            android.defaultConfig.minSdkVersion rootProject.ext.minSdkVersion
+          }
+          if (android.defaultConfig.targetSdkVersion == null) {
+            android.defaultConfig.targetSdkVersion rootProject.ext.targetSdkVersion
+          }
+        }
+      }
+    }
+  }
+}
+
 apply plugin: "expo-root-project"
 apply plugin: "com.facebook.react.rootproject"

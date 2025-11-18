@@ -8,11 +8,21 @@ class ApiService {
 
   // Initialize base URL
   async initialize() {
-    if (!this.baseURL) {
-      this.baseURL = await apiConfig.getBaseURL();
-      const fullBaseURL = this.baseURL + '/api';
-      axios.defaults.baseURL = fullBaseURL;
+    // Always refresh base URL to ensure we have the latest (production/local)
+    this.baseURL = await apiConfig.getBaseURL();
+    
+    // Handle both HTTP (local) and HTTPS (production) URLs
+    let fullBaseURL;
+    if (this.baseURL.startsWith('http://') || this.baseURL.startsWith('https://')) {
+      // Full URL already includes protocol
+      fullBaseURL = this.baseURL + '/api';
+    } else {
+      // Legacy IP address format
+      fullBaseURL = `http://${this.baseURL}/api`;
     }
+    
+    axios.defaults.baseURL = fullBaseURL;
+    console.log('API Service initialized with base URL:', fullBaseURL);
     return this.baseURL;
   }
 

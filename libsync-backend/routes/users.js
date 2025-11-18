@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const verifyToken = require('../middleware/auth');
 const verifyAdmin = require('../middleware/adminAuth');
+const User = require('../models/User');
 const {
   listStudents,
   createStudent,
@@ -71,6 +72,32 @@ router.get('/student/:studentID', async (req, res) => {
     });
   } catch (err) {
     console.error('Error fetching student details:', err);
+    res.status(500).json({ message: err.message });
+  }
+});
+
+// Save push notification token (for students)
+router.post('/push-token', async (req, res) => {
+  try {
+    const { pushToken } = req.body;
+    const userId = req.user.id || req.user._id;
+
+    if (!pushToken) {
+      return res.status(400).json({ message: 'Push token is required' });
+    }
+
+    // Update user's push token
+    await User.findByIdAndUpdate(userId, {
+      pushToken: pushToken,
+      pushTokenUpdatedAt: new Date()
+    });
+
+    res.json({ 
+      message: 'Push token saved successfully',
+      success: true
+    });
+  } catch (err) {
+    console.error('Error saving push token:', err);
     res.status(500).json({ message: err.message });
   }
 });

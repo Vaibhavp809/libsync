@@ -1,4 +1,13 @@
 <resources xmlns:tools="http://schemas.android.com/tools">
+  <!-- Define Theme.EdgeToEdge for edge-to-edge support -->
+  <style name="Theme.EdgeToEdge" parent="Theme.AppCompat.Light.NoActionBar">
+    <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
+    <item name="android:statusBarColor">@android:color/transparent</item>
+    <item name="android:navigationBarColor">@android:color/transparent</item>
+    <item name="android:windowLightStatusBar">true</item>
+    <item name="android:windowLightNavigationBar">true</item>
+  </style>
+  
   <style name="AppTheme" parent="Theme.EdgeToEdge">
     <item name="android:editTextBackground">@drawable/rn_edit_text_material</item>
     <item name="colorPrimary">@color/colorPrimary</item>

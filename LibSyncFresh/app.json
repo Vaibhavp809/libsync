@@ -8,8 +8,7 @@
     "userInterfaceStyle": "light",
     "experiments": {
       "typedRoutes": true,
-      "tsconfigPaths": true,
-      "newArchitecture": true
+      "tsconfigPaths": true
     },
     "jsEngine": "hermes",
     "splash": {
