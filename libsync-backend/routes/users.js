@@ -86,18 +86,36 @@ router.post('/push-token', async (req, res) => {
       return res.status(400).json({ message: 'Push token is required' });
     }
 
+    console.log(`📱 Saving push token for user: ${userId}`);
+
     // Update user's push token
-    await User.findByIdAndUpdate(userId, {
-      pushToken: pushToken,
-      pushTokenUpdatedAt: new Date()
-    });
+    const updatedUser = await User.findByIdAndUpdate(
+      userId,
+      {
+        pushToken: pushToken,
+        pushTokenUpdatedAt: new Date()
+      },
+      { new: true }
+    ).select('name studentID pushToken');
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: 'User not found' });
+    }
+
+    console.log(`✅ Push token saved for user: ${updatedUser.name || updatedUser.studentID || userId}`);
 
     res.json({ 
       message: 'Push token saved successfully',
-      success: true
+      success: true,
+      user: {
+        id: updatedUser._id,
+        name: updatedUser.name,
+        studentID: updatedUser.studentID,
+        hasPushToken: !!updatedUser.pushToken
+      }
     });
   } catch (err) {
-    console.error('Error saving push token:', err);
+    console.error('❌ Error saving push token:', err);
     res.status(500).json({ message: err.message });
   }
 });

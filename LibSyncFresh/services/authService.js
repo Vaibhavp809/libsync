@@ -131,6 +131,21 @@ class AuthService {
         
         // Set axios default header
         axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
+        
+        // Send push token to server after successful login
+        try {
+          const { notificationService } = require('./notificationService');
+          const savedToken = await notificationService.getSavedPushToken();
+          if (savedToken) {
+            await notificationService.sendPushTokenToServer(savedToken);
+            console.log('✅ Push token sent to server after login');
+          } else {
+            console.log('ℹ️ No saved push token found, will be sent when notification service initializes');
+          }
+        } catch (pushError) {
+          console.warn('⚠️ Failed to send push token after login:', pushError.message);
+          // Don't fail login if push token send fails
+        }
       } else {
         throw new Error('Invalid response: missing token or user data');
       }

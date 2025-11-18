@@ -146,21 +146,29 @@ class NotificationService {
       if (token) {
         this.expoPushToken = token;
         await this.savePushTokenToStorage(token);
-        // Send token to server
-        await this.sendPushTokenToServer(token);
-        console.log('✅ Push token registered and sent to server:', token);
+        console.log('✅ Push token obtained:', token.substring(0, 20) + '...');
+        
+        // Send token to server (will retry if user not logged in yet)
+        try {
+          await this.sendPushTokenToServer(token);
+        } catch (error) {
+          console.warn('⚠️ Could not send push token to server (user may not be logged in yet):', error.message);
+          // Don't fail initialization - token will be sent after login
+        }
+      } else {
+        console.warn('⚠️ No push token obtained - notifications may not work');
       }
 
       // Set up notification listeners
       this.setupNotificationListeners();
       
       this.isInitialized = true;
-      console.log('Notification service initialized successfully');
+      console.log('✅ Notification service initialized successfully');
 
     } catch (error) {
-      console.error('Failed to initialize notification service:', error);
+      console.error('❌ Failed to initialize notification service:', error);
       this.isInitialized = false;
-      throw error;
+      // Don't throw - app should continue even if notifications fail
     }
   }
 
@@ -351,25 +359,32 @@ class NotificationService {
   // Send push token to your server
   async sendPushTokenToServer(token) {
     try {
-      if (!token) return;
+      if (!token) {
+        console.warn('⚠️ No push token provided');
+        return;
+      }
 
       // Get user data to associate token with user
       const userData = await AsyncStorage.getItem('user_data');
       if (!userData) {
-        console.log('No user data found, cannot send push token to server');
-        return;
+        console.log('ℹ️ No user data found, cannot send push token to server (user not logged in)');
+        throw new Error('User not logged in');
       }
 
+      console.log('📤 Sending push token to server...');
+
       // Send token to your backend
-      await apiService.post('/users/push-token', {
+      const response = await apiService.post('/users/push-token', {
         pushToken: token,
         platform: Platform.OS
       });
 
-      console.log('✅ Push token sent to server successfully');
+      console.log('✅ Push token sent to server successfully:', response);
+      return response;
     } catch (error) {
-      console.error('Failed to send push token to server:', error);
-      // Don't throw - app should continue even if token save fails
+      console.error('❌ Failed to send push token to server:', error.message);
+      // Re-throw so caller knows it failed
+      throw error;
     }
   }
 

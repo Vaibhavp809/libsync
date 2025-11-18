@@ -138,6 +138,15 @@ async function sendPushNotificationsToMultiple(pushTokens, title, body, data = {
  */
 async function sendPushNotificationForNotification(notification) {
   try {
+    console.log('📤 Attempting to send push notification for:', {
+      title: notification.title,
+      type: notification.type,
+      recipients: notification.recipients,
+      recipient: notification.recipient,
+      targetUsers: notification.targetUsers,
+      department: notification.department
+    });
+
     let targetUsers = [];
     let channelId = 'default';
 
@@ -164,31 +173,45 @@ async function sendPushNotificationForNotification(notification) {
       // Get all students with push tokens
       targetUsers = await User.find({
         role: 'student',
-        pushToken: { $exists: true, $ne: null }
-      }).select('pushToken');
+        pushToken: { $exists: true, $ne: null, $ne: '' }
+      }).select('pushToken name studentID');
+      console.log(`Found ${targetUsers.length} students with push tokens for 'all' notification`);
     } else if (notification.recipients === 'students' && notification.department) {
       // Get students in specific department with push tokens
       targetUsers = await User.find({
         role: 'student',
         department: notification.department,
-        pushToken: { $exists: true, $ne: null }
-      }).select('pushToken');
-    } else if (notification.recipients === 'specific' && notification.targetUsers) {
+        pushToken: { $exists: true, $ne: null, $ne: '' }
+      }).select('pushToken name studentID');
+      console.log(`Found ${targetUsers.length} students with push tokens in department ${notification.department}`);
+    } else if (notification.recipients === 'specific' && notification.targetUsers && notification.targetUsers.length > 0) {
       // Get specific users with push tokens
       targetUsers = await User.find({
         _id: { $in: notification.targetUsers },
-        pushToken: { $exists: true, $ne: null }
-      }).select('pushToken');
+        pushToken: { $exists: true, $ne: null, $ne: '' }
+      }).select('pushToken name studentID');
+      console.log(`Found ${targetUsers.length} specific users with push tokens out of ${notification.targetUsers.length} target users`);
     } else if (notification.recipient) {
-      // Single recipient
-      const user = await User.findById(notification.recipient).select('pushToken');
+      // Single recipient - handle both ObjectId and string
+      const recipientId = notification.recipient._id || notification.recipient;
+      const user = await User.findById(recipientId).select('pushToken name studentID');
       if (user && user.pushToken) {
         targetUsers = [user];
+        console.log(`Found single recipient with push token: ${user.name || user.studentID}`);
+      } else {
+        console.log(`Single recipient ${recipientId} has no push token`);
       }
+    } else {
+      console.warn('⚠️ No valid targeting found for notification:', {
+        recipients: notification.recipients,
+        recipient: notification.recipient,
+        targetUsers: notification.targetUsers,
+        department: notification.department
+      });
     }
 
     if (targetUsers.length === 0) {
-      console.log('No users with push tokens found for notification');
+      console.warn('⚠️ No users with push tokens found for notification');
       return { success: false, error: 'No users with push tokens' };
     }
 
@@ -198,9 +221,11 @@ async function sendPushNotificationForNotification(notification) {
       .filter(token => token && token.trim() !== '');
 
     if (pushTokens.length === 0) {
-      console.log('No valid push tokens found');
+      console.warn('⚠️ No valid push tokens found after filtering');
       return { success: false, error: 'No valid push tokens' };
     }
+
+    console.log(`📱 Sending push notifications to ${pushTokens.length} users via channel: ${channelId}`);
 
     // Send notifications
     const result = await sendPushNotificationsToMultiple(
@@ -216,10 +241,19 @@ async function sendPushNotificationForNotification(notification) {
       channelId
     );
 
-    console.log(`Push notification sent to ${result.sent || 0} users for notification: ${notification.title}`);
+    if (result.success) {
+      console.log(`✅ Push notification sent successfully to ${result.sent || 0} users for notification: ${notification.title}`);
+    } else {
+      console.error(`❌ Push notification failed: ${result.error || 'Unknown error'}`);
+      if (result.errors) {
+        console.error('Push notification errors:', result.errors);
+      }
+    }
+
     return result;
   } catch (error) {
-    console.error('Error sending push notification for notification:', error);
+    console.error('❌ Error sending push notification for notification:', error);
+    console.error('Error stack:', error.stack);
     return { success: false, error: error.message };
   }
 }
