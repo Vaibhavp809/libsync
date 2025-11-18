@@ -1,0 +1,31 @@
+{
+  "build": {
+    "development": {
+      "developmentClient": true,
+      "distribution": "internal",
+      "env": {
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      }
+    },
+    "preview": {
+      "distribution": "internal",
+      "env": {
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      }
+    },
+    "production": {
+      "env": {
+        "NPM_CONFIG_LEGACY_PEER_DEPS": "true"
+      }
+    }
+  }
+}
+
+// To build a development client APK for Android:
+// Run: eas build --profile development --platform android
+//
+// This will generate a dev-client APK that supports push notifications
+// and can be installed on physical devices for testing.
+//
+// After building, install the APK on your device and run: expo start --dev-client
+

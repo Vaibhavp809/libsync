@@ -1,0 +1,54 @@
+{
+  "expo": {
+    "name": "LibSyncFresh",
+    "slug": "libsync",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "experiments": {
+      "typedRoutes": true,
+      "tsconfigPaths": true,
+      "newArchitecture": true
+    },
+    "jsEngine": "hermes",
+    "splash": {
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.Libsync.libsync",
+      "googleServicesFile": "./android/google-services.json",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#ffffff"
+      },
+      "edgeToEdgeEnabled": true,
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "Allow LibSync to access your camera to scan barcodes and QR codes."
+        }
+      ]
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "3fe02101-dc23-431a-b568-c66e0d124246"
+      }
+    },
+    "owner": "vaibhav20589"
+  }
+}
