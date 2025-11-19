@@ -8,18 +8,28 @@ html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
-  zoom: 1; /* Prevent browser zoom issues */
 }
 
-/* Prevent unwanted zoom on desktop */
+/* Set default zoom to 80% for desktop to prevent congestion */
+/* This makes the UI less congested and more comfortable to work with */
 @media (min-width: 769px) {
+  html {
+    zoom: 0.8; /* 80% zoom - matches the view that looks good */
+  }
+  
+  body {
+    zoom: 0.8;
+  }
+}
+
+/* Keep 100% zoom on mobile for proper touch targets and readability */
+@media (max-width: 768px) {
   html {
     zoom: 1;
   }
   
   body {
     zoom: 1;
-    transform: scale(1);
   }
 }
 
