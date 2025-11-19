@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
+import './Sidebar.css';
 
-const Sidebar = () => {
+const Sidebar = ({ isMobileOpen, onClose }) => {
   const location = useLocation();
   const navigate = useNavigate();
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -43,10 +44,24 @@ const Sidebar = () => {
   };
 
   return (
-    <div style={{
-      ...styles.sidebar,
-      width: isCollapsed ? '80px' : '280px'
-    }}>
+    <>
+      {/* Mobile Overlay */}
+      {isMobileOpen && (
+        <div 
+          className="sidebar-overlay"
+          onClick={onClose}
+          aria-hidden="true"
+        />
+      )}
+      
+      {/* Sidebar */}
+      <div 
+        className={`sidebar ${isMobileOpen ? 'sidebar-open' : ''} ${isCollapsed ? 'sidebar-collapsed' : ''}`}
+        style={{
+          ...styles.sidebar,
+          width: isCollapsed ? '80px' : '280px'
+        }}
+      >
       {/* Header */}
       <div style={styles.header}>
         <Link to="/dashboard" style={styles.logoLink}>
@@ -56,11 +71,17 @@ const Sidebar = () => {
           </div>
         </Link>
         <button 
-          onClick={() => setIsCollapsed(!isCollapsed)}
+          onClick={() => {
+            if (window.innerWidth <= 768) {
+              onClose && onClose();
+            } else {
+              setIsCollapsed(!isCollapsed);
+            }
+          }}
           style={styles.collapseButton}
           title={isCollapsed ? 'Expand' : 'Collapse'}
         >
-          {isCollapsed ? '→' : '←'}
+          {window.innerWidth <= 768 ? '✕' : (isCollapsed ? '→' : '←')}
         </button>
       </div>
 
@@ -71,6 +92,11 @@ const Sidebar = () => {
             <li key={item.path} style={styles.menuItem}>
               <Link 
                 to={item.path} 
+                onClick={() => {
+                  if (window.innerWidth <= 768) {
+                    onClose && onClose();
+                  }
+                }}
                 style={{
                   ...styles.menuLink,
                   ...(isActive(item.path) && styles.activeLink),
@@ -112,7 +138,8 @@ const Sidebar = () => {
           </button>
         </div>
       )}
-    </div>
+      </div>
+    </>
   );
 };
 
