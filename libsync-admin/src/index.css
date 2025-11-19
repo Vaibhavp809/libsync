@@ -10,29 +10,6 @@ html {
   -ms-text-size-adjust: 100%;
 }
 
-/* Set default zoom to 80% for desktop to prevent congestion */
-/* This makes the UI less congested and more comfortable to work with */
-@media (min-width: 769px) {
-  html {
-    zoom: 0.8; /* 80% zoom - matches the view that looks good */
-  }
-  
-  body {
-    zoom: 0.8;
-  }
-}
-
-/* Keep 100% zoom on mobile for proper touch targets and readability */
-@media (max-width: 768px) {
-  html {
-    zoom: 1;
-  }
-  
-  body {
-    zoom: 1;
-  }
-}
-
 body {
   margin: 0;
   padding: 0;
