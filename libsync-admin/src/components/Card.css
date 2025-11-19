@@ -1,0 +1,53 @@
+/* Responsive styles for Card component */
+@media (max-width: 768px) {
+  .card {
+    padding: 16px !important;
+    border-radius: 12px !important;
+  }
+  
+  .card-header {
+    gap: 12px !important;
+    margin-bottom: 16px !important;
+  }
+  
+  .card-icon {
+    width: 40px !important;
+    height: 40px !important;
+    font-size: 20px !important;
+  }
+  
+  .card-title {
+    font-size: 16px !important;
+  }
+  
+  .card-subtitle {
+    font-size: 13px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .card {
+    padding: 12px !important;
+    border-radius: 8px !important;
+  }
+  
+  .card-header {
+    gap: 10px !important;
+    margin-bottom: 12px !important;
+  }
+  
+  .card-icon {
+    width: 36px !important;
+    height: 36px !important;
+    font-size: 18px !important;
+  }
+  
+  .card-title {
+    font-size: 15px !important;
+  }
+  
+  .card-subtitle {
+    font-size: 12px !important;
+  }
+}
+

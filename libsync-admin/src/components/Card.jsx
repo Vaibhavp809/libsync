@@ -1,8 +1,10 @@
 import React from 'react';
+import './Card.css';
 
 const Card = ({ children, title, subtitle, icon, color = '#3b82f6', onClick, style = {} }) => {
   return (
     <div 
+      className="card"
       style={{
         ...styles.card,
         ...(onClick && styles.clickableCard),
@@ -11,22 +13,25 @@ const Card = ({ children, title, subtitle, icon, color = '#3b82f6', onClick, sty
       onClick={onClick}
     >
       {title && (
-        <div style={styles.cardHeader}>
+        <div style={styles.cardHeader} className="card-header">
           {icon && (
-            <div style={{
-              ...styles.cardIcon,
-              backgroundColor: color
-            }}>
+            <div 
+              className="card-icon"
+              style={{
+                ...styles.cardIcon,
+                backgroundColor: color
+              }}
+            >
               {icon}
             </div>
           )}
-          <div style={styles.cardTitleSection}>
-            <h3 style={styles.cardTitle}>{title}</h3>
-            {subtitle && <p style={styles.cardSubtitle}>{subtitle}</p>}
+          <div style={styles.cardTitleSection} className="card-title-section">
+            <h3 style={styles.cardTitle} className="card-title">{title}</h3>
+            {subtitle && <p style={styles.cardSubtitle} className="card-subtitle">{subtitle}</p>}
           </div>
         </div>
       )}
-      <div style={styles.cardContent}>
+      <div style={styles.cardContent} className="card-content">
         {children}
       </div>
     </div>

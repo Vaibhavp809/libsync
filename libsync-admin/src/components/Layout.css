@@ -1,0 +1,40 @@
+/* Responsive styles for Layout component */
+@media (max-width: 1024px) {
+  .layout-main {
+    padding: 24px !important;
+  }
+  
+  .layout-content {
+    max-width: 100% !important;
+    padding: 24px !important;
+  }
+}
+
+@media (max-width: 768px) {
+  .layout-main {
+    padding: 16px !important;
+    margin-left: 0 !important; /* Sidebar should be hidden or overlay on mobile */
+  }
+  
+  .layout-content {
+    padding: 16px !important;
+    border-radius: 12px !important;
+  }
+  
+  /* Adjust sidebar width on mobile */
+  :root {
+    --sidebar-width: 0px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .layout-main {
+    padding: 12px !important;
+  }
+  
+  .layout-content {
+    padding: 12px !important;
+    border-radius: 8px !important;
+  }
+}
+

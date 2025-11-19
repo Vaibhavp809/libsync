@@ -1,0 +1,37 @@
+/* Responsive styles for Table component */
+@media (max-width: 768px) {
+  .table-container {
+    border-radius: 8px !important;
+    overflow-x: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  
+  .table-container table {
+    font-size: 12px !important;
+    min-width: 600px; /* Ensure table doesn't get too compressed */
+  }
+  
+  .table-container th,
+  .table-container td {
+    padding: 8px 10px !important;
+    font-size: 12px !important;
+  }
+  
+  .table-container th {
+    font-size: 11px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .table-container table {
+    font-size: 11px !important;
+    min-width: 500px;
+  }
+  
+  .table-container th,
+  .table-container td {
+    padding: 6px 8px !important;
+    font-size: 11px !important;
+  }
+}
+
