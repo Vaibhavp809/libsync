@@ -28,8 +28,10 @@ function AppContent() {
     // Add/remove home-page class based on route
     if (location.pathname === '/') {
       document.body.classList.add('home-page');
+      document.documentElement.classList.add('home-page');
     } else {
       document.body.classList.remove('home-page');
+      document.documentElement.classList.remove('home-page');
     }
   }, [location]);
 

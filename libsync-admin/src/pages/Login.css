@@ -122,31 +122,32 @@
   }
 }
 
-/* Return to Home Button Styles */
+/* Return to Home Button Styles - Make it very visible */
 .return-home-button {
-  position: absolute !important;
+  position: fixed !important;
   top: 20px !important;
   left: 20px !important;
-  padding: 12px 24px !important;
-  background: rgba(255, 255, 255, 0.95) !important;
+  padding: 14px 28px !important;
+  background: rgba(255, 255, 255, 0.98) !important;
   color: #1e293b !important;
   text-decoration: none !important;
-  border-radius: 8px !important;
-  font-size: 14px !important;
-  font-weight: 600 !important;
+  border-radius: 10px !important;
+  font-size: 15px !important;
+  font-weight: 700 !important;
   display: flex !important;
   align-items: center !important;
   gap: 8px !important;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15) !important;
-  transition: all 0.2s ease !important;
-  z-index: 1000 !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
+  transition: all 0.3s ease !important;
+  z-index: 9999 !important;
   backdrop-filter: blur(10px) !important;
-  border: 1px solid rgba(255, 255, 255, 0.3) !important;
+  border: 2px solid rgba(255, 255, 255, 0.6) !important;
+  cursor: pointer !important;
 }
 
 .return-home-button:hover {
   background: rgba(255, 255, 255, 1) !important;
-  transform: translateY(-2px) !important;
-  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2) !important;
+  transform: translateY(-3px) scale(1.05) !important;
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4) !important;
 }
 

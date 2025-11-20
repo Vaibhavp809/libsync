@@ -24,29 +24,25 @@ body {
   overflow-x: hidden;
 }
 
-/* Apply 80% scale to admin pages (excluding Home) */
-body:not(.home-page) {
-  transform: scale(0.8);
-  transform-origin: top left;
-  width: 125%; /* Compensate for scale to maintain full width */
-  height: 125%; /* Compensate for scale to maintain full height */
-  overflow-x: hidden;
+/* Apply 80% scale to admin pages (excluding Home) - Direct approach */
+html:not(.home-page) body {
+  transform: scale(0.8) !important;
+  transform-origin: top left !important;
+  width: 125% !important;
+  height: 125% !important;
+  position: relative !important;
 }
 
-/* Ensure login page container doesn't double-scale */
-body:not(.home-page) .login-container {
-  transform: scale(1); /* Reset scale since body already has it */
+html:not(.home-page) {
+  overflow-x: hidden !important;
 }
 
-/* Ensure Layout component doesn't double-scale */
-body:not(.home-page) .layout-main,
-body:not(.home-page) .layout-content {
-  transform: scale(1); /* Reset scale since body already has it */
-}
-
-/* Ensure sidebar doesn't get double-scaled */
-body:not(.home-page) .sidebar {
-  transform: scale(1); /* Reset scale since body already has it */
+/* Reset scale for nested elements to prevent double scaling */
+html:not(.home-page) body .login-container,
+html:not(.home-page) body .layout-main,
+html:not(.home-page) body .layout-content,
+html:not(.home-page) body .sidebar {
+  transform: scale(1) !important;
 }
 
 /* Animations */
