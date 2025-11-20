@@ -74,11 +74,12 @@ const styles = {
   container: {
     display: 'flex',
     minHeight: '100vh',
-    height: '100vh',
-    maxHeight: '100vh',
+    height: '100%',
+    flex: 1,
     backgroundColor: '#f8fafc',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    overflow: 'hidden'
+    overflow: 'hidden',
+    position: 'relative'
   },
   main: {
     flex: 1,
