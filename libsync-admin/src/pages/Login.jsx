@@ -38,6 +38,14 @@ export default function Login() {
     return decodedToken.exp < currentTime;
   };
 
+  // Ensure login-page class is set immediately
+  useEffect(() => {
+    document.body.classList.add('login-page');
+    document.documentElement.classList.add('login-page');
+    document.body.classList.remove('home-page');
+    document.documentElement.classList.remove('home-page');
+  }, []);
+
   useEffect(() => {
     // Only check localStorage for "Remember Me" users
     // sessionStorage tokens are NOT checked here because they should clear on browser close
@@ -130,9 +138,9 @@ export default function Login() {
         localStorage.removeItem('adminUser');
       }
 
-      // Ensure body class is set before navigation
-      document.body.classList.remove('home-page');
-      document.documentElement.classList.remove('home-page');
+      // Ensure body class is set before navigation (remove login-page, no home-page = 80% scale)
+      document.body.classList.remove('home-page', 'login-page');
+      document.documentElement.classList.remove('home-page', 'login-page');
       
       // Small delay to ensure class is applied before navigation
       setTimeout(() => {

@@ -122,8 +122,10 @@
   }
 }
 
-/* Return to Home Button Styles - Make it very visible */
-.return-home-button {
+/* Return to Home Button Styles - Make it very visible and always show */
+.return-home-button,
+a.return-home-button,
+Link.return-home-button {
   position: fixed !important;
   top: 20px !important;
   left: 20px !important;
@@ -139,10 +141,13 @@
   gap: 8px !important;
   box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3) !important;
   transition: all 0.3s ease !important;
-  z-index: 9999 !important;
+  z-index: 99999 !important;
   backdrop-filter: blur(10px) !important;
   border: 2px solid rgba(255, 255, 255, 0.6) !important;
   cursor: pointer !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
 }
 
 .return-home-button:hover {

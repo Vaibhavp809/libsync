@@ -6,10 +6,10 @@ import Header from '../components/Header';
 import Card from '../components/Card';
 
 export default function Dashboard() {
-  // Ensure body class is set immediately when dashboard loads
+  // Ensure body class is set immediately when dashboard loads (no class = 80% scale)
   React.useEffect(() => {
-    document.body.classList.remove('home-page');
-    document.documentElement.classList.remove('home-page');
+    document.body.classList.remove('home-page', 'login-page');
+    document.documentElement.classList.remove('home-page', 'login-page');
   }, []);
   const [stats, setStats] = useState({
     totalBooks: 0,

@@ -6,11 +6,11 @@ const Layout = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Ensure body class is set immediately for 80% scale
+  // Ensure body class is set immediately for 80% scale (admin pages)
   useEffect(() => {
-    // Remove home-page class immediately when Layout mounts (admin pages)
-    document.body.classList.remove('home-page');
-    document.documentElement.classList.remove('home-page');
+    // Remove home-page and login-page classes when Layout mounts (admin pages)
+    document.body.classList.remove('home-page', 'login-page');
+    document.documentElement.classList.remove('home-page', 'login-page');
   }, []);
 
   useEffect(() => {

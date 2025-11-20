@@ -33,8 +33,9 @@ export default function ProtectedRoute({ children }) {
 
   // Ensure body class is set immediately for 80% scale on admin pages
   useEffect(() => {
-    document.body.classList.remove('home-page');
-    document.documentElement.classList.remove('home-page');
+    // Remove home-page and login-page classes (admin pages should have no class = 80% scale)
+    document.body.classList.remove('home-page', 'login-page');
+    document.documentElement.classList.remove('home-page', 'login-page');
   }, []);
 
   useEffect(() => {

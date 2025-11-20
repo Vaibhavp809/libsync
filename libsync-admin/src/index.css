@@ -27,9 +27,9 @@ body {
   overflow-y: auto;
 }
 
-/* Apply 80% scale to admin pages (excluding Home) - Multiple selectors for reliability */
-html:not(.home-page) body,
-body:not(.home-page) {
+/* Apply 80% scale to admin pages (excluding Home and Login) - Multiple selectors for reliability */
+html:not(.home-page):not(.login-page) body,
+body:not(.home-page):not(.login-page) {
   transform: scale(0.8) !important;
   transform-origin: top left !important;
   width: 125% !important;
@@ -37,20 +37,20 @@ body:not(.home-page) {
   position: relative !important;
 }
 
-html:not(.home-page),
-body:not(.home-page) {
+html:not(.home-page):not(.login-page),
+body:not(.home-page):not(.login-page) {
   overflow-x: hidden !important;
 }
 
 /* Reset scale for nested elements to prevent double scaling */
-html:not(.home-page) body .login-container,
-html:not(.home-page) body .layout-main,
-html:not(.home-page) body .layout-content,
-html:not(.home-page) body .sidebar,
-body:not(.home-page) .login-container,
-body:not(.home-page) .layout-main,
-body:not(.home-page) .layout-content,
-body:not(.home-page) .sidebar {
+html:not(.home-page):not(.login-page) body .login-container,
+html:not(.home-page):not(.login-page) body .layout-main,
+html:not(.home-page):not(.login-page) body .layout-content,
+html:not(.home-page):not(.login-page) body .sidebar,
+body:not(.home-page):not(.login-page) .login-container,
+body:not(.home-page):not(.login-page) .layout-main,
+body:not(.home-page):not(.login-page) .layout-content,
+body:not(.home-page):not(.login-page) .sidebar {
   transform: scale(1) !important;
 }
 

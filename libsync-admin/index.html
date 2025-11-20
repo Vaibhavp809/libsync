@@ -36,13 +36,19 @@
       // This ensures 80% scale is applied right away when navigating to dashboard
       (function() {
         const path = window.location.pathname;
-        if (path !== '/') {
-          document.body.classList.remove('home-page');
-          document.documentElement.classList.remove('home-page');
-        } else {
+        // Remove all route classes first
+        document.body.classList.remove('home-page', 'login-page');
+        document.documentElement.classList.remove('home-page', 'login-page');
+        
+        // Add appropriate class based on route
+        if (path === '/') {
           document.body.classList.add('home-page');
           document.documentElement.classList.add('home-page');
+        } else if (path === '/login') {
+          document.body.classList.add('login-page');
+          document.documentElement.classList.add('login-page');
         }
+        // For all other routes (dashboard, etc.), no class = 80% scale will apply
       })();
     </script>
     <div id="root"></div>

@@ -25,15 +25,23 @@ function AppContent() {
   const location = useLocation();
 
   useEffect(() => {
-    // Add/remove home-page class based on route - run immediately
+    // Add/remove classes based on route - run immediately
     const setBodyClass = () => {
-      if (location.pathname === '/') {
+      const path = location.pathname;
+      
+      // Remove all route classes first
+      document.body.classList.remove('home-page', 'login-page');
+      document.documentElement.classList.remove('home-page', 'login-page');
+      
+      // Add appropriate class based on route
+      if (path === '/') {
         document.body.classList.add('home-page');
         document.documentElement.classList.add('home-page');
-      } else {
-        document.body.classList.remove('home-page');
-        document.documentElement.classList.remove('home-page');
+      } else if (path === '/login') {
+        document.body.classList.add('login-page');
+        document.documentElement.classList.add('login-page');
       }
+      // For all other routes (dashboard, etc.), no class = 80% scale
     };
     
     // Set immediately
@@ -41,13 +49,23 @@ function AppContent() {
     
     // Also set on next tick to ensure it persists
     setTimeout(setBodyClass, 0);
+    
+    // Also set after a short delay to catch any race conditions
+    setTimeout(setBodyClass, 100);
   }, [location]);
   
   // Also set on mount
   useEffect(() => {
-    if (location.pathname !== '/') {
-      document.body.classList.remove('home-page');
-      document.documentElement.classList.remove('home-page');
+    const path = window.location.pathname;
+    document.body.classList.remove('home-page', 'login-page');
+    document.documentElement.classList.remove('home-page', 'login-page');
+    
+    if (path === '/') {
+      document.body.classList.add('home-page');
+      document.documentElement.classList.add('home-page');
+    } else if (path === '/login') {
+      document.body.classList.add('login-page');
+      document.documentElement.classList.add('login-page');
     }
   }, []);
 
