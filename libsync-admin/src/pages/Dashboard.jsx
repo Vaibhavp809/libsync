@@ -6,6 +6,20 @@ import Header from '../components/Header';
 import Card from '../components/Card';
 
 export default function Dashboard() {
+  // Check if coming from login and force refresh if needed
+  React.useEffect(() => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('fromLogin') === 'true') {
+      // Remove the parameter and force a refresh to ensure CSS loads properly
+      urlParams.delete('fromLogin');
+      const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
+      window.history.replaceState({}, '', newUrl);
+      // Force a refresh after removing parameter to ensure CSS is applied
+      window.location.reload();
+      return;
+    }
+  }, []);
+  
   // Ensure body class is set immediately when dashboard loads and apply 80% zoom
   React.useEffect(() => {
     document.body.classList.remove('home-page', 'login-page');
