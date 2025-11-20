@@ -1,3 +1,14 @@
+/* Ensure layout components are flexible */
+.layout-main {
+  min-height: 100% !important;
+  height: 100% !important;
+}
+
+.layout-content {
+  min-height: auto !important;
+  height: auto !important;
+}
+
 /* Mobile Menu Button */
 .mobile-menu-button {
   display: none;
