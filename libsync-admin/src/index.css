@@ -24,8 +24,9 @@ body {
   overflow-x: hidden;
 }
 
-/* Apply 80% scale to admin pages (excluding Home) - Direct approach */
-html:not(.home-page) body {
+/* Apply 80% scale to admin pages (excluding Home) - Multiple selectors for reliability */
+html:not(.home-page) body,
+body:not(.home-page) {
   transform: scale(0.8) !important;
   transform-origin: top left !important;
   width: 125% !important;
@@ -33,7 +34,8 @@ html:not(.home-page) body {
   position: relative !important;
 }
 
-html:not(.home-page) {
+html:not(.home-page),
+body:not(.home-page) {
   overflow-x: hidden !important;
 }
 
@@ -41,7 +43,11 @@ html:not(.home-page) {
 html:not(.home-page) body .login-container,
 html:not(.home-page) body .layout-main,
 html:not(.home-page) body .layout-content,
-html:not(.home-page) body .sidebar {
+html:not(.home-page) body .sidebar,
+body:not(.home-page) .login-container,
+body:not(.home-page) .layout-main,
+body:not(.home-page) .layout-content,
+body:not(.home-page) .sidebar {
   transform: scale(1) !important;
 }
 
