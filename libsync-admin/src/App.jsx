@@ -41,11 +41,8 @@ function AppContent() {
       if (path === '/') {
         body.classList.add('home-page');
         html.classList.add('home-page');
-      } else if (path === '/login') {
-        body.classList.add('login-page');
-        html.classList.add('login-page');
       }
-      // For all other routes, no class = 80% font-size will apply via CSS
+      // For login and all other routes, no class = 80% zoom will apply via CSS
     };
     
     // Set immediately
