@@ -142,13 +142,16 @@ export default function Login() {
       document.body.classList.remove('home-page', 'login-page');
       document.documentElement.classList.remove('home-page', 'login-page');
       
-      // Force immediate redirect to dashboard
+      // Redirect to dashboard first
       window.location.href = '/dashboard';
       
-      // Force a full page reload after a very short delay to ensure CSS is applied
+      // Force a full page reload after redirect to ensure CSS loads properly
+      // This ensures the 80% zoom CSS is applied immediately
       setTimeout(() => {
-        window.location.reload(true);
-      }, 50);
+        if (window.location.pathname === '/dashboard') {
+          window.location.reload(true);
+        }
+      }, 100);
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
