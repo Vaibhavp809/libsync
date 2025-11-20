@@ -38,7 +38,7 @@ export default function Login() {
     return decodedToken.exp < currentTime;
   };
 
-  // Ensure login-page class is set immediately
+  // Ensure login-page class is set immediately (for CSS-based scaling)
   useEffect(() => {
     document.body.classList.add('login-page');
     document.documentElement.classList.add('login-page');
@@ -138,7 +138,7 @@ export default function Login() {
         localStorage.removeItem('adminUser');
       }
 
-      // Ensure body class is set before navigation (remove login-page, no home-page = 80% scale)
+      // Ensure body class is set before navigation (remove login-page, no class = 80% font-size via CSS)
       document.body.classList.remove('home-page', 'login-page');
       document.documentElement.classList.remove('home-page', 'login-page');
       

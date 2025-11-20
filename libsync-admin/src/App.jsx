@@ -25,8 +25,8 @@ function AppContent() {
   const location = useLocation();
 
   useEffect(() => {
-    // Apply scaling DIRECTLY via inline styles - this is the most reliable method
-    const applyScaling = () => {
+    // Set body class for CSS-based scaling (simple and reliable)
+    const setBodyClass = () => {
       const path = location.pathname;
       const body = document.body;
       const html = document.documentElement;
@@ -37,42 +37,22 @@ function AppContent() {
       body.classList.remove('home-page', 'login-page');
       html.classList.remove('home-page', 'login-page');
       
-      // Apply scaling DIRECTLY via inline styles
+      // Add appropriate class based on route
       if (path === '/') {
         body.classList.add('home-page');
         html.classList.add('home-page');
-        body.style.transform = '';
-        body.style.width = '';
-        body.style.height = '';
-        body.style.transformOrigin = '';
-        html.style.overflowX = '';
       } else if (path === '/login') {
         body.classList.add('login-page');
         html.classList.add('login-page');
-        body.style.transform = '';
-        body.style.width = '';
-        body.style.height = '';
-        body.style.transformOrigin = '';
-        html.style.overflowX = '';
-      } else {
-        // All other routes - apply 80% scale DIRECTLY
-        body.style.transform = 'scale(0.8)';
-        body.style.transformOrigin = 'top left';
-        body.style.width = '125%';
-        body.style.height = '125%';
-        body.style.position = 'relative';
-        html.style.overflowX = 'hidden';
       }
+      // For all other routes, no class = 80% font-size will apply via CSS
     };
     
-    // Apply immediately
-    applyScaling();
+    // Set immediately
+    setBodyClass();
     
-    // Apply multiple times to ensure it sticks
-    setTimeout(applyScaling, 0);
-    setTimeout(applyScaling, 10);
-    setTimeout(applyScaling, 50);
-    setTimeout(applyScaling, 100);
+    // Also set on next tick to ensure it persists
+    setTimeout(setBodyClass, 0);
   }, [location]);
   
   // Also set on mount

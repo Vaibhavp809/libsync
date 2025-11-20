@@ -4,14 +4,14 @@ import './index.css'
 import './styles/responsive.css'
 import App from './App.jsx'
 
-// Apply scaling immediately - this runs after index.html script but before React
-(function applyScalingNow() {
+// Set body class for CSS-based scaling (no transform, just font-size)
+(function setBodyClass() {
   const path = window.location.pathname;
   const body = document.body;
   const html = document.documentElement;
   
   if (!body) {
-    setTimeout(applyScalingNow, 0);
+    setTimeout(setBodyClass, 0);
     return;
   }
   
@@ -19,28 +19,15 @@ import App from './App.jsx'
   body.classList.remove('home-page', 'login-page');
   html.classList.remove('home-page', 'login-page');
   
-  // Apply scaling DIRECTLY via inline styles
+  // Add appropriate class based on route
   if (path === '/') {
     body.classList.add('home-page');
     html.classList.add('home-page');
-    body.style.transform = '';
-    body.style.width = '';
-    body.style.height = '';
   } else if (path === '/login') {
     body.classList.add('login-page');
     html.classList.add('login-page');
-    body.style.transform = '';
-    body.style.width = '';
-    body.style.height = '';
-  } else {
-    // Apply 80% scale directly
-    body.style.transform = 'scale(0.8)';
-    body.style.transformOrigin = 'top left';
-    body.style.width = '125%';
-    body.style.height = '125%';
-    body.style.position = 'relative';
-    html.style.overflowX = 'hidden';
   }
+  // For all other routes, no class = 80% font-size will apply via CSS
 })();
 
 createRoot(document.getElementById('root')).render(

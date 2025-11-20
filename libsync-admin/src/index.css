@@ -10,6 +10,16 @@ html {
   -ms-text-size-adjust: 100%;
 }
 
+/* Apply 80% font size to admin pages (excluding Home and Login) */
+html:not(.home-page):not(.login-page) {
+  font-size: 12.8px; /* 80% of 16px */
+}
+
+html.home-page,
+html.login-page {
+  font-size: 16px; /* Full size for home and login */
+}
+
 body {
   margin: 0;
   padding: 0;
@@ -27,32 +37,23 @@ body {
   overflow-y: auto;
 }
 
-/* Apply 80% scale to admin pages (excluding Home and Login) - Multiple selectors for reliability */
-/* Note: This is also defined inline in index.html for immediate application */
-html:not(.home-page):not(.login-page) body,
-body:not(.home-page):not(.login-page) {
-  transform: scale(0.8) !important;
-  transform-origin: top left !important;
-  width: 125% !important;
-  height: 125% !important;
-  position: relative !important;
+/* Apply 80% sizing to admin pages (excluding Home and Login) - Using font-size instead of transform */
+/* This approach scales everything naturally without transform issues */
+html:not(.home-page):not(.login-page) body {
+  font-size: 80% !important;
 }
 
-html:not(.home-page):not(.login-page),
-body:not(.home-page):not(.login-page) {
-  overflow-x: hidden !important;
+/* Scale down padding, margins, and spacing for admin pages */
+html:not(.home-page):not(.login-page) * {
+  font-size: 0.8em !important;
 }
 
-/* Reset scale for nested elements to prevent double scaling */
-html:not(.home-page):not(.login-page) body .login-container,
-html:not(.home-page):not(.login-page) body .layout-main,
-html:not(.home-page):not(.login-page) body .layout-content,
-html:not(.home-page):not(.login-page) body .sidebar,
-body:not(.home-page):not(.login-page) .login-container,
-body:not(.home-page):not(.login-page) .layout-main,
-body:not(.home-page):not(.login-page) .layout-content,
-body:not(.home-page):not(.login-page) .sidebar {
-  transform: scale(1) !important;
+/* But reset font-size for elements that should maintain their size */
+html:not(.home-page):not(.login-page) .login-container,
+html:not(.home-page):not(.login-page) .layout-main,
+html:not(.home-page):not(.login-page) .layout-content,
+html:not(.home-page):not(.login-page) .sidebar {
+  font-size: 1em !important; /* Reset to normal within scaled context */
 }
 
 /* Animations */

@@ -6,7 +6,7 @@ import Header from '../components/Header';
 import Card from '../components/Card';
 
 export default function Dashboard() {
-  // Ensure body class is set immediately when dashboard loads (no class = 80% scale)
+  // Ensure body class is set immediately when dashboard loads (no class = 80% font-size via CSS)
   React.useEffect(() => {
     document.body.classList.remove('home-page', 'login-page');
     document.documentElement.classList.remove('home-page', 'login-page');
