@@ -1,9 +1,9 @@
 // Service Worker for LibSync Admin PWA
 const CACHE_NAME = 'libsync-admin-v1';
 const urlsToCache = [
-  '/',
   '/manifest.json',
-  '/logo-512.png'
+  '/logo-512.png',
+  '/favicon.png'
 ];
 
 // Install event - cache resources
@@ -81,10 +81,8 @@ self.addEventListener('fetch', (event) => {
           });
       })
       .catch(() => {
-        // Return offline page or fallback if available
-        if (event.request.destination === 'document') {
-          return caches.match('/');
-        }
+        // Return null for failed requests (don't try to serve from cache if fetch fails)
+        return null;
       })
   );
 });
