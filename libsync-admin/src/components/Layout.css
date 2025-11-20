@@ -1,7 +1,7 @@
-/* Ensure layout components are flexible */
+/* Ensure layout components are flexible - height increases with content */
 .layout-main {
   min-height: 100% !important;
-  height: 100% !important;
+  height: auto !important;
 }
 
 .layout-content {

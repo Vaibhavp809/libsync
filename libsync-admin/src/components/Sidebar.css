@@ -1,7 +1,7 @@
-/* Make sidebar flexible - use viewport height */
+/* Make sidebar flexible - height increases with content */
 .sidebar {
-  min-height: 100vh !important;
-  height: 100vh !important;
+  min-height: 100% !important;
+  height: auto !important;
   max-height: none !important;
 }
 

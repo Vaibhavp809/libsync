@@ -299,8 +299,8 @@ export default function Login() {
 
 const styles = {
   container: {
-    minHeight: '100vh',
-    height: '100%',
+    minHeight: '100dvh', /* Dynamic viewport height - covers full device height */
+    height: '100dvh', /* Dynamic viewport height - covers full device height */
     width: '100%',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     display: 'flex',
