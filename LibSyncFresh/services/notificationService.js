@@ -1,7 +1,7 @@
 import * as Notifications from 'expo-notifications';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
-import { Platform, Alert } from 'react-native';
+import { Platform, Alert, PermissionsAndroid } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from './apiService';
 
@@ -37,6 +37,41 @@ export async function registerForPushNotificationsAsync() {
     }
 
     // Step 3: Request notification permissions
+    // For Android 13+ (API 33+), explicitly request POST_NOTIFICATIONS permission
+    if (Platform.OS === 'android' && Platform.Version >= 33) {
+      try {
+        const hasPermission = await PermissionsAndroid.check(
+          PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
+        );
+        
+        if (!hasPermission) {
+          const status = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
+            {
+              title: 'Allow notifications',
+              message: 'LibSync would like to send you notifications',
+              buttonPositive: 'Allow',
+              buttonNegative: 'Deny',
+            }
+          );
+          
+          if (status !== PermissionsAndroid.RESULTS.GRANTED) {
+            console.warn('❌ POST_NOTIFICATIONS permission denied on Android 13+');
+            Alert.alert(
+              'Notification Permission Required',
+              'LibSync needs notification permission to send you important updates. Please enable it in Settings.',
+              [{ text: 'OK' }]
+            );
+            return null;
+          }
+        }
+      } catch (error) {
+        console.error('Error requesting POST_NOTIFICATIONS permission:', error);
+        // Continue with expo-notifications permission request as fallback
+      }
+    }
+
+    // Request notification permissions via expo-notifications
     const { status: existingStatus } = await Notifications.getPermissionsAsync();
     let finalStatus = existingStatus;
 

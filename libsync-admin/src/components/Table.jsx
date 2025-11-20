@@ -14,7 +14,9 @@ const Table = ({ columns, data, onRowClick, emptyMessage = "No data available" }
                 key={index} 
                 style={{
                   ...styles.headerCell,
-                  ...(column.key === 'actions' && styles.actionsHeaderCell)
+                  ...(column.key === 'actions' && styles.actionsHeaderCell),
+                  ...(column.key === 'status' && styles.statusHeaderCell),
+                  ...(column.key === 'price' && styles.priceHeaderCell)
                 }}
               >
                 {column.header}
@@ -38,7 +40,9 @@ const Table = ({ columns, data, onRowClick, emptyMessage = "No data available" }
                     key={colIndex} 
                     style={{
                       ...styles.dataCell,
-                      ...(column.key === 'actions' && styles.actionsCell)
+                      ...(column.key === 'actions' && styles.actionsCell),
+                      ...(column.key === 'status' && styles.statusCell),
+                      ...(column.key === 'price' && styles.priceCell)
                     }}
                   >
                     {column.render ? column.render(row) : (row[column.key] || '-')}
@@ -77,7 +81,7 @@ const styles = {
     width: '100%',
     borderCollapse: 'collapse',
     fontSize: '14px',
-    tableLayout: 'auto'
+    tableLayout: 'fixed' // Use fixed layout for better column width control
   },
   headerRow: {
     background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
@@ -110,11 +114,11 @@ const styles = {
     color: '#475569',
     verticalAlign: 'top',
     whiteSpace: 'normal',
-    overflow: 'visible',
+    overflow: 'hidden',
     wordWrap: 'break-word',
     lineHeight: '1.6',
     minHeight: '50px',
-    maxWidth: 'none'
+    textOverflow: 'ellipsis'
   },
   actionsCell: {
     position: 'sticky',
@@ -139,6 +143,36 @@ const styles = {
     textAlign: 'center',
     boxShadow: '-2px 0 4px rgba(0, 0, 0, 0.05)',
     padding: '12px 12px'
+  },
+  statusHeaderCell: {
+    width: '120px',
+    minWidth: '100px',
+    maxWidth: '120px',
+    textAlign: 'center',
+    padding: '12px 8px'
+  },
+  statusCell: {
+    width: '120px',
+    minWidth: '100px',
+    maxWidth: '120px',
+    textAlign: 'center',
+    padding: '14px 8px',
+    overflow: 'hidden'
+  },
+  priceHeaderCell: {
+    width: '100px',
+    minWidth: '80px',
+    maxWidth: '120px',
+    textAlign: 'center',
+    padding: '12px 8px'
+  },
+  priceCell: {
+    width: '100px',
+    minWidth: '80px',
+    maxWidth: '120px',
+    textAlign: 'center',
+    padding: '14px 8px',
+    overflow: 'hidden'
   },
   emptyCell: {
     padding: '60px 20px',

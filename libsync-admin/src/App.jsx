@@ -1,5 +1,4 @@
-import React, { useEffect } from 'react';
-import { useLocation } from 'react-router-dom';
+import React from 'react';
 import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
@@ -22,11 +21,6 @@ import EResourcesPage from './pages/EResourcesPage';
 import LibraryUpdatesPage from './pages/LibraryUpdatesPage';
 
 function AppContent() {
-  const location = useLocation();
-
-  // Simple routing - no special zoom logic needed
-  // Login page handles its own styling via Login.jsx
-
   return (
     <Routes>
       <Route path="/" element={<Home />} />

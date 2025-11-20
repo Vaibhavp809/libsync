@@ -30,40 +30,6 @@ body {
   position: relative;
 }
 
-/* Default: all pages at 100% zoom */
-html {
-  zoom: 1;
-  -moz-transform: scale(1);
-}
-
-/* Login page: 80% zoom */
-html.login-page {
-  zoom: 0.8 !important;
-  -moz-transform: scale(0.8) !important;
-  -moz-transform-origin: 0 0 !important;
-  height: 100% !important;
-  position: relative !important;
-}
-
-/* For Firefox - login page zoom */
-@-moz-document url-prefix() {
-  html.login-page body {
-    transform: scale(0.8) !important;
-    transform-origin: 0 0 !important;
-    width: 125% !important;
-    height: 125% !important;
-  }
-}
-
-/* Make login page body flexible to fit screen height */
-html.login-page body {
-  min-height: 100% !important;
-  height: auto !important;
-  position: relative !important;
-  display: flex !important;
-  flex-direction: column !important;
-}
-
 /* Animations */
 @keyframes spin {
   from {

@@ -67,14 +67,17 @@ const Layout = ({ children }) => {
 const styles = {
   container: {
     display: 'flex',
-    minHeight: '100%',
-    height: 'auto',
+    minHeight: '100vh',
+    height: '100vh',
     width: '100%',
     flex: 1,
     backgroundColor: '#f8fafc',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
     overflow: 'hidden',
-    position: 'relative'
+    position: 'relative',
+    /* Ensure container doesn't interfere with fixed sidebar */
+    transform: 'none',
+    willChange: 'auto'
   },
   main: {
     flex: 1,
@@ -83,8 +86,9 @@ const styles = {
     overflowX: 'hidden',
     background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
     marginLeft: 'var(--sidebar-width, 280px)',
-    minHeight: '100%',
-    height: 'auto'
+    minHeight: '100vh',
+    height: '100vh',
+    position: 'relative'
   },
   content: {
     maxWidth: '1200px',

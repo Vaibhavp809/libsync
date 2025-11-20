@@ -161,8 +161,12 @@ const styles = {
     left: 0,
     top: 0,
     bottom: 0,
-    overflow: 'hidden',
-    zIndex: 1000
+    overflowY: 'auto',
+    overflowX: 'hidden',
+    zIndex: 1000,
+    // Ensure it's fixed to viewport
+    transform: 'none',
+    willChange: 'auto'
   },
   header: {
     padding: '16px 16px',

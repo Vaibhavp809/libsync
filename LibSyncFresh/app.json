@@ -21,7 +21,7 @@
     },
     "android": {
       "package": "com.Libsync.libsync",
-      "googleServicesFile": "./android/google-services.json",
+      "googleServicesFile": "./android/app/google-services.json",
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#ffffff"

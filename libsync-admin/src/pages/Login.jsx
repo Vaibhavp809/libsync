@@ -45,7 +45,7 @@ export default function Login() {
     document.body.classList.remove('home-page');
     document.documentElement.classList.remove('home-page');
     
-    // Cleanup on unmount
+    // Cleanup on unmount - remove login-page class
     return () => {
       document.body.classList.remove('login-page');
       document.documentElement.classList.remove('login-page');
@@ -144,7 +144,7 @@ export default function Login() {
         localStorage.removeItem('adminUser');
       }
 
-      // Redirect to dashboard (simple redirect, no zoom needed)
+      // Redirect to dashboard
       window.location.replace('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
@@ -298,10 +298,8 @@ export default function Login() {
 
 const styles = {
   container: {
-    minHeight: '100vh',
-    minHeight: '100dvh', // Dynamic viewport height for mobile (overrides 100vh)
-    height: '100vh',
-    height: '100dvh', // Dynamic viewport height for mobile (overrides 100vh)
+    minHeight: '100dvh', // Dynamic viewport height for mobile
+    height: '100dvh', // Dynamic viewport height for mobile
     width: '100%',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     display: 'flex',

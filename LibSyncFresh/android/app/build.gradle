@@ -174,4 +174,9 @@ dependencies {
     } else {
         implementation jscFlavor
     }
+
+    // Firebase Cloud Messaging
+    implementation("com.google.firebase:firebase-messaging")
 }
+
+apply plugin: 'com.google.gms.google-services'

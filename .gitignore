@@ -41,3 +41,7 @@ coverage-report/
 # Ignore nested package-locks and node artifacts
 **/package-lock.json
 libsync-admin/PWA_MOBILE_INSTALL.md
+LibSyncFresh.zip
+
+# Firebase config (should not be committed to public repos)
+LibSyncFresh/android/app/google-services.json
