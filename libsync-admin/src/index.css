@@ -53,10 +53,10 @@ html:not(.home-page) {
 }
 
 /* Fix bottom white space - make positioning flexible for zoomed pages */
-/* Use device-height units to cover full device height */
+/* Use flexible heights, not fixed viewport heights */
 html:not(.home-page) body {
-  min-height: 125dvh; /* Dynamic viewport height - covers full device height with zoom */
-  height: 125dvh; /* Dynamic viewport height - covers full device height with zoom */
+  min-height: 100% !important;
+  height: auto !important;
   position: relative;
   display: flex;
   flex-direction: column;

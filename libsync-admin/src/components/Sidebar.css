@@ -1,5 +1,7 @@
 /* Make sidebar flexible - height increases with content */
-.sidebar {
+/* Force recalculation on load */
+.sidebar,
+[class*="sidebar"] {
   min-height: 100% !important;
   height: auto !important;
   max-height: none !important;

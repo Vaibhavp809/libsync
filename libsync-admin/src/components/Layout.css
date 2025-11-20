@@ -1,7 +1,16 @@
 /* Ensure layout components are flexible - height increases with content */
-.layout-main {
+/* Force recalculation on load */
+.layout-main,
+[class*="layout-main"] {
   min-height: 100% !important;
   height: auto !important;
+  max-height: none !important;
+}
+
+/* Force container to be flexible */
+[style*="display: flex"][style*="minHeight"] {
+  height: auto !important;
+  max-height: none !important;
 }
 
 .layout-content {
