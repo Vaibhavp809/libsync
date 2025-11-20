@@ -299,15 +299,21 @@ export default function Login() {
 const styles = {
   container: {
     minHeight: '100vh',
+    minHeight: '100dvh', // Dynamic viewport height for mobile (overrides 100vh)
     height: '100vh',
+    height: '100dvh', // Dynamic viewport height for mobile (overrides 100vh)
     width: '100%',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '20px',
-    position: 'relative',
-    overflow: 'hidden'
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    overflow: 'auto'
   },
   homeButton: {
     position: 'fixed',

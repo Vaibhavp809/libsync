@@ -122,7 +122,7 @@
   }
 }
 
-/* Make login container fixed and flexible */
+/* Make login container fixed and flexible - fits screen height */
 .login-container {
   position: fixed !important;
   top: 0 !important;
@@ -132,7 +132,11 @@
   width: 100% !important;
   height: 100% !important;
   min-height: 100vh !important;
+  min-height: 100dvh !important; /* Dynamic viewport height for mobile */
   overflow: auto !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
 }
 
 /* Return to Home Button Styles - Make it very visible and always show */
