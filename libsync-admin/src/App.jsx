@@ -25,33 +25,54 @@ function AppContent() {
   const location = useLocation();
 
   useEffect(() => {
-    // Add/remove classes based on route - run immediately
-    const setBodyClass = () => {
+    // Apply scaling DIRECTLY via inline styles - this is the most reliable method
+    const applyScaling = () => {
       const path = location.pathname;
+      const body = document.body;
+      const html = document.documentElement;
+      
+      if (!body) return;
       
       // Remove all route classes first
-      document.body.classList.remove('home-page', 'login-page');
-      document.documentElement.classList.remove('home-page', 'login-page');
+      body.classList.remove('home-page', 'login-page');
+      html.classList.remove('home-page', 'login-page');
       
-      // Add appropriate class based on route
+      // Apply scaling DIRECTLY via inline styles
       if (path === '/') {
-        document.body.classList.add('home-page');
-        document.documentElement.classList.add('home-page');
+        body.classList.add('home-page');
+        html.classList.add('home-page');
+        body.style.transform = '';
+        body.style.width = '';
+        body.style.height = '';
+        body.style.transformOrigin = '';
+        html.style.overflowX = '';
       } else if (path === '/login') {
-        document.body.classList.add('login-page');
-        document.documentElement.classList.add('login-page');
+        body.classList.add('login-page');
+        html.classList.add('login-page');
+        body.style.transform = '';
+        body.style.width = '';
+        body.style.height = '';
+        body.style.transformOrigin = '';
+        html.style.overflowX = '';
+      } else {
+        // All other routes - apply 80% scale DIRECTLY
+        body.style.transform = 'scale(0.8)';
+        body.style.transformOrigin = 'top left';
+        body.style.width = '125%';
+        body.style.height = '125%';
+        body.style.position = 'relative';
+        html.style.overflowX = 'hidden';
       }
-      // For all other routes (dashboard, etc.), no class = 80% scale
     };
     
-    // Set immediately
-    setBodyClass();
+    // Apply immediately
+    applyScaling();
     
-    // Also set on next tick to ensure it persists
-    setTimeout(setBodyClass, 0);
-    
-    // Also set after a short delay to catch any race conditions
-    setTimeout(setBodyClass, 100);
+    // Apply multiple times to ensure it sticks
+    setTimeout(applyScaling, 0);
+    setTimeout(applyScaling, 10);
+    setTimeout(applyScaling, 50);
+    setTimeout(applyScaling, 100);
   }, [location]);
   
   // Also set on mount

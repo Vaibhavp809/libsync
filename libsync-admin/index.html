@@ -48,68 +48,107 @@
         transform: scale(1) !important;
       }
     </style>
-  </head>
-  <body>
     <script>
-      // Set body class IMMEDIATELY before React loads to prevent hard refresh issue
-      // This ensures 80% scale is applied right away when navigating to dashboard
+      // CRITICAL: Apply scaling DIRECTLY via inline styles BEFORE anything else loads
+      // This runs synchronously and blocks until complete
       (function() {
-        function setBodyClass() {
+        function applyScaling() {
           const path = window.location.pathname;
-          // Remove all route classes first
-          document.body.classList.remove('home-page', 'login-page');
-          document.documentElement.classList.remove('home-page', 'login-page');
+          const body = document.body;
+          const html = document.documentElement;
           
-          // Add appropriate class based on route
-          if (path === '/') {
-            document.body.classList.add('home-page');
-            document.documentElement.classList.add('home-page');
-          } else if (path === '/login') {
-            document.body.classList.add('login-page');
-            document.documentElement.classList.add('login-page');
+          if (!body) {
+            // Body not ready yet, try again immediately
+            setTimeout(applyScaling, 0);
+            return;
           }
-          // For all other routes (dashboard, etc.), no class = 80% scale will apply
+          
+          // Remove all route classes
+          body.classList.remove('home-page', 'login-page');
+          html.classList.remove('home-page', 'login-page');
+          
+          // Apply scaling DIRECTLY via inline styles for immediate effect
+          if (path === '/') {
+            // Home page - no scaling
+            body.classList.add('home-page');
+            html.classList.add('home-page');
+            body.style.transform = '';
+            body.style.width = '';
+            body.style.height = '';
+            body.style.transformOrigin = '';
+            html.style.overflowX = '';
+          } else if (path === '/login') {
+            // Login page - no scaling
+            body.classList.add('login-page');
+            html.classList.add('login-page');
+            body.style.transform = '';
+            body.style.width = '';
+            body.style.height = '';
+            body.style.transformOrigin = '';
+            html.style.overflowX = '';
+          } else {
+            // All other pages - apply 80% scale DIRECTLY via inline style
+            body.style.transform = 'scale(0.8)';
+            body.style.transformOrigin = 'top left';
+            body.style.width = '125%';
+            body.style.height = '125%';
+            body.style.position = 'relative';
+            html.style.overflowX = 'hidden';
+          }
         }
         
-        // Set immediately when body is available
-        if (document.body) {
-          setBodyClass();
+        // Run immediately - this is a blocking script
+        applyScaling();
+        
+        // Also run when DOM is ready
+        if (document.readyState === 'loading') {
+          document.addEventListener('DOMContentLoaded', applyScaling);
         } else {
-          // Wait for body to be available
-          document.addEventListener('DOMContentLoaded', setBodyClass);
+          applyScaling();
         }
         
-        // Watch for class changes and re-apply if needed (defensive)
-        const observer = new MutationObserver(function(mutations) {
-          mutations.forEach(function(mutation) {
-            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
-              // Re-apply class logic if class was changed
-              setTimeout(setBodyClass, 0);
-            }
-          });
+        // Watch for path changes (SPA navigation)
+        let lastPath = window.location.pathname;
+        const checkPath = function() {
+          if (window.location.pathname !== lastPath) {
+            lastPath = window.location.pathname;
+            applyScaling();
+          }
+        };
+        
+        // Check frequently for route changes
+        setInterval(checkPath, 50);
+        
+        // Also watch for popstate (browser back/forward)
+        window.addEventListener('popstate', applyScaling);
+        
+        // MutationObserver to re-apply if styles are removed
+        const observer = new MutationObserver(function() {
+          applyScaling();
         });
         
-        // Start observing when body is available
-        if (document.body) {
-          observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-        } else {
-          document.addEventListener('DOMContentLoaded', function() {
-            observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
-            observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-          });
-        }
-        
-        // Also set on navigation (for SPA navigation)
-        let currentPath = window.location.pathname;
-        setInterval(function() {
-          if (window.location.pathname !== currentPath) {
-            currentPath = window.location.pathname;
-            setBodyClass();
+        // Start observing as soon as body exists
+        const startObserving = function() {
+          if (document.body) {
+            observer.observe(document.body, {
+              attributes: true,
+              attributeFilter: ['class', 'style'],
+              childList: false,
+              subtree: false
+            });
+            observer.observe(document.documentElement, {
+              attributes: true,
+              attributeFilter: ['class', 'style']
+            });
+          } else {
+            setTimeout(startObserving, 10);
           }
-        }, 100);
+        };
+        startObserving();
       })();
     </script>
+  </head>
+  <body>
     <div id="root"></div>
     <script type="module" src="/src/main.jsx"></script>
     <script>
