@@ -29,6 +29,25 @@
     <link rel="apple-touch-icon" href="/logo-512.png" />
     
     <title>LibSync Admin Dashboard</title>
+    <style>
+      /* Apply 80% scale immediately via inline CSS to prevent hard refresh issue */
+      body:not(.home-page):not(.login-page) {
+        transform: scale(0.8) !important;
+        transform-origin: top left !important;
+        width: 125% !important;
+        height: 125% !important;
+        position: relative !important;
+      }
+      html:not(.home-page):not(.login-page) {
+        overflow-x: hidden !important;
+      }
+      body:not(.home-page):not(.login-page) .login-container,
+      body:not(.home-page):not(.login-page) .layout-main,
+      body:not(.home-page):not(.login-page) .layout-content,
+      body:not(.home-page):not(.login-page) .sidebar {
+        transform: scale(1) !important;
+      }
+    </style>
   </head>
   <body>
     <script>
@@ -49,6 +68,9 @@
           document.documentElement.classList.add('login-page');
         }
         // For all other routes (dashboard, etc.), no class = 80% scale will apply
+        
+        // Force a reflow to ensure styles are applied
+        document.body.offsetHeight;
       })();
     </script>
     <div id="root"></div>

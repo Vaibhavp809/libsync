@@ -28,6 +28,7 @@ body {
 }
 
 /* Apply 80% scale to admin pages (excluding Home and Login) - Multiple selectors for reliability */
+/* Note: This is also defined inline in index.html for immediate application */
 html:not(.home-page):not(.login-page) body,
 body:not(.home-page):not(.login-page) {
   transform: scale(0.8) !important;

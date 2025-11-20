@@ -45,6 +45,12 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
+  // Don't cache chrome-extension, chrome:, data:, blob:, or other non-http(s) URLs
+  const url = new URL(event.request.url);
+  if (url.protocol !== 'http:' && url.protocol !== 'https:') {
+    return; // Let browser handle non-http(s) requests normally
+  }
+
   event.respondWith(
     caches.match(event.request)
       .then((response) => {
@@ -59,10 +65,17 @@ self.addEventListener('fetch', (event) => {
             // Clone the response
             const responseToCache = response.clone();
 
-            caches.open(CACHE_NAME)
-              .then((cache) => {
-                cache.put(event.request, responseToCache);
-              });
+            // Only cache http/https URLs
+            const requestUrl = new URL(event.request.url);
+            if (requestUrl.protocol === 'http:' || requestUrl.protocol === 'https:') {
+              caches.open(CACHE_NAME)
+                .then((cache) => {
+                  cache.put(event.request, responseToCache).catch((err) => {
+                    // Silently fail if caching fails (e.g., chrome-extension URLs)
+                    console.warn('Service Worker: Failed to cache', event.request.url, err);
+                  });
+                });
+            }
 
             return response;
           });
