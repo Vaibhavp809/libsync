@@ -9,51 +9,14 @@ buildscript {
     classpath('com.android.tools.build:gradle')
     classpath('com.facebook.react:react-native-gradle-plugin')
     classpath('org.jetbrains.kotlin:kotlin-gradle-plugin')
-    classpath('com.google.gms:google-services')
   }
 }
-
-def reactNativeAndroidDir = new File(
-  providers.exec {
-    workingDir(rootDir)
-    commandLine("node", "--print", "require.resolve('react-native/package.json')")
-  }.standardOutput.asText.get().trim(),
-  "../android"
-)
 
 allprojects {
   repositories {
-    maven {
-      // All of React Native (JS, Obj-C sources, Android binaries) is installed from npm
-      url(reactNativeAndroidDir)
-    }
-
     google()
     mavenCentral()
     maven { url 'https://www.jitpack.io' }
-  }
-}
-
-subprojects {
-  afterEvaluate { project ->
-    if (project.hasProperty("android")) {
-      def android = project.extensions.findByName("android")
-      if (android != null) {
-        // Set compileSdk if not already set
-        if (android.compileSdk == null && android.compileSdkVersion == null) {
-          android.compileSdk rootProject.ext.compileSdkVersion
-        }
-        // Set defaultConfig properties if not already set
-        if (android.defaultConfig != null) {
-          if (android.defaultConfig.minSdkVersion == null) {
-            android.defaultConfig.minSdkVersion rootProject.ext.minSdkVersion
-          }
-          if (android.defaultConfig.targetSdkVersion == null) {
-            android.defaultConfig.targetSdkVersion rootProject.ext.targetSdkVersion
-          }
-        }
-      }
-    }
   }
 }
 

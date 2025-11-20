@@ -1,4 +1,4 @@
-package com.anonymous.libsyncapp
+package com.Libsync.libsync
 
 import android.os.Build
 import android.os.Bundle
