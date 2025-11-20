@@ -54,23 +54,60 @@
       // Set body class IMMEDIATELY before React loads to prevent hard refresh issue
       // This ensures 80% scale is applied right away when navigating to dashboard
       (function() {
-        const path = window.location.pathname;
-        // Remove all route classes first
-        document.body.classList.remove('home-page', 'login-page');
-        document.documentElement.classList.remove('home-page', 'login-page');
-        
-        // Add appropriate class based on route
-        if (path === '/') {
-          document.body.classList.add('home-page');
-          document.documentElement.classList.add('home-page');
-        } else if (path === '/login') {
-          document.body.classList.add('login-page');
-          document.documentElement.classList.add('login-page');
+        function setBodyClass() {
+          const path = window.location.pathname;
+          // Remove all route classes first
+          document.body.classList.remove('home-page', 'login-page');
+          document.documentElement.classList.remove('home-page', 'login-page');
+          
+          // Add appropriate class based on route
+          if (path === '/') {
+            document.body.classList.add('home-page');
+            document.documentElement.classList.add('home-page');
+          } else if (path === '/login') {
+            document.body.classList.add('login-page');
+            document.documentElement.classList.add('login-page');
+          }
+          // For all other routes (dashboard, etc.), no class = 80% scale will apply
         }
-        // For all other routes (dashboard, etc.), no class = 80% scale will apply
         
-        // Force a reflow to ensure styles are applied
-        document.body.offsetHeight;
+        // Set immediately when body is available
+        if (document.body) {
+          setBodyClass();
+        } else {
+          // Wait for body to be available
+          document.addEventListener('DOMContentLoaded', setBodyClass);
+        }
+        
+        // Watch for class changes and re-apply if needed (defensive)
+        const observer = new MutationObserver(function(mutations) {
+          mutations.forEach(function(mutation) {
+            if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+              // Re-apply class logic if class was changed
+              setTimeout(setBodyClass, 0);
+            }
+          });
+        });
+        
+        // Start observing when body is available
+        if (document.body) {
+          observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+          observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+        } else {
+          document.addEventListener('DOMContentLoaded', function() {
+            observer.observe(document.body, { attributes: true, attributeFilter: ['class'] });
+            observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+          });
+        }
+        
+        // Also set on navigation (for SPA navigation)
+        let currentPath = window.location.pathname;
+        setInterval(function() {
+          if (window.location.pathname !== currentPath) {
+            currentPath = window.location.pathname;
+            setBodyClass();
+          }
+        }, 100);
       })();
     </script>
     <div id="root"></div>
