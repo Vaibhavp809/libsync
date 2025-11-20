@@ -22,6 +22,9 @@ body {
   color: #1e293b;
   width: 100%;
   overflow-x: hidden;
+  height: 100vh;
+  max-height: 100vh;
+  overflow-y: auto;
 }
 
 /* Apply 80% scale to admin pages (excluding Home) - Multiple selectors for reliability */

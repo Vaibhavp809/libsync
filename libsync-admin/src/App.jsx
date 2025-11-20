@@ -25,15 +25,31 @@ function AppContent() {
   const location = useLocation();
 
   useEffect(() => {
-    // Add/remove home-page class based on route
-    if (location.pathname === '/') {
-      document.body.classList.add('home-page');
-      document.documentElement.classList.add('home-page');
-    } else {
+    // Add/remove home-page class based on route - run immediately
+    const setBodyClass = () => {
+      if (location.pathname === '/') {
+        document.body.classList.add('home-page');
+        document.documentElement.classList.add('home-page');
+      } else {
+        document.body.classList.remove('home-page');
+        document.documentElement.classList.remove('home-page');
+      }
+    };
+    
+    // Set immediately
+    setBodyClass();
+    
+    // Also set on next tick to ensure it persists
+    setTimeout(setBodyClass, 0);
+  }, [location]);
+  
+  // Also set on mount
+  useEffect(() => {
+    if (location.pathname !== '/') {
       document.body.classList.remove('home-page');
       document.documentElement.classList.remove('home-page');
     }
-  }, [location]);
+  }, []);
 
   return (
     <Routes>

@@ -130,6 +130,10 @@ export default function Login() {
         localStorage.removeItem('adminUser');
       }
 
+      // Ensure body class is set before navigation
+      document.body.classList.remove('home-page');
+      document.documentElement.classList.remove('home-page');
+      
       // Redirect to dashboard (force reload to remount app)
       window.location.replace('/dashboard');
     } catch (err) {
@@ -285,6 +289,8 @@ export default function Login() {
 const styles = {
   container: {
     minHeight: '100vh',
+    height: '100vh',
+    maxHeight: '100vh',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     display: 'flex',
     alignItems: 'center',
