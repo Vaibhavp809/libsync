@@ -1,4 +1,4 @@
-package com.Libsync.libsync
+package com.libsync.libsync
 
 import android.os.Build
 import android.os.Bundle
@@ -9,6 +9,9 @@ import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnable
 import com.facebook.react.defaults.DefaultReactActivityDelegate
 
 import expo.modules.ReactActivityDelegateWrapper
+
+import com.libsync.BuildConfig
+import com.libsync.R
 
 class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {

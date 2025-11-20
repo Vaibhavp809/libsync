@@ -1,4 +1,4 @@
-package com.Libsync.libsync
+package com.libsync.libsync
 
 import android.app.Application
 import android.content.res.Configuration
@@ -15,6 +15,8 @@ import com.facebook.react.defaults.DefaultReactNativeHost
 
 import expo.modules.ApplicationLifecycleDispatcher
 import expo.modules.ReactNativeHostWrapper
+
+import com.libsync.BuildConfig
 
 class MainApplication : Application(), ReactApplication {
 
