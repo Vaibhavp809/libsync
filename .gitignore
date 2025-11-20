@@ -40,3 +40,4 @@ coverage-report/
 
 # Ignore nested package-locks and node artifacts
 **/package-lock.json
+libsync-admin/PWA_MOBILE_INSTALL.md

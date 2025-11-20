@@ -3,10 +3,11 @@
   "short_name": "LibSync Admin",
   "description": "LibSync - Your Library, Automated & Closer - Admin Dashboard",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0ea5e9",
-  "orientation": "portrait-primary",
+  "orientation": "any",
   "icons": [
     {
       "src": "/logo.png",
