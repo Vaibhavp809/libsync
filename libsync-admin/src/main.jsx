@@ -4,14 +4,15 @@ import './index.css'
 import './styles/responsive.css'
 import App from './App.jsx'
 
-// Set body class and force height recalculation immediately - runs before React
-(function setBodyClassAndHeight() {
+// Set body class and force CSS application immediately - runs before React
+// This ensures 80% zoom is applied immediately on page load
+(function setBodyClassAndApplyZoom() {
   const path = window.location.pathname;
   const body = document.body;
   const html = document.documentElement;
   
   if (!body) {
-    setTimeout(setBodyClassAndHeight, 0);
+    setTimeout(setBodyClassAndApplyZoom, 0);
     return;
   }
   
@@ -23,33 +24,34 @@ import App from './App.jsx'
   if (path === '/') {
     body.classList.add('home-page');
     html.classList.add('home-page');
+  } else {
+    // For all other routes (dashboard, login, etc.), apply 80% zoom immediately
+    // Force zoom application via inline style to ensure it applies immediately
+    html.style.zoom = '0.8';
+    body.style.height = 'auto';
+    body.style.minHeight = '100%';
   }
-  // For login and all other routes, no class = 80% zoom will apply via CSS
   
-  // Force height recalculation immediately - make heights flexible
-  body.style.height = 'auto';
-  body.style.minHeight = '100%';
-  html.style.height = 'auto';
-  html.style.minHeight = '100%';
-  
-  // Force reflow to recalculate
+  // Force reflow to ensure zoom is applied
   body.offsetHeight;
   html.offsetHeight;
   
-  // Also force recalculation after a delay to ensure it sticks
+  // Also apply after a delay to ensure it sticks
   setTimeout(() => {
-    if (body && html) {
+    if (body && html && path !== '/') {
+      html.style.zoom = '0.8';
       body.style.height = 'auto';
-      html.style.height = 'auto';
+      body.style.minHeight = '100%';
       body.offsetHeight;
       html.offsetHeight;
     }
   }, 0);
   
   setTimeout(() => {
-    if (body && html) {
+    if (body && html && path !== '/') {
+      html.style.zoom = '0.8';
       body.style.height = 'auto';
-      html.style.height = 'auto';
+      body.style.minHeight = '100%';
       body.offsetHeight;
       html.offsetHeight;
     }

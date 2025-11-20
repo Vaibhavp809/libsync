@@ -142,21 +142,13 @@ export default function Login() {
       document.body.classList.remove('home-page', 'login-page');
       document.documentElement.classList.remove('home-page', 'login-page');
       
-      // Force height recalculation immediately
-      document.body.style.height = 'auto';
-      document.body.offsetHeight; // Force reflow
+      // Force immediate redirect to dashboard
+      window.location.href = '/dashboard';
       
-      // Force CSS recalculation for all elements
-      const allElements = document.querySelectorAll('*');
-      allElements.forEach(el => {
-        el.style.height = el.style.height || '';
-      });
-      
-      // Small delay to ensure class and styles are applied before navigation
+      // Force a full page reload after a very short delay to ensure CSS is applied
       setTimeout(() => {
-        // Redirect to dashboard (force reload to remount app)
-        window.location.replace('/dashboard');
-      }, 100);
+        window.location.reload(true);
+      }, 50);
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {

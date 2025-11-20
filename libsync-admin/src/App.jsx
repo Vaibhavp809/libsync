@@ -48,22 +48,33 @@ function AppContent() {
       // Set immediately
       setBodyClass();
       
-      // Force height recalculation after class change
-      const forceHeightRecalc = () => {
-        document.body.style.height = 'auto';
-        document.documentElement.style.height = 'auto';
-        // Force reflow
+      // Force zoom application immediately after class change
+      const forceZoomApplication = () => {
+        const path = location.pathname;
+        const html = document.documentElement;
+        
+        if (path !== '/') {
+          // Apply 80% zoom immediately via inline style
+          html.style.zoom = '0.8';
+          document.body.style.height = 'auto';
+          document.body.style.minHeight = '100%';
+        } else {
+          html.style.zoom = '1';
+        }
+        
+        // Force reflow to ensure zoom is applied
         document.body.offsetHeight;
-        document.documentElement.offsetHeight;
+        html.offsetHeight;
       };
       
       // Also set on next tick to ensure it persists
       setTimeout(() => {
         setBodyClass();
-        forceHeightRecalc();
+        forceZoomApplication();
       }, 0);
-      setTimeout(forceHeightRecalc, 50);
-      setTimeout(forceHeightRecalc, 100);
+      setTimeout(forceZoomApplication, 50);
+      setTimeout(forceZoomApplication, 100);
+      setTimeout(forceZoomApplication, 200);
   }, [location]);
   
   // Also set on mount
