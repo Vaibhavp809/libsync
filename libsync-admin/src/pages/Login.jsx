@@ -142,14 +142,15 @@ export default function Login() {
       document.body.classList.remove('home-page', 'login-page');
       document.documentElement.classList.remove('home-page', 'login-page');
       
-      // Redirect to dashboard first
-      window.location.href = '/dashboard';
+      // Redirect to dashboard with a parameter to trigger forced refresh
+      // This ensures the 80% zoom CSS is applied immediately after login
+      window.location.replace('/dashboard?fromLogin=true');
       
-      // Force a full page reload after redirect to ensure CSS loads properly
-      // This ensures the 80% zoom CSS is applied immediately
+      // Force a full page reload after a short delay to ensure CSS loads properly
+      // This will only run if redirect didn't happen yet
       setTimeout(() => {
-        if (window.location.pathname === '/dashboard') {
-          window.location.reload(true);
+        if (window.location.pathname !== '/dashboard') {
+          window.location.replace('/dashboard?fromLogin=true');
         }
       }, 100);
     } catch (err) {
