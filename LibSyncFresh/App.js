@@ -62,10 +62,27 @@ function App() {
         // Register for push notifications (non-blocking)
         // This will work in EAS dev-client builds, not in Expo Go
         registerForPushNotificationsAsync()
-          .then(token => {
+          .then(async (token) => {
             if (token) {
               console.log('✅ Expo push token registered:', token);
-              // Token can be sent to your backend here if needed
+              // Save token to storage
+              try {
+                const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+                await AsyncStorage.setItem('expo_push_token', token);
+                console.log('✅ Push token saved to storage');
+                
+                // Try to send token to server if user is already logged in
+                try {
+                  const { notificationService } = require('./services/notificationService');
+                  await notificationService.sendPushTokenToServer(token);
+                  console.log('✅ Push token sent to server');
+                } catch (pushError) {
+                  console.log('ℹ️ Could not send push token to server (user may not be logged in yet):', pushError.message);
+                  // Token will be sent after login via authService
+                }
+              } catch (storageError) {
+                console.warn('⚠️ Failed to save push token:', storageError.message);
+              }
             } else {
               console.log('ℹ️ Push notification registration skipped or failed');
             }

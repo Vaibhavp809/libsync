@@ -315,7 +315,7 @@ export default function NotificationsScreen() {
       setNotifications(prevNotifications =>
         prevNotifications.map(notification =>
           notification._id === notificationId
-            ? { ...notification, read: true, readAt: new Date() }
+            ? { ...notification, isRead: true, read: true, readAt: new Date() }
             : notification
         )
       );
@@ -449,6 +449,7 @@ export default function NotificationsScreen() {
       setNotifications(prevNotifications =>
         prevNotifications.map(notification => ({
           ...notification,
+          isRead: true,
           read: true,
           readAt: new Date()
         }))
@@ -562,7 +563,8 @@ export default function NotificationsScreen() {
   };
 
   const renderOverdueNotification = (item, overdueData) => {
-    const isUnread = !item.read;
+    // Check both isRead (from backend) and read (legacy) for compatibility
+    const isUnread = !(item.isRead || item.read);
     const isExpanded = expandedNotifications.has(item._id);
 
     return (
@@ -622,7 +624,8 @@ export default function NotificationsScreen() {
       return null;
     }
 
-    const isUnread = !item.read;
+    // Check both isRead (from backend) and read (legacy) for compatibility
+    const isUnread = !(item.isRead || item.read);
     const isExpanded = expandedNotifications.has(item._id);
     const showReadMore = shouldShowReadMore(item.message);
     const isReadMoreExpanded = readMoreNotifications.has(item._id);
@@ -646,7 +649,7 @@ export default function NotificationsScreen() {
             isUnread && styles.unreadNotification,
             isOverdueNotification && styles.overdueNotificationCard
           ]}
-          onPress={() => !item.read && markAsRead(item._id)}
+          onPress={() => !(item.isRead || item.read) && markAsRead(item._id)}
           activeOpacity={0.8}
         >
           {isOverdueNotification && overdueData ? (
@@ -931,7 +934,7 @@ export default function NotificationsScreen() {
         </View>
         <View style={styles.statItem}>
           <Text style={[styles.statNumber, { color: colors.success }]}>
-            {notifications.filter(n => n.read).length}
+            {notifications.filter(n => n.isRead || n.read).length}
           </Text>
           <Text style={styles.statLabel}>Read</Text>
         </View>

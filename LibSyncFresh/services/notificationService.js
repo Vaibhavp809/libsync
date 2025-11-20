@@ -151,9 +151,11 @@ class NotificationService {
         // Send token to server (will retry if user not logged in yet)
         try {
           await this.sendPushTokenToServer(token);
+          console.log('✅ Push token sent to server during initialization');
         } catch (error) {
-          console.warn('⚠️ Could not send push token to server (user may not be logged in yet):', error.message);
-          // Don't fail initialization - token will be sent after login
+          console.log('ℹ️ Could not send push token to server (user may not be logged in yet):', error.message);
+          console.log('ℹ️ Token will be sent automatically after user logs in');
+          // Don't fail initialization - token will be sent after login via authService
         }
       } else {
         console.warn('⚠️ No push token obtained - notifications may not work');
