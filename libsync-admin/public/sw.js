@@ -3,7 +3,6 @@ const CACHE_NAME = 'libsync-admin-v1';
 const urlsToCache = [
   '/',
   '/manifest.json',
-  '/logo.png',
   '/logo-512.png'
 ];
 
