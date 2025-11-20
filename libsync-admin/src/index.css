@@ -26,8 +26,10 @@ body {
   width: 100%;
   overflow-x: hidden;
   min-height: 100vh;
-  height: auto;
+  height: 100vh;
   position: relative;
+  display: flex;
+  flex-direction: column;
 }
 
 /* Apply 80% sizing to admin pages and login (excluding Home) - Using CSS zoom for proper scaling */
@@ -50,10 +52,10 @@ html:not(.home-page) {
   }
 }
 
-/* Fix bottom white space - make positioning flexible */
+/* Fix bottom white space - make positioning flexible for zoomed pages */
 html:not(.home-page) body {
   min-height: 125vh;
-  height: 100%;
+  height: 125vh;
   position: relative;
   display: flex;
   flex-direction: column;

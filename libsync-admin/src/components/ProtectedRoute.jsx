@@ -109,6 +109,7 @@ export default function ProtectedRoute({ children }) {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
+        minHeight: '100vh',
         height: '100vh',
         fontSize: '18px',
         color: '#666'
