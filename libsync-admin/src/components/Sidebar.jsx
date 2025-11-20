@@ -66,7 +66,11 @@ const Sidebar = ({ isMobileOpen, onClose }) => {
       <div style={styles.header}>
         <Link to="/dashboard" style={styles.logoLink}>
           <div style={styles.logoSection}>
-            <div style={styles.logoIcon}>📘</div>
+            <img 
+              src="/logo.png" 
+              alt="LibSync Logo" 
+              style={styles.logoIcon}
+            />
             {!isCollapsed && <h1 style={styles.logoText}>LibSync</h1>}
           </div>
         </Link>
@@ -179,7 +183,10 @@ const styles = {
     cursor: 'pointer'
   },
   logoIcon: {
-    fontSize: '28px',
+    width: '40px',
+    height: '40px',
+    borderRadius: '8px',
+    objectFit: 'contain',
     filter: 'drop-shadow(0 2px 4px rgba(0, 0, 0, 0.2))'
   },
   logoText: {
