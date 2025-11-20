@@ -76,54 +76,38 @@ function App() {
           // Continue with default production URL
         }
         
-        // Register for push notifications (non-blocking)
-        // This will work in EAS dev-client builds, not in Expo Go
-        registerForPushNotificationsAsync()
-          .then(async (token) => {
-            if (token) {
-              console.log('✅ Expo push token registered:', token);
-              // Save token to storage
-              try {
-                const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-                await AsyncStorage.setItem('expo_push_token', token);
-                console.log('✅ Push token saved to storage');
-                
-                // Try to send token to server if user is already logged in
-                try {
-                  const { notificationService } = require('./services/notificationService');
-                  await notificationService.sendPushTokenToServer(token);
-                  console.log('✅ Push token sent to server');
-                } catch (pushError) {
-                  console.log('ℹ️ Could not send push token to server (user may not be logged in yet):', pushError.message);
-                  // Token will be sent after login via authService
-                }
-              } catch (storageError) {
-                console.warn('⚠️ Failed to save push token:', storageError.message);
-              }
-            } else {
-              console.log('ℹ️ Push notification registration skipped or failed');
-            }
-          })
-          .catch(err => {
-            console.warn('⚠️ Notification registration failed:', err);
-            // App continues normally even if notifications fail
-          });
-        
-        // Initialize Notification service (for handling received notifications)
+        // Initialize Notification service (for handling received notifications and push token registration)
+        // This should always be initialized to set up notification handlers
         try {
-          // Check if we're running in Expo Go or a development build
           const { isDevice } = require('expo-device');
           const Constants = require('expo-constants');
           
-          // Only initialize notification handlers if NOT in Expo Go
-          if (isDevice && Constants.appOwnership !== 'expo') {
-            await notificationService.initialize();
-          } else {
-            console.log('Notification handlers disabled in Expo Go - use development build for push notifications');
-          }
+          // Always initialize notification service to set up handlers
+          // The service will handle device checks internally
+          await notificationService.initialize();
+          console.log('✅ Notification service initialized');
         } catch (notificationError) {
-          console.log('Notification service initialization failed:', notificationError.message);
+          console.error('❌ Notification service initialization failed:', notificationError);
           console.log('Continuing without push notifications...');
+          // Try to register for push notifications manually as fallback
+          try {
+            const token = await registerForPushNotificationsAsync();
+            if (token) {
+              console.log('✅ Push token obtained via fallback method');
+              const AsyncStorage = require('@react-native-async-storage/async-storage').default;
+              await AsyncStorage.setItem('expo_push_token', token);
+              
+              // Try to send token to server if user is already logged in
+              try {
+                await notificationService.sendPushTokenToServer(token);
+                console.log('✅ Push token sent to server via fallback');
+              } catch (pushError) {
+                console.log('ℹ️ Could not send push token to server (user may not be logged in yet):', pushError.message);
+              }
+            }
+          } catch (fallbackError) {
+            console.warn('⚠️ Fallback push notification registration also failed:', fallbackError.message);
+          }
         }
       } catch (error) {
         console.error('Service initialization failed:', error);

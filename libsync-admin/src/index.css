@@ -25,15 +25,6 @@ body {
   height: 100vh;
   max-height: 100vh;
   overflow-y: auto;
-  position: relative;
-}
-
-/* Ensure html fills viewport */
-html {
-  width: 100%;
-  height: 100%;
-  margin: 0;
-  padding: 0;
 }
 
 /* Apply 80% sizing to admin pages (excluding Home and Login) - Using CSS zoom for proper scaling */
@@ -42,32 +33,22 @@ html:not(.home-page):not(.login-page) {
   zoom: 0.8;
   -moz-transform: scale(0.8);
   -moz-transform-origin: 0 0;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
 }
 
-/* For Firefox - ensure body fills viewport */
+/* For Firefox */
 @-moz-document url-prefix() {
   html:not(.home-page):not(.login-page) body {
     transform: scale(0.8);
     transform-origin: 0 0;
     width: 125%;
     height: 125%;
-    min-width: 125%;
-    min-height: 125%;
   }
 }
 
-/* Ensure body fills viewport when zoomed - fix white space */
+/* Fix bottom white space only - ensure body fills vertical space */
 html:not(.home-page):not(.login-page) body {
-  width: 125%;
-  height: 125%;
-  min-width: 125%;
-  min-height: 125%;
-  position: relative;
-  overflow-x: hidden;
-  overflow-y: auto;
+  min-height: 125vh;
+  height: auto;
 }
 
 /* Reset zoom for home and login pages */

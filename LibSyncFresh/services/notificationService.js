@@ -139,10 +139,15 @@ class NotificationService {
   // Initialize notification service
   async initialize() {
     try {
+      // Always configure notification handler first
       this.configure();
       
+      // Set up notification listeners (always, even if push token registration fails)
+      this.setupNotificationListeners();
+      
       // Request permissions and get push token
-      const token = await this.registerForPushNotificationsAsync();
+      // Use the standalone function which has better error handling
+      const token = await registerForPushNotificationsAsync();
       if (token) {
         this.expoPushToken = token;
         await this.savePushTokenToStorage(token);
@@ -159,16 +164,20 @@ class NotificationService {
         }
       } else {
         console.warn('⚠️ No push token obtained - notifications may not work');
+        // Still mark as initialized so handlers work for local notifications
       }
-
-      // Set up notification listeners
-      this.setupNotificationListeners();
       
       this.isInitialized = true;
       console.log('✅ Notification service initialized successfully');
 
     } catch (error) {
       console.error('❌ Failed to initialize notification service:', error);
+      // Still set up listeners even if token registration fails
+      try {
+        this.setupNotificationListeners();
+      } catch (listenerError) {
+        console.error('Failed to set up notification listeners:', listenerError);
+      }
       this.isInitialized = false;
       // Don't throw - app should continue even if notifications fail
     }

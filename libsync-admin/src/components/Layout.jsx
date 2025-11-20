@@ -76,11 +76,9 @@ const styles = {
     minHeight: '100vh',
     height: '100vh',
     maxHeight: '100vh',
-    width: '100%',
     backgroundColor: '#f8fafc',
     fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    overflow: 'hidden',
-    position: 'relative'
+    overflow: 'hidden'
   },
   main: {
     flex: 1,
