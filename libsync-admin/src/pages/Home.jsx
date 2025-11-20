@@ -56,8 +56,7 @@ export default function Home() {
       <nav className={`navbar ${isScrolled ? 'scrolled' : ''}`}>
         <div className="nav-container">
           <div className="nav-logo" onClick={() => { window.scrollTo({ top: 0, behavior: 'smooth' }); setIsMobileMenuOpen(false); }}>
-            <img src="/logo.png" alt="LibSync" style={{ height: '32px', marginRight: '8px' }} />
-            <span>LibSync</span>
+            LibSync
           </div>
           
           {/* Hamburger Menu Button */}
