@@ -138,15 +138,25 @@ export default function Login() {
         localStorage.removeItem('adminUser');
       }
 
-      // Ensure body class is set before navigation (remove login-page, no class = 80% font-size via CSS)
+      // Ensure body class is set before navigation (remove login-page, no class = 80% zoom via CSS)
       document.body.classList.remove('home-page', 'login-page');
       document.documentElement.classList.remove('home-page', 'login-page');
       
-      // Small delay to ensure class is applied before navigation
+      // Force height recalculation immediately
+      document.body.style.height = 'auto';
+      document.body.offsetHeight; // Force reflow
+      
+      // Force CSS recalculation for all elements
+      const allElements = document.querySelectorAll('*');
+      allElements.forEach(el => {
+        el.style.height = el.style.height || '';
+      });
+      
+      // Small delay to ensure class and styles are applied before navigation
       setTimeout(() => {
         // Redirect to dashboard (force reload to remount app)
         window.location.replace('/dashboard');
-      }, 50);
+      }, 100);
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {

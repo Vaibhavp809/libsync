@@ -45,11 +45,25 @@ function AppContent() {
       // For login and all other routes, no class = 80% zoom will apply via CSS
     };
     
-    // Set immediately
-    setBodyClass();
-    
-    // Also set on next tick to ensure it persists
-    setTimeout(setBodyClass, 0);
+      // Set immediately
+      setBodyClass();
+      
+      // Force height recalculation after class change
+      const forceHeightRecalc = () => {
+        document.body.style.height = 'auto';
+        document.documentElement.style.height = 'auto';
+        // Force reflow
+        document.body.offsetHeight;
+        document.documentElement.offsetHeight;
+      };
+      
+      // Also set on next tick to ensure it persists
+      setTimeout(() => {
+        setBodyClass();
+        forceHeightRecalc();
+      }, 0);
+      setTimeout(forceHeightRecalc, 50);
+      setTimeout(forceHeightRecalc, 100);
   }, [location]);
   
   // Also set on mount

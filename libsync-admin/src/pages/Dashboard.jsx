@@ -6,10 +6,42 @@ import Header from '../components/Header';
 import Card from '../components/Card';
 
 export default function Dashboard() {
-  // Ensure body class is set immediately when dashboard loads (no class = 80% font-size via CSS)
+  // Ensure body class is set immediately when dashboard loads and force height recalculation
   React.useEffect(() => {
     document.body.classList.remove('home-page', 'login-page');
     document.documentElement.classList.remove('home-page', 'login-page');
+    
+    // Force height recalculation immediately
+    const forceHeightRecalc = () => {
+      document.body.style.height = 'auto';
+      document.documentElement.style.height = 'auto';
+      // Force reflow to recalculate heights
+      document.body.offsetHeight;
+      document.documentElement.offsetHeight;
+      // Force sidebar and layout recalculation
+      const sidebar = document.querySelector('.sidebar');
+      const layoutMain = document.querySelector('.layout-main');
+      const layoutContainer = document.querySelector('[style*="display: flex"]');
+      if (sidebar) {
+        sidebar.style.height = 'auto';
+        sidebar.offsetHeight;
+      }
+      if (layoutMain) {
+        layoutMain.style.height = 'auto';
+        layoutMain.offsetHeight;
+      }
+      if (layoutContainer) {
+        layoutContainer.style.height = 'auto';
+        layoutContainer.offsetHeight;
+      }
+    };
+    
+    forceHeightRecalc();
+    // Force recalculation multiple times to ensure it sticks
+    setTimeout(forceHeightRecalc, 0);
+    setTimeout(forceHeightRecalc, 50);
+    setTimeout(forceHeightRecalc, 100);
+    setTimeout(forceHeightRecalc, 200);
   }, []);
   const [stats, setStats] = useState({
     totalBooks: 0,
