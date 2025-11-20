@@ -31,6 +31,12 @@ export default function ProtectedRoute({ children }) {
   const [isValid, setIsValid] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
+  // Ensure body class is set immediately for 80% scale on admin pages
+  useEffect(() => {
+    document.body.classList.remove('home-page');
+    document.documentElement.classList.remove('home-page');
+  }, []);
+
   useEffect(() => {
     const checkAuth = () => {
       // Check localStorage first (for "Remember Me" users)

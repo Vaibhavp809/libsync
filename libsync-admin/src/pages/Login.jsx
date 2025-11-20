@@ -134,8 +134,11 @@ export default function Login() {
       document.body.classList.remove('home-page');
       document.documentElement.classList.remove('home-page');
       
-      // Redirect to dashboard (force reload to remount app)
-      window.location.replace('/dashboard');
+      // Small delay to ensure class is applied before navigation
+      setTimeout(() => {
+        // Redirect to dashboard (force reload to remount app)
+        window.location.replace('/dashboard');
+      }, 50);
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {

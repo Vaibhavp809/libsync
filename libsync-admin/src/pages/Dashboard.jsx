@@ -6,6 +6,11 @@ import Header from '../components/Header';
 import Card from '../components/Card';
 
 export default function Dashboard() {
+  // Ensure body class is set immediately when dashboard loads
+  React.useEffect(() => {
+    document.body.classList.remove('home-page');
+    document.documentElement.classList.remove('home-page');
+  }, []);
   const [stats, setStats] = useState({
     totalBooks: 0,
     activeLoans: 0,
