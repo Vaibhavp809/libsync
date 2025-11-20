@@ -6,33 +6,6 @@ const Layout = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-  // Ensure body class is set immediately for 80% scale (admin pages)
-  useEffect(() => {
-    // Remove home-page and login-page classes when Layout mounts (admin pages)
-    document.body.classList.remove('home-page', 'login-page');
-    document.documentElement.classList.remove('home-page', 'login-page');
-    
-    // Apply 80% zoom immediately via inline style
-    const applyZoom = () => {
-      const html = document.documentElement;
-      const body = document.body;
-      
-      // Apply zoom immediately
-      html.style.zoom = '0.8';
-      body.style.height = 'auto';
-      body.style.minHeight = '100%';
-      
-      // Force reflow to ensure zoom is applied
-      body.offsetHeight;
-      html.offsetHeight;
-    };
-    
-    applyZoom();
-    // Apply zoom multiple times to ensure it sticks
-    setTimeout(applyZoom, 0);
-    setTimeout(applyZoom, 50);
-    setTimeout(applyZoom, 100);
-  }, []);
 
   useEffect(() => {
     const checkMobile = () => {

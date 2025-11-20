@@ -24,73 +24,8 @@ import LibraryUpdatesPage from './pages/LibraryUpdatesPage';
 function AppContent() {
   const location = useLocation();
 
-  useEffect(() => {
-    // Set body class for CSS-based scaling (simple and reliable)
-    const setBodyClass = () => {
-      const path = location.pathname;
-      const body = document.body;
-      const html = document.documentElement;
-      
-      if (!body) return;
-      
-      // Remove all route classes first
-      body.classList.remove('home-page', 'login-page');
-      html.classList.remove('home-page', 'login-page');
-      
-      // Add appropriate class based on route
-      if (path === '/') {
-        body.classList.add('home-page');
-        html.classList.add('home-page');
-      }
-      // For login and all other routes, no class = 80% zoom will apply via CSS
-    };
-    
-      // Set immediately
-      setBodyClass();
-      
-      // Force zoom application immediately after class change
-      const forceZoomApplication = () => {
-        const path = location.pathname;
-        const html = document.documentElement;
-        
-        if (path !== '/') {
-          // Apply 80% zoom immediately via inline style
-          html.style.zoom = '0.8';
-          document.body.style.height = 'auto';
-          document.body.style.minHeight = '100%';
-        } else {
-          html.style.zoom = '1';
-        }
-        
-        // Force reflow to ensure zoom is applied
-        document.body.offsetHeight;
-        html.offsetHeight;
-      };
-      
-      // Also set on next tick to ensure it persists
-      setTimeout(() => {
-        setBodyClass();
-        forceZoomApplication();
-      }, 0);
-      setTimeout(forceZoomApplication, 50);
-      setTimeout(forceZoomApplication, 100);
-      setTimeout(forceZoomApplication, 200);
-  }, [location]);
-  
-  // Also set on mount
-  useEffect(() => {
-    const path = window.location.pathname;
-    document.body.classList.remove('home-page', 'login-page');
-    document.documentElement.classList.remove('home-page', 'login-page');
-    
-    if (path === '/') {
-      document.body.classList.add('home-page');
-      document.documentElement.classList.add('home-page');
-    } else if (path === '/login') {
-      document.body.classList.add('login-page');
-      document.documentElement.classList.add('login-page');
-    }
-  }, []);
+  // Simple routing - no special zoom logic needed
+  // Login page handles its own styling via Login.jsx
 
   return (
     <Routes>

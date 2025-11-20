@@ -38,12 +38,18 @@ export default function Login() {
     return decodedToken.exp < currentTime;
   };
 
-  // Ensure login-page class is set immediately (for CSS-based scaling)
+  // Ensure login-page class is set for CSS styling
   useEffect(() => {
     document.body.classList.add('login-page');
     document.documentElement.classList.add('login-page');
     document.body.classList.remove('home-page');
     document.documentElement.classList.remove('home-page');
+    
+    // Cleanup on unmount
+    return () => {
+      document.body.classList.remove('login-page');
+      document.documentElement.classList.remove('login-page');
+    };
   }, []);
 
   useEffect(() => {
@@ -138,21 +144,8 @@ export default function Login() {
         localStorage.removeItem('adminUser');
       }
 
-      // Ensure body class is set before navigation (remove login-page, no class = 80% zoom via CSS)
-      document.body.classList.remove('home-page', 'login-page');
-      document.documentElement.classList.remove('home-page', 'login-page');
-      
-      // Redirect to dashboard with a parameter to trigger forced refresh
-      // This ensures the 80% zoom CSS is applied immediately after login
-      window.location.replace('/dashboard?fromLogin=true');
-      
-      // Force a full page reload after a short delay to ensure CSS loads properly
-      // This will only run if redirect didn't happen yet
-      setTimeout(() => {
-        if (window.location.pathname !== '/dashboard') {
-          window.location.replace('/dashboard?fromLogin=true');
-        }
-      }, 100);
+      // Redirect to dashboard (simple redirect, no zoom needed)
+      window.location.replace('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
     } finally {
@@ -305,20 +298,16 @@ export default function Login() {
 
 const styles = {
   container: {
-    minHeight: '100dvh', /* Dynamic viewport height - covers full device height */
-    height: '100dvh', /* Dynamic viewport height - covers full device height */
+    minHeight: '100vh',
+    height: '100vh',
     width: '100%',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '20px',
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    overflow: 'auto'
+    position: 'relative',
+    overflow: 'hidden'
   },
   homeButton: {
     position: 'fixed',

@@ -6,64 +6,6 @@ import Header from '../components/Header';
 import Card from '../components/Card';
 
 export default function Dashboard() {
-  // Check if coming from login and force refresh if needed
-  React.useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('fromLogin') === 'true') {
-      // Remove the parameter and force a refresh to ensure CSS loads properly
-      urlParams.delete('fromLogin');
-      const newUrl = window.location.pathname + (urlParams.toString() ? '?' + urlParams.toString() : '');
-      window.history.replaceState({}, '', newUrl);
-      // Force a refresh after removing parameter to ensure CSS is applied
-      window.location.reload();
-      return;
-    }
-  }, []);
-  
-  // Ensure body class is set immediately when dashboard loads and apply 80% zoom
-  React.useEffect(() => {
-    document.body.classList.remove('home-page', 'login-page');
-    document.documentElement.classList.remove('home-page', 'login-page');
-    
-    // Apply 80% zoom immediately via inline style to ensure it applies
-    const applyZoom = () => {
-      const html = document.documentElement;
-      const body = document.body;
-      
-      // Apply zoom immediately
-      html.style.zoom = '0.8';
-      body.style.height = 'auto';
-      body.style.minHeight = '100%';
-      
-      // Force reflow to ensure zoom is applied
-      body.offsetHeight;
-      html.offsetHeight;
-      
-      // Force sidebar and layout recalculation
-      const sidebar = document.querySelector('.sidebar');
-      const layoutMain = document.querySelector('.layout-main');
-      const layoutContainer = document.querySelector('[style*="display: flex"]');
-      if (sidebar) {
-        sidebar.style.height = 'auto';
-        sidebar.offsetHeight;
-      }
-      if (layoutMain) {
-        layoutMain.style.height = 'auto';
-        layoutMain.offsetHeight;
-      }
-      if (layoutContainer) {
-        layoutContainer.style.height = 'auto';
-        layoutContainer.offsetHeight;
-      }
-    };
-    
-    applyZoom();
-    // Apply zoom multiple times to ensure it sticks
-    setTimeout(applyZoom, 0);
-    setTimeout(applyZoom, 50);
-    setTimeout(applyZoom, 100);
-    setTimeout(applyZoom, 200);
-  }, []);
   const [stats, setStats] = useState({
     totalBooks: 0,
     activeLoans: 0,
