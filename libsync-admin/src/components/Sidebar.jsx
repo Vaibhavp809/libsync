@@ -151,8 +151,8 @@ const styles = {
   sidebar: {
     background: 'linear-gradient(180deg, #1e293b 0%, #334155 100%)',
     color: 'white',
-    height: '100vh',
-    maxHeight: '100vh',
+    minHeight: '100vh',
+    height: '100%',
     display: 'flex',
     flexDirection: 'column',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
