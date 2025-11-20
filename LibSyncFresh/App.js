@@ -3,6 +3,7 @@ import { View, Text } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
+import * as Notifications from 'expo-notifications';
 import { apiConfig } from './config/apiConfig';
 import { authService } from './services/authService';
 import { apiService } from './services/apiService';
@@ -32,6 +33,22 @@ function App() {
   const [isReady, setIsReady] = React.useState(false);
 
   useEffect(() => {
+    // Configure notification handler FIRST - this must be done before any notifications arrive
+    // This ensures notifications are displayed even when app is in background or closed
+    Notifications.setNotificationHandler({
+      handleNotification: async (notification) => {
+        // Always show notifications, even when app is in foreground, background, or closed
+        return {
+          shouldShowAlert: true,
+          shouldPlaySound: true,
+          shouldSetBadge: true,
+          // For Android: ensure notification appears in system tray and lock screen
+          priority: Notifications.AndroidNotificationPriority.MAX,
+        };
+      },
+    });
+    console.log('✅ Notification handler configured for background/foreground display');
+
     // Initialize API and Auth services (non-blocking)
     const initializeServices = async () => {
       try {

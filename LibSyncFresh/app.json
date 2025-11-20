@@ -41,6 +41,15 @@
         {
           "cameraPermission": "Allow LibSync to access your camera to scan barcodes and QR codes."
         }
+      ],
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#ffffff",
+          "sounds": ["default"],
+          "mode": "production"
+        }
       ]
     ],
     "extra": {

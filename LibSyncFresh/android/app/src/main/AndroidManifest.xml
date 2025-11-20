@@ -5,6 +5,11 @@
   <uses-permission android:name="android.permission.SYSTEM_ALERT_WINDOW"/>
   <uses-permission android:name="android.permission.VIBRATE"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+  <!-- Required for push notifications on Android 13+ (API 33+) -->
+  <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+  <!-- Required for receiving push notifications when app is in background -->
+  <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
+  <uses-permission android:name="android.permission.WAKE_LOCK"/>
   <queries>
     <intent>
       <action android:name="android.intent.action.VIEW"/>
@@ -22,5 +27,22 @@
         <category android:name="android.intent.category.LAUNCHER"/>
       </intent-filter>
     </activity>
+    <!-- Expo Notification Service for handling push notifications -->
+    <service
+      android:name="expo.modules.notifications.service.ExpoNotificationsService"
+      android:exported="false"
+      android:stopWithTask="false">
+      <intent-filter>
+        <action android:name="expo.modules.notifications.NOTIFICATION_EVENT"/>
+      </intent-filter>
+    </service>
+    <!-- Expo Notification Receiver for receiving push notifications -->
+    <receiver
+      android:name="expo.modules.notifications.service.ExpoNotificationReceiver"
+      android:exported="false">
+      <intent-filter>
+        <action android:name="expo.modules.notifications.NOTIFICATION_RECEIVED"/>
+      </intent-filter>
+    </receiver>
   </application>
 </manifest>
