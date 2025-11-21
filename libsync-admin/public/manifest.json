@@ -1,13 +1,15 @@
 {
-  "name": "LibSync Admin Dashboard",
-  "short_name": "LibSync Admin",
-  "description": "LibSync - Your Library, Automated & Closer - Admin Dashboard",
+  "name": "LibSync",
+  "short_name": "LibSync",
+  "description": "LibSync - Your Library, Automated & Closer",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
   "background_color": "#ffffff",
   "theme_color": "#0ea5e9",
   "orientation": "any",
+  "dir": "ltr",
+  "lang": "en",
   "icons": [
     {
       "src": "/logo.png",
@@ -51,5 +53,6 @@
       "url": "/books",
       "icons": [{ "src": "/logo.png", "sizes": "192x192" }]
     }
-  ]
+  ],
+  "prefer_related_applications": false
 }

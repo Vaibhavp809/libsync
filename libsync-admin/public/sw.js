@@ -1,5 +1,5 @@
-// Service Worker for LibSync Admin PWA
-const CACHE_NAME = 'libsync-admin-v1';
+// Service Worker for LibSync PWA
+const CACHE_NAME = 'libsync-v1';
 const urlsToCache = [
   '/',
   '/manifest.json',
