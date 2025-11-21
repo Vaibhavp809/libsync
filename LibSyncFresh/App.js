@@ -1,177 +1,133 @@
-import React, { useEffect } from 'react';
-import { View, Text } from 'react-native';
+import React, { useEffect, useState } from 'react';
+import { View, Text, StyleSheet } from 'react-native';
 import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
-import * as Notifications from 'expo-notifications';
-import { apiConfig } from './config/apiConfig';
-import { authService } from './services/authService';
-import { apiService } from './services/apiService';
-import { notificationService, registerForPushNotificationsAsync } from './services/notificationService';
-import CustomHeader from './components/CustomHeader';
-import CustomDrawerContent from './components/CustomDrawerContent';
-import ErrorBoundary from './components/ErrorBoundary';
-import MyReservationsScreen from './screens/MyReservationsScreen';
-import LoginScreen from './src/screens/LoginScreen';
-import RegisterScreen from './src/screens/RegisterScreen';
-import HomeScreen from './screens/HomeScreen';
-import BookListScreen from './screens/BookListScreen';
-import ScannerScreen from './screens/ScannerScreen';
-import AttendanceScannerScreen from './screens/AttendanceScannerScreen';
-import LoanHistoryScreen from './screens/LoanHistoryScreen';
-import NewArrivalsScreen from './screens/NewArrivalsScreen';
-import SettingsScreen from './screens/SettingsScreen';
-import DebugScreen from './screens/DebugScreen';
-import EResourcesScreen from './screens/EResourcesScreen';
-import LibraryUpdatesScreen from './screens/LibraryUpdatesScreen';
-import NotificationsScreen from './screens/NotificationsScreen';
+
+// Minimal styles for error screens (defined early)
+const errorStyle = { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' };
+
+// Lazy load screens to prevent import errors from crashing the app
+let LoginScreen, RegisterScreen, HomeScreen, BookListScreen, ScannerScreen;
+let AttendanceScannerScreen, LoanHistoryScreen, NewArrivalsScreen;
+let SettingsScreen, DebugScreen, EResourcesScreen, LibraryUpdatesScreen;
+let NotificationsScreen, CustomHeader, CustomDrawerContent, ErrorBoundary;
+
+try {
+  LoginScreen = require('./src/screens/LoginScreen').default;
+} catch (e) {
+  console.error('Failed to load LoginScreen:', e);
+  LoginScreen = () => <View style={errorStyle}><Text>Login Screen Error</Text></View>;
+}
+
+try {
+  RegisterScreen = require('./src/screens/RegisterScreen').default;
+} catch (e) {
+  console.error('Failed to load RegisterScreen:', e);
+  RegisterScreen = () => <View style={errorStyle}><Text>Register Screen Error</Text></View>;
+}
+
+try {
+  HomeScreen = require('./screens/HomeScreen').default;
+  BookListScreen = require('./screens/BookListScreen').default;
+  ScannerScreen = require('./screens/ScannerScreen').default;
+  AttendanceScannerScreen = require('./screens/AttendanceScannerScreen').default;
+  LoanHistoryScreen = require('./screens/LoanHistoryScreen').default;
+  NewArrivalsScreen = require('./screens/NewArrivalsScreen').default;
+  SettingsScreen = require('./screens/SettingsScreen').default;
+  DebugScreen = require('./screens/DebugScreen').default;
+  EResourcesScreen = require('./screens/EResourcesScreen').default;
+  LibraryUpdatesScreen = require('./screens/LibraryUpdatesScreen').default;
+  NotificationsScreen = require('./screens/NotificationsScreen').default;
+  CustomHeader = require('./components/CustomHeader').default;
+  CustomDrawerContent = require('./components/CustomDrawerContent').default;
+  ErrorBoundary = require('./components/ErrorBoundary').default;
+} catch (e) {
+  console.error('Failed to load screens:', e);
+}
 
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
 function App() {
-  const [isReady, setIsReady] = React.useState(false);
-  const [initError, setInitError] = React.useState(null);
+  const [isReady, setIsReady] = useState(false);
+  const [initError, setInitError] = useState(null);
 
   useEffect(() => {
-    // Wrap everything in try-catch to prevent crashes
-    try {
-      // Configure notification handler FIRST - this must be done before any notifications arrive
-      // This ensures notifications are displayed even when app is in background or closed
-      Notifications.setNotificationHandler({
-        handleNotification: async (notification) => {
-          // Always show notifications, even when app is in foreground, background, or closed
-          return {
-            shouldShowAlert: true,
-            shouldPlaySound: true,
-            shouldSetBadge: true,
-            // For Android: ensure notification appears in system tray and lock screen
-            priority: Notifications.AndroidNotificationPriority.MAX,
-          };
-        },
-      });
-      console.log('✅ Notification handler configured for background/foreground display');
-    } catch (error) {
-      console.error('❌ Failed to configure notification handler:', error);
-      // Continue without notification handler
-    }
-
-    // Initialize API and Auth services (non-blocking)
+    console.log('📱 App useEffect started');
+    
+    // Initialize services asynchronously - don't block render
     const initializeServices = async () => {
       try {
-        // Initialize Auth service (load saved token and user)
+        console.log('📱 Starting service initialization...');
+        
+        // Initialize API config (non-blocking)
         try {
+          const { apiConfig } = require('./config/apiConfig');
+          await apiConfig.getBaseURL();
+          console.log('✅ API config initialized');
+        } catch (error) {
+          console.warn('⚠️ API config init failed:', error.message);
+        }
+
+        // Initialize Auth service (non-blocking)
+        try {
+          const { authService } = require('./services/authService');
           await authService.initialize();
-        } catch (authError) {
-          console.warn('Auth service initialization failed:', authError.message);
-          // Continue without auth - user can login later
+          console.log('✅ Auth service initialized');
+        } catch (error) {
+          console.warn('⚠️ Auth service init failed:', error.message);
         }
-        
-        // Initialize API service
+
+        // Initialize API service (non-blocking)
         try {
+          const { apiService } = require('./services/apiService');
           await apiService.initialize();
-        } catch (apiError) {
-          console.warn('API service initialization failed:', apiError.message);
-          // Continue - will use default production URL
+          console.log('✅ API service initialized');
+        } catch (error) {
+          console.warn('⚠️ API service init failed:', error.message);
         }
-        
-        // Configure API to use the correct server (defaults to production URL)
-        try {
-          await apiConfig.getCurrentServerIP();
-        } catch (configError) {
-          console.warn('API config initialization failed:', configError.message);
-          // Continue with default production URL
-        }
-        
-        // Initialize Notification service (for handling received notifications and push token registration)
-        // This should always be initialized to set up notification handlers
-        // Wrap in setTimeout to ensure it doesn't block app startup
+
+        // Configure notifications AFTER app is ready (delayed)
         setTimeout(async () => {
           try {
-            // Always initialize notification service to set up handlers
-            // The service will handle device checks internally
-            await notificationService.initialize();
-            console.log('✅ Notification service initialized');
-          } catch (notificationError) {
-            console.error('❌ Notification service initialization failed:', notificationError);
-            console.error('Error details:', notificationError.message, notificationError.stack);
-            console.log('Continuing without push notifications...');
-            // Don't try fallback - just continue without notifications
+            const Notifications = require('expo-notifications');
+            Notifications.setNotificationHandler({
+              handleNotification: async () => ({
+                shouldShowAlert: true,
+                shouldPlaySound: true,
+                shouldSetBadge: true,
+              }),
+            });
+            console.log('✅ Notification handler configured');
+          } catch (error) {
+            console.warn('⚠️ Notification setup failed:', error.message);
           }
-        }, 1000); // Delay by 1 second to let app render first
+        }, 2000);
+
+        console.log('✅ All services initialized');
+        setIsReady(true);
       } catch (error) {
-        console.error('Service initialization failed:', error);
-        // Don't crash the app - continue with default configuration
+        console.error('❌ Service initialization error:', error);
+        setInitError(error.message);
+        setIsReady(true); // Still show app even if init fails
       }
     };
-    
-    // Initialize services asynchronously without blocking app render
-    initializeServices()
-      .then(() => {
-        console.log('✅ All services initialized successfully');
-        setIsReady(true);
-      })
-      .catch(err => {
-        console.error('❌ Fatal initialization error:', err);
-        console.error('Error stack:', err.stack);
-        setInitError(err.message || 'Initialization failed');
-        // App will still render even if initialization fails
-        setIsReady(true);
-      });
+
+    initializeServices();
   }, []);
 
-  // Show loading screen while initializing
+  // Show loading screen
   if (!isReady) {
     return (
-      <ErrorBoundary>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
-          <Text style={{ fontSize: 18, color: '#333' }}>Loading LibSync...</Text>
-          {initError && (
-            <Text style={{ fontSize: 12, color: '#ff0000', marginTop: 10, padding: 10 }}>
-              Warning: {initError}
-            </Text>
-          )}
-        </View>
-      </ErrorBoundary>
+      <View style={styles.container}>
+        <Text style={styles.loadingText}>Loading LibSync...</Text>
+        {initError && (
+          <Text style={styles.errorText}>Warning: {initError}</Text>
+        )}
+      </View>
     );
   }
-
-  // Create a drawer navigator for authenticated screens
-  const DrawerNavigator = () => {
-    return (
-      <Drawer.Navigator
-        drawerContent={(props) => <CustomDrawerContent {...props} />}
-        screenOptions={({ navigation, route }) => ({
-          header: () => (
-            <CustomHeader 
-              navigation={navigation} 
-              title={getScreenTitle(route.name)}
-              showNotificationBell={route.name !== 'Notifications'}
-            />
-          ),
-          drawerPosition: 'left',
-          drawerType: 'slide',
-          overlayColor: 'rgba(0,0,0,0.5)',
-          drawerStyle: {
-            width: 280,
-          },
-        })}
-      >
-        <Drawer.Screen name="Home" component={HomeScreen} />
-        <Drawer.Screen name="Books" component={BookListScreen} />
-        <Drawer.Screen name="MyReservations" component={MyReservationsScreen} />
-        <Drawer.Screen name="LoanHistory" component={LoanHistoryScreen} />
-        <Drawer.Screen name="AttendanceScanner" component={AttendanceScannerScreen} />
-        <Drawer.Screen name="LibraryUpdates" component={LibraryUpdatesScreen} />
-        <Drawer.Screen name="EResources" component={EResourcesScreen} />
-        <Drawer.Screen name="Notifications" component={NotificationsScreen} />
-        <Drawer.Screen name="Scanner" component={ScannerScreen} />
-        <Drawer.Screen name="NewArrivals" component={NewArrivalsScreen} />
-        <Drawer.Screen name="Settings" component={SettingsScreen} />
-        <Drawer.Screen name="Debug" component={DebugScreen} />
-      </Drawer.Navigator>
-    );
-  };
 
   // Helper function to get screen titles
   const getScreenTitle = (routeName) => {
@@ -192,38 +148,100 @@ function App() {
     return titles[routeName] || 'LibSync';
   };
 
-  // Wrap everything in try-catch for safety
+  // Create drawer navigator
+  const DrawerNavigator = () => {
+    if (!CustomDrawerContent || !CustomHeader) {
+      return (
+        <View style={styles.container}>
+          <Text style={styles.errorText}>Navigation components not loaded</Text>
+        </View>
+      );
+    }
+
+    return (
+      <Drawer.Navigator
+        drawerContent={(props) => <CustomDrawerContent {...props} />}
+        screenOptions={({ navigation, route }) => ({
+          header: () => (
+            <CustomHeader 
+              navigation={navigation} 
+              title={getScreenTitle(route.name)}
+              showNotificationBell={route.name !== 'Notifications'}
+            />
+          ),
+          drawerPosition: 'left',
+          drawerType: 'slide',
+          overlayColor: 'rgba(0,0,0,0.5)',
+          drawerStyle: {
+            width: 280,
+          },
+        })}
+      >
+        {HomeScreen && <Drawer.Screen name="Home" component={HomeScreen} />}
+        {BookListScreen && <Drawer.Screen name="Books" component={BookListScreen} />}
+        {NotificationsScreen && <Drawer.Screen name="Notifications" component={NotificationsScreen} />}
+        {SettingsScreen && <Drawer.Screen name="Settings" component={SettingsScreen} />}
+      </Drawer.Navigator>
+    );
+  };
+
+  // Main app render
   try {
     return (
-      <ErrorBoundary>
-        <NavigationContainer
-          onReady={() => console.log('✅ NavigationContainer ready')}
-          onStateChange={() => console.log('Navigation state changed')}
+      <NavigationContainer
+        onReady={() => console.log('✅ NavigationContainer ready')}
+      >
+        <Stack.Navigator 
+          initialRouteName="Login"
+          screenOptions={{ headerShown: false }}
         >
-          <Stack.Navigator 
-            initialRouteName="Login"
-            screenOptions={{ headerShown: false }}
-          >
-            <Stack.Screen name="Login" component={LoginScreen} />
-            <Stack.Screen name="Register" component={RegisterScreen} />
-            <Stack.Screen name="Main" component={DrawerNavigator} />
-          </Stack.Navigator>
-        </NavigationContainer>
-      </ErrorBoundary>
+          <Stack.Screen name="Login" component={LoginScreen} />
+          <Stack.Screen name="Register" component={RegisterScreen} />
+          <Stack.Screen name="Main" component={DrawerNavigator} />
+        </Stack.Navigator>
+      </NavigationContainer>
     );
   } catch (error) {
     console.error('❌ Fatal error in App render:', error);
     return (
-      <ErrorBoundary>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff', padding: 20 }}>
-          <Text style={{ fontSize: 18, color: '#ff0000', marginBottom: 10 }}>App Error</Text>
-          <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>
-            {error.message || 'An unexpected error occurred'}
-          </Text>
-        </View>
-      </ErrorBoundary>
+      <View style={styles.container}>
+        <Text style={styles.errorText}>App Error</Text>
+        <Text style={styles.errorDetail}>{error.message}</Text>
+      </View>
     );
   }
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+    padding: 20,
+  },
+  loadingText: {
+    fontSize: 18,
+    color: '#333',
+  },
+  errorText: {
+    fontSize: 16,
+    color: '#ff0000',
+    marginTop: 10,
+    textAlign: 'center',
+  },
+  errorDetail: {
+    fontSize: 12,
+    color: '#666',
+    marginTop: 5,
+    textAlign: 'center',
+  },
+  error: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#fff',
+  },
+});
 
 export default App;

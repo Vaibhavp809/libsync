@@ -48,16 +48,18 @@
         {
           "icon": "./assets/icon.png",
           "color": "#ffffff",
-          "sounds": ["default"],
+          "sounds": [
+            "default"
+          ],
           "mode": "production"
         }
       ]
     ],
     "extra": {
       "eas": {
-        "projectId": "3fe02101-dc23-431a-b568-c66e0d124246"
+        "projectId": "5566e9e8-ca56-4691-a703-b506cf4710af"
       }
     },
-    "owner": "vaibhav20589"
+    "owner": "libsync"
   }
 }
