@@ -14,6 +14,9 @@
   /* Ensure it's positioned relative to viewport, not parent */
   transform: none !important;
   will-change: auto !important;
+  /* Allow sidebar content to grow, but container stays viewport height */
+  display: flex !important;
+  flex-direction: column !important;
 }
 
 /* Responsive styles for Sidebar */
