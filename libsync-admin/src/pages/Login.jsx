@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './Login.css';
 
@@ -141,11 +141,6 @@ export default function Login() {
 
   return (
     <div style={styles.container} className="login-container">
-      {/* Return to Home Button */}
-      <Link to="/" style={styles.homeButton} className="return-home-button">
-        ← Return to Home
-      </Link>
-      
       {/* Background Animation */}
       <div style={styles.backgroundAnimation}>
         <div style={styles.floatingShape}></div>
@@ -292,26 +287,6 @@ const styles = {
     padding: '20px',
     position: 'relative',
     overflow: 'hidden'
-  },
-  homeButton: {
-    position: 'absolute',
-    top: '20px',
-    left: '20px',
-    padding: '12px 24px',
-    background: 'rgba(255, 255, 255, 0.9)',
-    color: '#1e293b',
-    textDecoration: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '600',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '8px',
-    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
-    transition: 'all 0.2s ease',
-    zIndex: 1000,
-    backdropFilter: 'blur(10px)',
-    border: '1px solid rgba(255, 255, 255, 0.3)'
   },
   backgroundAnimation: {
     position: 'absolute',
