@@ -20,6 +20,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/apiService';
 import { colors, typography, spacing, borderRadius, shadows, components, layout } from '../styles/designSystem';
+import { toLocalDateString } from '../src/utils/time';
 
 export default function LibraryUpdatesScreen() {
   const [updates, setUpdates] = useState([]);
@@ -277,7 +278,7 @@ export default function LibraryUpdatesScreen() {
 
     const formatDate = (dateString) => {
       if (!dateString) return '';
-      return new Date(dateString).toLocaleDateString('en-US', {
+      return toLocalDateString(dateString, {
         month: 'short',
         day: 'numeric',
         year: 'numeric'

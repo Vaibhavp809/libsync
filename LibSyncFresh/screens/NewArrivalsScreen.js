@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiConfig } from '../config/apiConfig';
 import { mockApi } from '../config/mockApiConfig';
 import { colors, typography, spacing, borderRadius, shadows, components, layout, getStatusColor, getStatusBackgroundColor } from '../styles/designSystem';
+import { toLocalDateString, normalizeTimestamp } from '../src/utils/time';
 
 const { width: screenWidth } = Dimensions.get('window');
 const cardWidth = (screenWidth - (spacing.md * 3)) / 2;
@@ -122,8 +123,9 @@ export default function NewArrivalsScreen() {
   }, []);
 
   const renderFeaturedItem = ({ item, index }) => {
-    const addedDate = new Date(item.addedOn);
-    const isNew = (new Date() - addedDate) / (1000 * 60 * 60 * 24) <= 3; // New if added within 3 days
+    const addedDateMs = normalizeTimestamp(item.addedOn);
+    const addedDate = addedDateMs ? new Date(addedDateMs) : null;
+    const isNew = addedDateMs ? (Date.now() - addedDateMs) / (1000 * 60 * 60 * 24) <= 3 : false; // New if added within 3 days
     
     return (
       <TouchableOpacity style={styles.featuredCard} activeOpacity={0.9}>
@@ -144,7 +146,7 @@ export default function NewArrivalsScreen() {
           <View style={styles.featuredDetails}>
             <Text style={styles.featuredCategory}>{item.category}</Text>
             <Text style={styles.featuredDate}>
-              Added {addedDate.toLocaleDateString()}
+              Added {toLocalDateString(addedDateMs)}
             </Text>
           </View>
           

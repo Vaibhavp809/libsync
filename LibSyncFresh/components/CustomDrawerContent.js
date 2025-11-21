@@ -10,7 +10,7 @@ import {
 import { DrawerContentScrollView } from '@react-navigation/drawer';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import { MaterialCommunityIcons } from '@expo/vector-icons';
 import { authService } from '../services/authService';
 import { colors, typography, spacing, borderRadius, shadows } from '../styles/designSystem';
 

@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/apiService';
 import { authService } from '../services/authService';
 import { colors, typography, spacing, borderRadius, shadows, components, layout, getStatusColor, getStatusBackgroundColor } from '../styles/designSystem';
+import { toLocalDateString, normalizeTimestamp } from '../src/utils/time';
 
 export default function MyReservationsScreen() {
   const [reservations, setReservations] = useState([]);
@@ -101,8 +102,9 @@ export default function MyReservationsScreen() {
   }, [studentId]);
 
   const renderItem = ({ item }) => {
-    const reservedDate = new Date(item.reservedAt);
-    const daysPassed = Math.floor((new Date() - reservedDate) / (1000 * 60 * 60 * 24));
+    const reservedDateMs = normalizeTimestamp(item.reservedAt);
+    const reservedDate = reservedDateMs ? new Date(reservedDateMs) : null;
+    const daysPassed = reservedDate ? Math.floor((Date.now() - reservedDateMs) / (1000 * 60 * 60 * 24)) : 0;
     
     return (
       <View style={styles.reservationCard}>
@@ -125,7 +127,7 @@ export default function MyReservationsScreen() {
         <View style={styles.reservationDetails}>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>📅 Reserved Date:</Text>
-            <Text style={styles.detailValue}>{reservedDate.toLocaleDateString()}</Text>
+            <Text style={styles.detailValue}>{toLocalDateString(reservedDateMs)}</Text>
           </View>
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>⏰ Duration:</Text>

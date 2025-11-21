@@ -141,6 +141,7 @@ async function sendPushNotificationForNotification(notification) {
     console.log('📤 Attempting to send push notification for:', {
       title: notification.title,
       type: notification.type,
+      broadcast: notification.broadcast,
       recipients: notification.recipients,
       recipient: notification.recipient,
       targetUsers: notification.targetUsers,
@@ -169,7 +170,10 @@ async function sendPushNotificationForNotification(notification) {
     }
 
     // Determine target users
-    if (notification.recipients === 'all') {
+    // Check both new 'broadcast' field and legacy 'recipients' field
+    const isBroadcast = notification.broadcast === true || notification.recipients === 'all';
+    
+    if (isBroadcast) {
       // Get all students with push tokens
       targetUsers = await User.find({
         role: 'student',
@@ -203,6 +207,7 @@ async function sendPushNotificationForNotification(notification) {
       }
     } else {
       console.warn('⚠️ No valid targeting found for notification:', {
+        broadcast: notification.broadcast,
         recipients: notification.recipients,
         recipient: notification.recipient,
         targetUsers: notification.targetUsers,

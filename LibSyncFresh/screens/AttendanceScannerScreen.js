@@ -19,6 +19,7 @@ import { apiConfig } from '../config/apiConfig';
 import { colors, typography, spacing, borderRadius, shadows, components, layout } from '../styles/designSystem';
 import { authService } from '../services/authService';
 import { dataService } from '../services/dataService';
+import { toLocalTimeString, normalizeTimestamp } from '../src/utils/time';
 
 export default function AttendanceScannerScreen({ navigation }) {
   const [qrCode, setQrCode] = useState('');
@@ -89,7 +90,7 @@ export default function AttendanceScannerScreen({ navigation }) {
         setLastScanResult({
           action: scanData.action,
           studentName: scanData.studentName,
-          time: new Date(scanData.time).toLocaleTimeString(),
+          time: toLocalTimeString(scanData.time),
           success: true
         });
         
@@ -112,7 +113,7 @@ export default function AttendanceScannerScreen({ navigation }) {
       setLastScanResult({
         action: 'Error',
         studentName: 'N/A',
-        time: new Date().toLocaleTimeString(),
+        time: toLocalTimeString(Date.now()),
         success: false,
         error: errorMessage
       });
@@ -174,7 +175,7 @@ export default function AttendanceScannerScreen({ navigation }) {
         setLastScanResult({
           action: scanData.action,
           studentName: scanData.studentName,
-          time: new Date(scanData.time).toLocaleTimeString(),
+          time: toLocalTimeString(scanData.time),
           success: true
         });
         
@@ -197,7 +198,7 @@ export default function AttendanceScannerScreen({ navigation }) {
       setLastScanResult({
         action: 'Error',
         studentName: 'N/A',
-        time: new Date().toLocaleTimeString(),
+        time: toLocalTimeString(Date.now()),
         success: false,
         error: errorMessage
       });

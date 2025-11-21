@@ -20,6 +20,7 @@ import { Swipeable } from 'react-native-gesture-handler';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/apiService';
 import { colors, typography, spacing, borderRadius, shadows, components, layout } from '../styles/designSystem';
+import { formatRelativeDate, toLocalDateString, normalizeTimestamp } from '../src/utils/time';
 
 export default function NotificationsScreen() {
   const [notifications, setNotifications] = useState([]);
@@ -417,8 +418,8 @@ export default function NotificationsScreen() {
       fine = parseInt(fineMatch[1]);
     }
     
-    // Get due date from data
-    const dueDate = item.data?.dueDate ? new Date(item.data.dueDate) : null;
+    // Get due date from data (normalize timestamp)
+    const dueDate = item.data?.dueDate ? normalizeTimestamp(item.data.dueDate) : null;
     
     return {
       bookTitle,
@@ -431,7 +432,8 @@ export default function NotificationsScreen() {
 
   const formatFormattedDate = (date) => {
     if (!date) return 'N/A';
-    return date.toLocaleDateString('en-US', {
+    const dateMs = date instanceof Date ? date.getTime() : normalizeTimestamp(date);
+    return toLocalDateString(dateMs, {
       weekday: 'short',
       year: 'numeric',
       month: 'short',
@@ -518,22 +520,17 @@ export default function NotificationsScreen() {
 
   const formatDate = (dateString) => {
     if (!dateString) return '';
-    const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now - date);
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    
-    if (diffDays === 1) {
-      return 'Yesterday';
-    } else if (diffDays < 7) {
-      return `${diffDays} days ago`;
-    } else {
-      return date.toLocaleDateString('en-US', {
-        month: 'short',
-        day: 'numeric',
-        year: date.getFullYear() !== now.getFullYear() ? 'numeric' : undefined
-      });
+    // Use formatRelativeDate for better relative date handling
+    const relative = formatRelativeDate(dateString);
+    if (relative && (relative === 'Today' || relative === 'Yesterday' || relative === 'Tomorrow')) {
+      return relative;
     }
+    // For other dates, use the formatted date from formatRelativeDate
+    return relative || toLocalDateString(dateString, {
+      month: 'short',
+      day: 'numeric',
+      year: new Date(dateString).getFullYear() !== new Date().getFullYear() ? 'numeric' : undefined
+    });
   };
 
   const renderRightActions = (notificationId) => {
@@ -595,7 +592,7 @@ export default function NotificationsScreen() {
             <View style={styles.overdueDetailRow}>
               <Text style={styles.overdueLabel}>Due Date:</Text>
               <Text style={styles.overdueValue}>
-                {formatFormattedDate(overdueData.dueDate)}
+                {formatFormattedDate(overdueData.dueDate instanceof Date ? overdueData.dueDate.getTime() : overdueData.dueDate)}
               </Text>
             </View>
           )}

@@ -5,6 +5,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { apiService } from '../services/apiService';
 import { authService } from '../services/authService';
 import { colors, typography, spacing, borderRadius, shadows, components, layout, getStatusColor, getStatusBackgroundColor } from '../styles/designSystem';
+import { toLocalDateString, normalizeTimestamp } from '../src/utils/time';
 
 export default function LoanHistoryScreen() {
   const [loans, setLoans] = useState([]);
@@ -85,10 +86,10 @@ export default function LoanHistoryScreen() {
   }, [studentId]);
 
   const renderItem = ({ item, index }) => {
-    const issueDate = new Date(item.issueDate);
-    const dueDate = new Date(item.dueDate);
-    const returnDate = item.returnDate ? new Date(item.returnDate) : null;
-    const isOverdue = !returnDate && new Date() > dueDate;
+    const issueDate = normalizeTimestamp(item.issueDate);
+    const dueDate = normalizeTimestamp(item.dueDate);
+    const returnDate = item.returnDate ? normalizeTimestamp(item.returnDate) : null;
+    const isOverdue = !returnDate && Date.now() > dueDate;
     
     // Determine the proper status display
     let actualStatus = item.status;
@@ -127,18 +128,18 @@ export default function LoanHistoryScreen() {
             <View style={styles.dateRow}>
               <View style={styles.dateItem}>
                 <Text style={styles.dateLabel}>📅 Issued</Text>
-                <Text style={styles.dateValue}>{issueDate.toLocaleDateString()}</Text>
+                <Text style={styles.dateValue}>{toLocalDateString(issueDate)}</Text>
               </View>
               <View style={styles.dateItem}>
                 <Text style={styles.dateLabel}>⏰ Due Date</Text>
                 <Text style={[styles.dateValue, isOverdue && styles.overdueText]}>
-                  {dueDate.toLocaleDateString()}
+                  {toLocalDateString(dueDate)}
                 </Text>
               </View>
               {returnDate && (
                 <View style={styles.dateItem}>
                   <Text style={styles.dateLabel}>✅ Returned</Text>
-                  <Text style={styles.dateValue}>{returnDate.toLocaleDateString()}</Text>
+                  <Text style={styles.dateValue}>{toLocalDateString(returnDate)}</Text>
                 </View>
               )}
             </View>
