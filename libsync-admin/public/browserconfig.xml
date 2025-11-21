@@ -4,8 +4,8 @@
         <tile>
             <square70x70logo src="/logo.png"/>
             <square150x150logo src="/logo.png"/>
-            <wide310x150logo src="/logo-512.png"/>
-            <square310x310logo src="/logo-512.png"/>
+            <wide310x150logo src="/logo-512-white.png"/>
+            <square310x310logo src="/logo-512-white.png"/>
             <TileColor>#0ea5e9</TileColor>
         </tile>
     </msapplication>
