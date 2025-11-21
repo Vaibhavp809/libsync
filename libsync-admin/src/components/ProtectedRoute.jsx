@@ -31,13 +31,6 @@ export default function ProtectedRoute({ children }) {
   const [isValid, setIsValid] = useState(false);
   const [isChecking, setIsChecking] = useState(true);
 
-  // Ensure body class is set immediately for admin pages
-  useEffect(() => {
-    // Remove home-page and login-page classes (admin pages should have no special class)
-    document.body.classList.remove('home-page', 'login-page');
-    document.documentElement.classList.remove('home-page', 'login-page');
-  }, []);
-
   useEffect(() => {
     const checkAuth = () => {
       // Check localStorage first (for "Remember Me" users)
@@ -109,7 +102,6 @@ export default function ProtectedRoute({ children }) {
         display: 'flex',
         justifyContent: 'center',
         alignItems: 'center',
-        minHeight: '100vh',
         height: '100vh',
         fontSize: '18px',
         color: '#666'

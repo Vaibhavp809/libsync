@@ -151,7 +151,6 @@ const styles = {
   sidebar: {
     background: 'linear-gradient(180deg, #1e293b 0%, #334155 100%)',
     color: 'white',
-    minHeight: '100vh',
     height: '100vh',
     display: 'flex',
     flexDirection: 'column',
@@ -161,12 +160,8 @@ const styles = {
     left: 0,
     top: 0,
     bottom: 0,
-    overflowY: 'auto',
-    overflowX: 'hidden',
-    zIndex: 1000,
-    // Ensure it's fixed to viewport
-    transform: 'none',
-    willChange: 'auto'
+    overflow: 'hidden',
+    zIndex: 1000
   },
   header: {
     padding: '16px 16px',

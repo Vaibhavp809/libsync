@@ -38,20 +38,6 @@ export default function Login() {
     return decodedToken.exp < currentTime;
   };
 
-  // Ensure login-page class is set for CSS styling
-  useEffect(() => {
-    document.body.classList.add('login-page');
-    document.documentElement.classList.add('login-page');
-    document.body.classList.remove('home-page');
-    document.documentElement.classList.remove('home-page');
-    
-    // Cleanup on unmount - remove login-page class
-    return () => {
-      document.body.classList.remove('login-page');
-      document.documentElement.classList.remove('login-page');
-    };
-  }, []);
-
   useEffect(() => {
     // Only check localStorage for "Remember Me" users
     // sessionStorage tokens are NOT checked here because they should clear on browser close
@@ -144,7 +130,7 @@ export default function Login() {
         localStorage.removeItem('adminUser');
       }
 
-      // Redirect to dashboard
+      // Redirect to dashboard (force reload to remount app)
       window.location.replace('/dashboard');
     } catch (err) {
       setError(err.response?.data?.message || 'Login failed. Please try again.');
@@ -298,41 +284,34 @@ export default function Login() {
 
 const styles = {
   container: {
-    minHeight: '100dvh', // Dynamic viewport height for mobile
-    height: '100dvh', // Dynamic viewport height for mobile
-    width: '100%',
+    minHeight: '100vh',
     background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
     display: 'flex',
     alignItems: 'center',
     justifyContent: 'center',
     padding: '20px',
-    position: 'fixed',
-    top: 0,
-    left: 0,
-    right: 0,
-    bottom: 0,
-    overflow: 'auto'
+    position: 'relative',
+    overflow: 'hidden'
   },
   homeButton: {
-    position: 'fixed',
+    position: 'absolute',
     top: '20px',
     left: '20px',
-    padding: '14px 28px',
-    background: 'rgba(255, 255, 255, 0.98)',
+    padding: '12px 24px',
+    background: 'rgba(255, 255, 255, 0.9)',
     color: '#1e293b',
     textDecoration: 'none',
-    borderRadius: '10px',
-    fontSize: '15px',
-    fontWeight: '700',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '600',
     display: 'flex',
     alignItems: 'center',
     gap: '8px',
-    boxShadow: '0 6px 20px rgba(0, 0, 0, 0.3)',
-    zIndex: 9999,
-    border: '2px solid rgba(255, 255, 255, 0.6)',
+    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)',
+    transition: 'all 0.2s ease',
+    zIndex: 1000,
     backdropFilter: 'blur(10px)',
-    transition: 'all 0.3s ease',
-    cursor: 'pointer'
+    border: '1px solid rgba(255, 255, 255, 0.3)'
   },
   backgroundAnimation: {
     position: 'absolute',

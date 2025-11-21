@@ -6,7 +6,6 @@ const Layout = ({ children }) => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
-
   useEffect(() => {
     const checkMobile = () => {
       setIsMobile(window.innerWidth <= 768);
@@ -67,31 +66,16 @@ const Layout = ({ children }) => {
 const styles = {
   container: {
     display: 'flex',
-    flexDirection: 'row',
     minHeight: '100vh',
-    height: '100%',
-    width: '100%',
-    flex: 1,
     backgroundColor: '#f8fafc',
-    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
-    overflow: 'hidden',
-    position: 'relative',
-    /* Ensure container doesn't interfere with fixed sidebar */
-    transform: 'none',
-    willChange: 'auto'
+    fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif"
   },
   main: {
     flex: 1,
     padding: '32px',
     overflowY: 'auto',
-    overflowX: 'hidden',
     background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-    marginLeft: 'var(--sidebar-width, 280px)',
-    minHeight: '100vh',
-    height: '100%',
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column'
+    marginLeft: 'var(--sidebar-width, 280px)'
   },
   content: {
     maxWidth: '1200px',

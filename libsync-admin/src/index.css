@@ -8,42 +8,45 @@ html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
-  height: 100% !important;
-  min-height: 100% !important;
-  margin: 0 !important;
-  padding: 0 !important;
-  background: var(--app-bg, #f8fafc) !important;
-  -webkit-font-smoothing: antialiased !important;
-  -moz-osx-font-smoothing: grayscale !important;
 }
 
 body {
-  margin: 0 !important;
-  padding: 0 !important;
+  margin: 0;
+  padding: 0;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  -webkit-font-smoothing: antialiased !important;
-  -moz-osx-font-smoothing: grayscale !important;
-  background-color: #f8fafc !important;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: #f8fafc;
   color: #1e293b;
   width: 100%;
   overflow-x: hidden;
-  min-height: 100vh !important;
-  height: 100% !important;
-  position: relative;
 }
 
-/* Global flexible height for root container */
-#root {
-  min-height: 100vh !important;
-  height: 100% !important;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  margin: 0 !important;
-  padding: 0 !important;
-  background: var(--app-bg, #f8fafc) !important;
+/* Apply 80% scale to admin pages (excluding Home) */
+body:not(.home-page) {
+  transform: scale(0.8);
+  transform-origin: top left;
+  width: 125%; /* Compensate for scale to maintain full width */
+  height: 125%; /* Compensate for scale to maintain full height */
+  overflow-x: hidden;
+}
+
+/* Ensure login page container doesn't double-scale */
+body:not(.home-page) .login-container {
+  transform: scale(1); /* Reset scale since body already has it */
+}
+
+/* Ensure Layout component doesn't double-scale */
+body:not(.home-page) .layout-main,
+body:not(.home-page) .layout-content {
+  transform: scale(1); /* Reset scale since body already has it */
+}
+
+/* Ensure sidebar doesn't get double-scaled */
+body:not(.home-page) .sidebar {
+  transform: scale(1); /* Reset scale since body already has it */
 }
 
 /* Animations */
@@ -190,135 +193,3 @@ button:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
-
-/* ---- Layout fixes (zoom/scale removed) ---- */
-
-/* Global flexible height rules - all containers should grow with content */
-*[style*="height: 100vh"],
-*[style*="height: 100%"]:not(.sidebar):not([class*="sidebar"]) {
-  height: auto !important;
-}
-
-/* Top-level app container: column flex so header + content + footer behave correctly */
-.app-root, .admin-root, .main-wrapper, #app, #root > div { 
-  display: flex !important;
-  flex-direction: column !important;
-  min-height: 100vh !important;
-  height: 100% !important;
-}
-
-/* Layout root with sidebar: row flex for sidebar + content */
-.layout-root {
-  display: flex !important;
-  flex-direction: row !important;
-  min-height: 100vh !important;
-  height: 100% !important;
-}
-
-/* Content area: take remaining space, allow scrolling inside content */
-.content, .main-content, .layout-content, .page, .page-content, .app-content {
-  flex: 1 1 auto !important;
-  min-height: 0 !important; /* allow the flex child to shrink/grow correctly */
-  overflow: auto !important;
-}
-
-/* Sidebar: do not force large fixed heights; let it size to content */
-.sidebar, .app-sidebar, .layout-sidebar, .left-panel {
-  height: auto !important;
-  min-height: 0 !important;
-  max-height: none !important;
-  overflow: visible !important;
-}
-
-/* Global container flexibility */
-.container, .wrapper, .page-container, [class*="container"], [class*="wrapper"] {
-  height: auto !important;
-  min-height: auto !important;
-}
-
-/* Guard against accidental transform leftovers */
-.app-scaled-root, .app-scaled-wrapper {
-  transform: none !important;
-  width: 100% !important;
-}
-
-/* ---- CURSOR AUTO-APPEND: enforce default zoom=1.0 globally ---- */
-html, :root {
-  font-size: 100% !important;
-}
-
-* { 
-  -webkit-text-size-adjust: 100% !important; 
-  -ms-text-size-adjust: 100% !important; 
-}
-
-html.post-login { 
-  font-size: 100% !important; 
-} /* ensure any remaining post-login selector does not scale */
-
-.app-scaled-root, .app-scaled-wrapper { 
-  transform: none !important; 
-  width: 100% !important; 
-}
-
-body, #root, .app-root, .admin-root, .main-wrapper { 
-  height: auto !important; 
-  min-height: 100% !important; 
-}
-/* ---- end override ---- */
-
-/* Remove accidental fixed large footer gaps */
-.footer, .app-footer, .layout-footer {
-  flex: 0 0 auto !important;
-  height: auto !important;
-}
-
-/* Defensive overrides for inline style height:XXXXXpx that create white gaps (best-effort)
-   This uses high specificity and !important; safe to remove when debugging complete. */
-*[style*="height: 100vh"] { height: 100% !important; min-height: 100% !important; }
-*[style*="height: 100%"] { min-height: 100% !important; }
-
-/* Ensure all flex containers are flexible */
-[style*="display: flex"] {
-  height: auto !important;
-}
-
-/* small screens: stack column */
-@media (max-width: 900px) {
-  .app-root, .admin-root, .main-wrapper, .layout-root { 
-    flex-direction: column !important; 
-  }
-  .sidebar, .app-sidebar, .layout-sidebar { 
-    width: 100% !important; 
-  }
-}
-
-/* Global flexible height enforcement - make all containers grow with content */
-/* Exceptions: sidebar (fixed), modals, overlays, and specific UI elements */
-div:not(.sidebar):not([class*="modal"]):not([class*="overlay"]):not([class*="popup"]):not([class*="dialog"]):not([class*="dropdown"]) {
-  height: auto !important;
-}
-
-/* Ensure pages and main content areas are flexible */
-.page, .page-container, [class*="page"], [class*="Page"] {
-  min-height: auto !important;
-  height: auto !important;
-}
-
-/* Tables and lists should grow with content */
-table, .table, [class*="table"] {
-  height: auto !important;
-}
-
-/* Forms should be flexible */
-form, .form, [class*="form"] {
-  height: auto !important;
-}
-
-/* Cards and panels should grow with content */
-.card, .panel, [class*="card"], [class*="panel"] {
-  height: auto !important;
-  min-height: auto !important;
-}
-
-/* ---- end auto-append ---- */

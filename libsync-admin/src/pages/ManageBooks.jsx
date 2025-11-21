@@ -441,15 +441,7 @@ export default function ManageBooks() {
       key: 'accessionNumber', 
       header: 'Acc. No.',
       render: (book) => (
-        <span style={{ 
-          fontWeight: '600', 
-          color: '#1f2937',
-          display: 'inline-block',
-          maxWidth: '120px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
-        }}>
+        <span style={{ fontWeight: '600', color: '#1f2937' }}>
           {book.accessionNumber}
         </span>
       )
@@ -459,13 +451,12 @@ export default function ManageBooks() {
       header: 'Title',
       render: (book) => (
         <div style={{ 
-          maxWidth: '300px',
-          overflow: 'hidden', 
+          maxWidth: '500px',
+          overflow: 'visible', 
           wordWrap: 'break-word',
           whiteSpace: 'normal',
           lineHeight: '1.6',
-          padding: '8px 4px',
-          textOverflow: 'ellipsis'
+          padding: '8px 4px'
         }} title={book.title}>
           {book.title}
         </div>
@@ -476,59 +467,24 @@ export default function ManageBooks() {
       header: 'Author',
       render: (book) => (
         <div style={{ 
-          maxWidth: '200px',
-          overflow: 'hidden', 
+          maxWidth: '300px',
+          overflow: 'visible', 
           wordWrap: 'break-word',
           whiteSpace: 'normal',
           lineHeight: '1.6',
-          padding: '8px 4px',
-          textOverflow: 'ellipsis'
+          padding: '8px 4px'
         }} title={book.author}>
           {book.author}
         </div>
       )
     },
-    { 
-      key: 'yearOfPublishing', 
-      header: 'Year',
-      render: (book) => (
-        <span style={{ 
-          display: 'inline-block',
-          minWidth: '60px',
-          textAlign: 'center'
-        }}>
-          {book.yearOfPublishing || '-'}
-        </span>
-      )
-    },
-    { 
-      key: 'edition', 
-      header: 'Ed.',
-      render: (book) => (
-        <span style={{ 
-          display: 'inline-block',
-          minWidth: '80px',
-          maxWidth: '100px',
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
-          whiteSpace: 'nowrap'
-        }} title={book.edition}>
-          {book.edition || '-'}
-        </span>
-      )
-    },
+    { key: 'yearOfPublishing', header: 'Year' },
+    { key: 'edition', header: 'Ed.' },
     {
       key: 'price',
       header: 'Price',
       render: (book) => (
-        <span style={{ 
-          fontWeight: '600', 
-          color: '#059669',
-          display: 'inline-block',
-          minWidth: '80px',
-          textAlign: 'center',
-          width: '100%'
-        }}>
+        <span style={{ fontWeight: '600', color: '#059669' }}>
           {book.price ? `₹${book.price}` : '-'}
         </span>
       )
@@ -537,26 +493,12 @@ export default function ManageBooks() {
       key: 'status',
       header: 'Status',
       render: (book) => (
-        <div style={{
-          display: 'flex',
-          justifyContent: 'center',
-          alignItems: 'center',
-          minWidth: '100px',
-          maxWidth: '120px',
-          width: '100px'
+        <span style={{
+          ...styles.statusBadge,
+          backgroundColor: book.status === 'Available' ? '#10b981' : '#f59e0b'
         }}>
-          <span style={{
-            ...styles.statusBadge,
-            backgroundColor: book.status === 'Available' ? '#10b981' : '#f59e0b',
-            display: 'inline-block',
-            whiteSpace: 'nowrap',
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            maxWidth: '100%'
-          }}>
-            {book.status}
-          </span>
-        </div>
+          {book.status}
+        </span>
       )
     },
     {
@@ -578,10 +520,7 @@ export default function ManageBooks() {
             display: 'flex',
             gap: '8px',
             minWidth: '140px',
-            maxWidth: '160px',
-            width: '160px',
-            justifyContent: 'center',
-            flexWrap: 'nowrap'
+            justifyContent: 'center'
           }}>
             <button
               style={{

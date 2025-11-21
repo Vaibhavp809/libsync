@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import Home from './pages/Home';
@@ -21,6 +22,17 @@ import EResourcesPage from './pages/EResourcesPage';
 import LibraryUpdatesPage from './pages/LibraryUpdatesPage';
 
 function AppContent() {
+  const location = useLocation();
+
+  useEffect(() => {
+    // Add/remove home-page class based on route
+    if (location.pathname === '/') {
+      document.body.classList.add('home-page');
+    } else {
+      document.body.classList.remove('home-page');
+    }
+  }, [location]);
+
   return (
     <Routes>
       <Route path="/" element={<Home />} />
