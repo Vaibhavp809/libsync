@@ -77,11 +77,25 @@ async function sendPushNotification(pushToken, title, body, data = {}, channelId
  */
 async function sendPushNotificationsToMultiple(pushTokens, title, body, data = {}, channelId = 'default') {
   try {
+    console.log(`📤 sendPushNotificationsToMultiple called with ${pushTokens.length} tokens`);
+    console.log(`📤 Title: "${title}"`);
+    console.log(`📤 Body: "${body}"`);
+    console.log(`📤 Channel: ${channelId}`);
+    
     // Filter out invalid tokens
-    const validTokens = pushTokens.filter(token => Expo.isExpoPushToken(token));
+    const validTokens = pushTokens.filter(token => {
+      const isValid = Expo.isExpoPushToken(token);
+      if (!isValid) {
+        console.warn(`⚠️ Invalid token filtered out: ${token.substring(0, 30)}...`);
+      }
+      return isValid;
+    });
+    
+    console.log(`📤 Valid tokens: ${validTokens.length} out of ${pushTokens.length}`);
     
     if (validTokens.length === 0) {
-      console.warn('No valid push tokens provided');
+      console.error('❌ No valid push tokens provided after filtering');
+      console.error('❌ All tokens were invalid Expo push tokens');
       return { success: false, error: 'No valid push tokens' };
     }
 
@@ -96,18 +110,34 @@ async function sendPushNotificationsToMultiple(pushTokens, title, body, data = {
       channelId: channelId,
     }));
 
+    console.log(`📤 Constructed ${messages.length} notification messages`);
+    console.log(`📤 First message preview:`, {
+      to: messages[0].to.substring(0, 30) + '...',
+      title: messages[0].title,
+      body: messages[0].body.substring(0, 50) + '...',
+      channelId: messages[0].channelId
+    });
+
     // Send notifications in chunks
     const chunks = expo.chunkPushNotifications(messages);
+    console.log(`📤 Split into ${chunks.length} chunks for sending`);
+    
     const tickets = [];
 
-    for (let chunk of chunks) {
+    for (let i = 0; i < chunks.length; i++) {
       try {
-        const ticketChunk = await expo.sendPushNotificationsAsync(chunk);
+        console.log(`📤 Sending chunk ${i + 1}/${chunks.length} (${chunks[i].length} notifications)...`);
+        const ticketChunk = await expo.sendPushNotificationsAsync(chunks[i]);
         tickets.push(...ticketChunk);
+        console.log(`✅ Chunk ${i + 1} sent successfully`);
       } catch (error) {
-        console.error('Error sending push notification chunk:', error);
+        console.error(`❌ Error sending push notification chunk ${i + 1}:`, error);
+        console.error(`❌ Error message:`, error.message);
+        console.error(`❌ Error stack:`, error.stack);
       }
     }
+
+    console.log(`📤 Received ${tickets.length} tickets from Expo`);
 
     // Check for errors
     const errors = [];
@@ -117,17 +147,33 @@ async function sendPushNotificationsToMultiple(pushTokens, title, body, data = {
           token: validTokens[i],
           error: ticket.message || 'Unknown error'
         });
+        console.error(`❌ Ticket error for token ${i}:`, ticket.message || 'Unknown error');
+      } else {
+        console.log(`✅ Ticket ${i} status: ${ticket.status} (ID: ${ticket.id || 'N/A'})`);
       }
     });
 
-    return {
+    const result = {
       success: errors.length === 0,
       sent: validTokens.length - errors.length,
       failed: errors.length,
       errors: errors.length > 0 ? errors : undefined
     };
+
+    console.log(`📤 ========== PUSH NOTIFICATION RESULT ==========`);
+    console.log(`📤 Success: ${result.success}`);
+    console.log(`📤 Sent: ${result.sent}`);
+    console.log(`📤 Failed: ${result.failed}`);
+    if (result.errors) {
+      console.error(`📤 Errors:`, JSON.stringify(result.errors, null, 2));
+    }
+    console.log(`📤 =============================================`);
+
+    return result;
   } catch (error) {
-    console.error('Error sending push notifications:', error);
+    console.error('❌ Error sending push notifications:', error);
+    console.error('❌ Error message:', error.message);
+    console.error('❌ Error stack:', error.stack);
     return { success: false, error: error.message };
   }
 }
@@ -138,21 +184,28 @@ async function sendPushNotificationsToMultiple(pushTokens, title, body, data = {
  */
 async function sendPushNotificationForNotification(notification) {
   try {
+    // Convert Mongoose document to plain object if needed
+    const notificationObj = notification.toObject ? notification.toObject() : notification;
+    
+    console.log('📤 ========== PUSH NOTIFICATION START ==========');
     console.log('📤 Attempting to send push notification for:', {
-      title: notification.title,
-      type: notification.type,
-      broadcast: notification.broadcast,
-      recipients: notification.recipients,
-      recipient: notification.recipient,
-      targetUsers: notification.targetUsers,
-      department: notification.department
+      notificationId: notificationObj._id || notificationObj.id,
+      title: notificationObj.title,
+      message: notificationObj.message,
+      type: notificationObj.type,
+      broadcast: notificationObj.broadcast,
+      recipients: notificationObj.recipients,
+      recipient: notificationObj.recipient,
+      recipientId: notificationObj.recipient?._id || notificationObj.recipient,
+      targetUsers: notificationObj.targetUsers,
+      department: notificationObj.department
     });
 
     let targetUsers = [];
     let channelId = 'default';
 
     // Determine channel based on notification type
-    switch (notification.type) {
+    switch (notif.type) {
       case 'reservation':
         channelId = 'reservations';
         break;
@@ -169,9 +222,12 @@ async function sendPushNotificationForNotification(notification) {
         channelId = 'default';
     }
 
+    // Use the converted object
+    const notif = notificationObj;
+    
     // Determine target users
     // Check both new 'broadcast' field and legacy 'recipients' field
-    const isBroadcast = notification.broadcast === true || notification.recipients === 'all';
+    const isBroadcast = notif.broadcast === true || notif.recipients === 'all';
     
     if (isBroadcast) {
       // Get all students with push tokens
@@ -180,43 +236,65 @@ async function sendPushNotificationForNotification(notification) {
         pushToken: { $exists: true, $ne: null, $ne: '' }
       }).select('pushToken name studentID');
       console.log(`Found ${targetUsers.length} students with push tokens for 'all' notification`);
-    } else if (notification.recipients === 'students' && notification.department) {
+    } else if (notif.recipients === 'students' && notif.department) {
       // Get students in specific department with push tokens
       targetUsers = await User.find({
         role: 'student',
-        department: notification.department,
+        department: notif.department,
         pushToken: { $exists: true, $ne: null, $ne: '' }
       }).select('pushToken name studentID');
-      console.log(`Found ${targetUsers.length} students with push tokens in department ${notification.department}`);
-    } else if (notification.recipients === 'specific' && notification.targetUsers && notification.targetUsers.length > 0) {
+      console.log(`Found ${targetUsers.length} students with push tokens in department ${notif.department}`);
+    } else if (notif.recipients === 'specific' && notif.targetUsers && notif.targetUsers.length > 0) {
       // Get specific users with push tokens
       targetUsers = await User.find({
-        _id: { $in: notification.targetUsers },
+        _id: { $in: notif.targetUsers },
         pushToken: { $exists: true, $ne: null, $ne: '' }
       }).select('pushToken name studentID');
-      console.log(`Found ${targetUsers.length} specific users with push tokens out of ${notification.targetUsers.length} target users`);
-    } else if (notification.recipient) {
+      console.log(`Found ${targetUsers.length} specific users with push tokens out of ${notif.targetUsers.length} target users`);
+    } else if (notif.recipient) {
       // Single recipient - handle both ObjectId and string
-      const recipientId = notification.recipient._id || notification.recipient;
-      const user = await User.findById(recipientId).select('pushToken name studentID');
+      const recipientId = notif.recipient._id || notif.recipient || notif.recipient.toString();
+      console.log(`🔍 Looking for single recipient with ID: ${recipientId}`);
+      
+      const user = await User.findById(recipientId).select('pushToken name studentID email');
+      console.log(`🔍 User found:`, {
+        found: !!user,
+        hasPushToken: !!(user && user.pushToken),
+        name: user?.name,
+        studentID: user?.studentID,
+        pushTokenPreview: user?.pushToken ? user.pushToken.substring(0, 30) + '...' : 'none'
+      });
+      
       if (user && user.pushToken) {
         targetUsers = [user];
-        console.log(`Found single recipient with push token: ${user.name || user.studentID}`);
+        console.log(`✅ Found single recipient with push token: ${user.name || user.studentID || user.email}`);
       } else {
-        console.log(`Single recipient ${recipientId} has no push token`);
+        console.warn(`⚠️ Single recipient ${recipientId} has no push token`);
+        if (user) {
+          console.warn(`⚠️ User exists but pushToken is: ${user.pushToken || 'null/undefined'}`);
+        } else {
+          console.warn(`⚠️ User with ID ${recipientId} not found`);
+        }
       }
     } else {
       console.warn('⚠️ No valid targeting found for notification:', {
-        broadcast: notification.broadcast,
-        recipients: notification.recipients,
-        recipient: notification.recipient,
-        targetUsers: notification.targetUsers,
-        department: notification.department
+        broadcast: notif.broadcast,
+        recipients: notif.recipients,
+        recipient: notif.recipient,
+        targetUsers: notif.targetUsers,
+        department: notif.department
       });
     }
 
     if (targetUsers.length === 0) {
-      console.warn('⚠️ No users with push tokens found for notification');
+      console.error('❌ No users with push tokens found for notification');
+      console.error('❌ Notification targeting:', {
+        broadcast: notif.broadcast,
+        recipients: notif.recipients,
+        recipient: notif.recipient,
+        targetUsers: notif.targetUsers,
+        department: notif.department
+      });
       return { success: false, error: 'No users with push tokens' };
     }
 
@@ -225,29 +303,38 @@ async function sendPushNotificationForNotification(notification) {
       .map(user => user.pushToken)
       .filter(token => token && token.trim() !== '');
 
+    console.log(`📋 Extracted ${pushTokens.length} valid push tokens from ${targetUsers.length} target users`);
+
     if (pushTokens.length === 0) {
-      console.warn('⚠️ No valid push tokens found after filtering');
+      console.error('❌ No valid push tokens found after filtering');
+      console.error('❌ Target users:', targetUsers.map(u => ({
+        name: u.name,
+        studentID: u.studentID,
+        hasPushToken: !!u.pushToken,
+        pushTokenLength: u.pushToken?.length || 0
+      })));
       return { success: false, error: 'No valid push tokens' };
     }
 
     console.log(`📱 Sending push notifications to ${pushTokens.length} users via channel: ${channelId}`);
+    console.log(`📱 First token preview: ${pushTokens[0].substring(0, 30)}...`);
 
     // Send notifications
     const result = await sendPushNotificationsToMultiple(
       pushTokens,
-      notification.title,
-      notification.message,
+      notif.title,
+      notif.message,
       {
-        notificationId: notification._id.toString(),
-        type: notification.type,
-        priority: notification.priority,
-        ...notification.data
+        notificationId: (notif._id || notif.id).toString(),
+        type: notif.type,
+        priority: notif.priority,
+        ...(notif.data || {})
       },
       channelId
     );
 
     if (result.success) {
-      console.log(`✅ Push notification sent successfully to ${result.sent || 0} users for notification: ${notification.title}`);
+      console.log(`✅ Push notification sent successfully to ${result.sent || 0} users for notification: ${notif.title}`);
     } else {
       console.error(`❌ Push notification failed: ${result.error || 'Unknown error'}`);
       if (result.errors) {
@@ -255,6 +342,7 @@ async function sendPushNotificationForNotification(notification) {
       }
     }
 
+    console.log('📤 ========== PUSH NOTIFICATION END ==========');
     return result;
   } catch (error) {
     console.error('❌ Error sending push notification for notification:', error);

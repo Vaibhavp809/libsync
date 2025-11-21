@@ -483,25 +483,48 @@ router.post('/', verifyToken, async (req, res) => {
     const notification = new Notification(notificationData);
     await notification.save();
 
+    console.log('📝 Notification saved:', {
+      id: notification._id,
+      title: notification.title,
+      target: target || recipients,
+      recipient: notification.recipient,
+      broadcast: notification.broadcast,
+      department: notification.department,
+      targetUsers: notification.targetUsers
+    });
+
     // Send push notifications to targeted users (non-blocking)
-    try {
-      const { sendPushNotificationForNotification } = require('../utils/pushNotifications');
-      sendPushNotificationForNotification(notification)
-        .then(result => {
-          if (result.success) {
-            console.log(`✅ Push notifications sent: ${result.sent || 0} users notified`);
-          } else {
-            console.warn(`⚠️ Push notification failed: ${result.error || 'Unknown error'}`);
+    // Use async/await with proper error handling
+    (async () => {
+      try {
+        console.log('🚀 Starting push notification send process...');
+        const { sendPushNotificationForNotification } = require('../utils/pushNotifications');
+        
+        // Populate the notification if it has references
+        let populatedNotification = notification;
+        if (notification.recipient) {
+          populatedNotification = await Notification.findById(notification._id)
+            .populate('recipient', 'name studentID pushToken')
+            .lean();
+        }
+        
+        const result = await sendPushNotificationForNotification(populatedNotification || notification);
+        
+        if (result.success) {
+          console.log(`✅ Push notifications sent successfully: ${result.sent || 0} users notified`);
+          console.log(`✅ Notification: "${notification.title}" sent to ${result.sent || 0} users`);
+        } else {
+          console.error(`❌ Push notification failed: ${result.error || 'Unknown error'}`);
+          if (result.errors) {
+            console.error('❌ Push notification errors:', JSON.stringify(result.errors, null, 2));
           }
-        })
-        .catch(err => {
-          console.error('Error sending push notifications:', err);
-          // Don't fail the request if push notification fails
-        });
-    } catch (pushError) {
-      console.error('Error setting up push notifications:', pushError);
-      // Continue even if push notification setup fails
-    }
+        }
+      } catch (err) {
+        console.error('❌ Error sending push notifications:', err);
+        console.error('❌ Error stack:', err.stack);
+        // Don't fail the request if push notification fails
+      }
+    })();
 
     res.status(201).json({
       message: 'Notification created successfully',
