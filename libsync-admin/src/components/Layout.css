@@ -1,3 +1,29 @@
+/* Mobile Menu Button */
+.mobile-menu-button {
+  display: none;
+}
+
+.mobile-menu-button span {
+  width: 24px;
+  height: 3px;
+  background: white;
+  border-radius: 2px;
+  transition: all 0.3s ease;
+  display: block;
+}
+
+.mobile-menu-button.active span:nth-child(1) {
+  transform: rotate(45deg) translate(6px, 6px);
+}
+
+.mobile-menu-button.active span:nth-child(2) {
+  opacity: 0;
+}
+
+.mobile-menu-button.active span:nth-child(3) {
+  transform: rotate(-45deg) translate(6px, -6px);
+}
+
 /* Responsive styles for Layout component */
 @media (max-width: 1024px) {
   .layout-main {
@@ -11,8 +37,14 @@
 }
 
 @media (max-width: 768px) {
+  /* Show mobile menu button */
+  .mobile-menu-button {
+    display: flex !important;
+  }
+  
   .layout-main {
     padding: 16px !important;
+    padding-top: 70px !important; /* Space for mobile menu button */
     margin-left: 0 !important; /* Sidebar should be hidden or overlay on mobile */
   }
   
@@ -30,6 +62,7 @@
 @media (max-width: 480px) {
   .layout-main {
     padding: 12px !important;
+    padding-top: 60px !important;
   }
   
   .layout-content {

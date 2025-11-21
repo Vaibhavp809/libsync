@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import axios from 'axios';
+import './Login.css';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -139,7 +140,13 @@ export default function Login() {
   };
 
   return (
-    <div style={styles.container}>
+    <div style={styles.container} className="login-container">
+      {/* Return to Home Button */}
+      <Link to="/" style={styles.homeButton} className="return-home-button">
+        <span style={styles.homeButtonIcon}>←</span>
+        <span style={styles.homeButtonText}>Return to Home</span>
+      </Link>
+      
       {/* Background Animation */}
       <div style={styles.backgroundAnimation}>
         <div style={styles.floatingShape}></div>
@@ -148,15 +155,15 @@ export default function Login() {
       </div>
 
       {/* Main Content */}
-      <div style={styles.content}>
+      <div style={styles.content} className="login-content">
         {/* Left Panel - Branding */}
-        <div style={styles.brandPanel}>
+        <div style={styles.brandPanel} className="login-brand-panel">
           <div style={styles.brandContent}>
             <div style={styles.logoContainer}>
-              <div style={styles.logoIcon}>📚</div>
-              <h1 style={styles.brandTitle}>LibSync</h1>
+              <div style={styles.logoIcon} className="login-logo-icon">📚</div>
+              <h1 style={styles.brandTitle} className="login-brand-title">LibSync</h1>
             </div>
-            <p style={styles.brandSubtitle}>
+            <p style={styles.brandSubtitle} className="login-brand-subtitle">
               Modern Library Management System
             </p>
             <div style={styles.featureList}>
@@ -177,11 +184,11 @@ export default function Login() {
         </div>
 
         {/* Right Panel - Login Form */}
-        <div style={styles.formPanel}>
-          <div style={styles.formContainer}>
-            <div style={styles.formHeader}>
-              <h2 style={styles.formTitle}>Welcome Back</h2>
-              <p style={styles.formSubtitle}>
+        <div style={styles.formPanel} className="login-form-panel">
+          <div style={styles.formContainer} className="login-form-container">
+            <div style={styles.formHeader} className="login-form-header">
+              <h2 style={styles.formTitle} className="login-form-title">Welcome Back</h2>
+              <p style={styles.formSubtitle} className="login-form-subtitle">
                 Sign in to access your library dashboard
               </p>
             </div>
@@ -215,6 +222,7 @@ export default function Login() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
                     style={styles.input}
+                    className="login-input"
                     required
                   />
                 </div>
@@ -230,6 +238,7 @@ export default function Login() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     style={styles.input}
+                    className="login-input"
                     required
                   />
                   <button
@@ -245,6 +254,7 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={isLoading}
+                className="login-submit-button"
                 style={{
                   ...styles.submitButton,
                   ...(isLoading && styles.submitButtonLoading)
@@ -509,5 +519,36 @@ const styles = {
     fontSize: '14px',
     color: '#6b7280',
     margin: 0
+  },
+  homeButton: {
+    position: 'fixed',
+    top: '20px',
+    left: '20px',
+    padding: '14px 28px',
+    background: 'linear-gradient(135deg, rgba(255, 255, 255, 0.95) 0%, rgba(255, 255, 255, 0.9) 100%)',
+    color: '#667eea',
+    textDecoration: 'none',
+    borderRadius: '12px',
+    fontSize: '15px',
+    fontWeight: '700',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '10px',
+    boxShadow: '0 6px 20px rgba(102, 126, 234, 0.25), 0 2px 8px rgba(118, 75, 162, 0.2)',
+    zIndex: 9999,
+    border: '2px solid rgba(102, 126, 234, 0.3)',
+    backdropFilter: 'blur(10px)',
+    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+    cursor: 'pointer',
+    overflow: 'hidden',
+    position: 'relative'
+  },
+  homeButtonIcon: {
+    fontSize: '20px',
+    transition: 'transform 0.3s ease',
+    display: 'inline-block'
+  },
+  homeButtonText: {
+    transition: 'opacity 0.3s ease'
   }
 };

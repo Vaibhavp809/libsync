@@ -349,7 +349,7 @@ export default function ManageStudents() {
       <Card
         title="Student Search"
         subtitle="Search students by name, email, USN, or department"
-        icon="search"
+        icon="🔍"
         color="#3b82f6"
         style={styles.searchCard}
       >
@@ -364,7 +364,7 @@ export default function ManageStudents() {
       <Card
         title={`Students (${totalStudents})`}
         subtitle={`Showing ${filteredStudents.length} of ${totalStudents} students (Page ${currentPage} of ${totalPages})`}
-        icon="user-graduate"
+        icon="👩‍🎓"
         color="#0ea5e9"
         style={styles.tableCard}
       >
@@ -412,7 +412,7 @@ export default function ManageStudents() {
             <Card
               title={editing ? 'Edit Student' : 'Add New Student'}
               subtitle={editing ? 'Update student information' : 'Create a new student record'}
-              icon="user-graduate"
+              icon="👩‍🎓"
               color={editing ? "#f59e0b" : "#10b981"}
               style={styles.formCard}
             >

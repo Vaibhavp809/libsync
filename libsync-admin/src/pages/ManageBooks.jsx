@@ -451,8 +451,8 @@ export default function ManageBooks() {
       header: 'Title',
       render: (book) => (
         <div style={{ 
-          maxWidth: '500px',
-          overflow: 'visible', 
+          maxWidth: '100%',
+          overflow: 'hidden', 
           wordWrap: 'break-word',
           whiteSpace: 'normal',
           lineHeight: '1.6',
@@ -467,12 +467,13 @@ export default function ManageBooks() {
       header: 'Author',
       render: (book) => (
         <div style={{ 
-          maxWidth: '300px',
-          overflow: 'visible', 
+          maxWidth: '200px',
+          overflow: 'hidden', 
           wordWrap: 'break-word',
           whiteSpace: 'normal',
           lineHeight: '1.6',
-          padding: '8px 4px'
+          padding: '8px 4px',
+          textOverflow: 'ellipsis'
         }} title={book.author}>
           {book.author}
         </div>
@@ -495,7 +496,10 @@ export default function ManageBooks() {
       render: (book) => (
         <span style={{
           ...styles.statusBadge,
-          backgroundColor: book.status === 'Available' ? '#10b981' : '#f59e0b'
+          backgroundColor: book.status === 'Available' ? '#10b981' : '#f59e0b',
+          display: 'inline-block',
+          minWidth: '90px',
+          textAlign: 'center'
         }}>
           {book.status}
         </span>
@@ -518,21 +522,23 @@ export default function ManageBooks() {
         return (
           <div style={{
             display: 'flex',
-            gap: '8px',
-            minWidth: '140px',
-            justifyContent: 'center'
+            gap: '6px',
+            minWidth: '120px',
+            maxWidth: '120px',
+            justifyContent: 'center',
+            flexWrap: 'nowrap'
           }}>
             <button
               style={{
-                padding: '6px 12px',
+                padding: '6px 10px',
                 border: '1px solid #3b82f6',
                 borderRadius: '6px',
                 background: 'white',
                 color: '#3b82f6',
                 cursor: 'pointer',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: '500',
-                minWidth: '50px',
+                minWidth: '45px',
                 whiteSpace: 'nowrap'
               }}
               onClick={(e) => {
@@ -547,15 +553,15 @@ export default function ManageBooks() {
             </button>
             <button
               style={{
-                padding: '6px 12px',
+                padding: '6px 10px',
                 border: '1px solid #ef4444',
                 borderRadius: '6px',
                 background: 'white',
                 color: '#ef4444',
                 cursor: 'pointer',
-                fontSize: '12px',
+                fontSize: '11px',
                 fontWeight: '500',
-                minWidth: '50px',
+                minWidth: '45px',
                 whiteSpace: 'nowrap'
               }}
               onClick={async (e) => {
