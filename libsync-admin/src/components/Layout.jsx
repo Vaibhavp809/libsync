@@ -67,8 +67,9 @@ const Layout = ({ children }) => {
 const styles = {
   container: {
     display: 'flex',
+    flexDirection: 'row',
     minHeight: '100vh',
-    height: 'auto',
+    height: '100%',
     width: '100%',
     flex: 1,
     backgroundColor: '#f8fafc',
@@ -87,8 +88,10 @@ const styles = {
     background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
     marginLeft: 'var(--sidebar-width, 280px)',
     minHeight: '100vh',
-    height: 'auto',
-    position: 'relative'
+    height: '100%',
+    position: 'relative',
+    display: 'flex',
+    flexDirection: 'column'
   },
   content: {
     maxWidth: '1200px',

@@ -8,36 +8,42 @@ html {
   font-size: 16px;
   -webkit-text-size-adjust: 100%;
   -ms-text-size-adjust: 100%;
-  height: auto;
-  min-height: 100%;
-  margin: 0;
-  padding: 0;
+  height: 100% !important;
+  min-height: 100% !important;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: var(--app-bg, #f8fafc) !important;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
 }
 
 body {
-  margin: 0;
-  padding: 0;
+  margin: 0 !important;
+  padding: 0 !important;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
     'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
     sans-serif;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: #f8fafc;
+  -webkit-font-smoothing: antialiased !important;
+  -moz-osx-font-smoothing: grayscale !important;
+  background-color: #f8fafc !important;
   color: #1e293b;
   width: 100%;
   overflow-x: hidden;
-  min-height: 100vh;
-  height: auto;
+  min-height: 100vh !important;
+  height: 100% !important;
   position: relative;
 }
 
 /* Global flexible height for root container */
 #root {
-  min-height: 100vh;
-  height: auto;
+  min-height: 100vh !important;
+  height: 100% !important;
   width: 100%;
   display: flex;
   flex-direction: column;
+  margin: 0 !important;
+  padding: 0 !important;
+  background: var(--app-bg, #f8fafc) !important;
 }
 
 /* Animations */
@@ -206,23 +212,35 @@ html.post-login {
   height: auto !important;
 }
 
-/* Ensure main layout stretches to full height and sidebar is flexible */
-.app-root, .admin-root, .main-wrapper, .layout-root { 
-  min-height: 100vh !important; 
-  height: auto !important;
-  display: flex !important; 
-  flex-direction: row !important; 
+/* Top-level app container: column flex so header + content + footer behave correctly */
+.app-root, .admin-root, .main-wrapper, #app, #root > div { 
+  display: flex !important;
+  flex-direction: column !important;
+  min-height: 100vh !important;
+  height: 100% !important;
 }
 
-.sidebar, .app-sidebar, .layout-sidebar { 
-  height: auto !important; 
-  flex: 0 0 auto !important; 
+/* Layout root with sidebar: row flex for sidebar + content */
+.layout-root {
+  display: flex !important;
+  flex-direction: row !important;
+  min-height: 100vh !important;
+  height: 100% !important;
 }
 
-.content, .main-content, .layout-content { 
-  flex: 1 1 auto !important; 
-  min-height: auto !important;
+/* Content area: take remaining space, allow scrolling inside content */
+.content, .main-content, .layout-content, .page, .page-content, .app-content {
+  flex: 1 1 auto !important;
+  min-height: 0 !important; /* allow the flex child to shrink/grow correctly */
+  overflow: auto !important;
+}
+
+/* Sidebar: do not force large fixed heights; let it size to content */
+.sidebar, .app-sidebar, .layout-sidebar, .left-panel {
   height: auto !important;
+  min-height: 0 !important;
+  max-height: none !important;
+  overflow: visible !important;
 }
 
 /* Global container flexibility */
@@ -232,11 +250,21 @@ html.post-login {
 }
 
 /* Guard against accidental transform leftovers */
-.app-scaled-root, .app-scaled-wrapper { 
-  transform: none !important; 
-  width: 100% !important; 
+.app-scaled-root, .app-scaled-wrapper {
+  transform: none !important;
+  width: 100% !important;
+}
+
+/* Remove accidental fixed large footer gaps */
+.footer, .app-footer, .layout-footer {
+  flex: 0 0 auto !important;
   height: auto !important;
 }
+
+/* Defensive overrides for inline style height:XXXXXpx that create white gaps (best-effort)
+   This uses high specificity and !important; safe to remove when debugging complete. */
+*[style*="height: 100vh"] { height: 100% !important; min-height: 100% !important; }
+*[style*="height: 100%"] { min-height: 100% !important; }
 
 /* Ensure all flex containers are flexible */
 [style*="display: flex"] {

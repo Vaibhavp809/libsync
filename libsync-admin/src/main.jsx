@@ -75,6 +75,51 @@ import App from './App.jsx'
 })();
 /* ---- end auto-inject ---- */
 
+/* CURSOR: force layout recalculation on SPA route changes to avoid persistent white gaps */
+(function() {
+  function forceReflow() {
+    try {
+      // trigger reflow and dispatch resize so CSS that depends on viewport recalculates
+      document.body.style.display = "block";
+      // small timeout to allow DOM settle
+      window.requestAnimationFrame(function() {
+        window.dispatchEvent(new Event("resize"));
+        // remove any accidental inline height pixels left by scripts: clear body inline heights if present
+        if (document.body.style.height && document.body.style.height.indexOf("px") > -1) {
+          document.body.style.height = "";
+        }
+      });
+    } catch(e) { 
+      console.warn("forceReflow error", e); 
+    }
+  }
+
+  // patch history to detect SPA navigation (if not already patched)
+  if (!window.history._cursorPatched) {
+    (function(history) {
+      var push = history.pushState;
+      var replace = history.replaceState;
+      history.pushState = function() {
+        var ret = push.apply(history, arguments);
+        window.dispatchEvent(new Event("locationchange"));
+        return ret;
+      };
+      history.replaceState = function() {
+        var ret = replace.apply(history, arguments);
+        window.dispatchEvent(new Event("locationchange"));
+        return ret;
+      };
+      window.history._cursorPatched = true;
+    })(window.history);
+  }
+
+  window.addEventListener("locationchange", function(){ setTimeout(forceReflow, 60); });
+  window.addEventListener("popstate", function(){ setTimeout(forceReflow, 60); });
+  document.addEventListener("DOMContentLoaded", function(){ setTimeout(forceReflow, 100); });
+  // also run right away
+  setTimeout(forceReflow, 200);
+})();
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <App />
