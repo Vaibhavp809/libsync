@@ -4,7 +4,7 @@ const urlsToCache = [
   '/',
   '/manifest.json',
   '/logo.png',
-  '/logo-512.png'
+  '/logo-512-white.png'
 ];
 
 // Install event - cache resources
