@@ -174,3 +174,52 @@ button:focus {
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
+
+/* ---- AUTO-APPENDED: post-login scale + flexible layout fixes ---- */
+
+/* Apply 0.8 scaling for post-login pages by toggling class on the <html> element:
+   document.documentElement.classList.add("post-login") */
+html.post-login {
+  font-size: 80% !important;
+}
+
+/* Keep mobile unaffected */
+@media (max-width: 900px) {
+  html.post-login { 
+    font-size: 100% !important; 
+  }
+}
+
+/* Ensure main layout stretches to full height and sidebar is flexible */
+.app-root, .admin-root, .main-wrapper, .layout-root { 
+  min-height: 100vh !important; 
+  display: flex !important; 
+  flex-direction: row !important; 
+}
+
+.sidebar, .app-sidebar, .layout-sidebar { 
+  height: auto !important; 
+  flex: 0 0 auto !important; 
+}
+
+.content, .main-content, .layout-content { 
+  flex: 1 1 auto !important; 
+  min-height: 100vh !important; 
+}
+
+/* Guard against accidental transform leftovers */
+.app-scaled-root, .app-scaled-wrapper { 
+  transform: none !important; 
+  width: 100% !important; 
+}
+
+/* small screens: stack column */
+@media (max-width: 900px) {
+  .app-root, .admin-root, .main-wrapper, .layout-root { 
+    flex-direction: column !important; 
+  }
+  .sidebar, .app-sidebar, .layout-sidebar { 
+    width: 100% !important; 
+  }
+}
+/* ---- end auto-append ---- */

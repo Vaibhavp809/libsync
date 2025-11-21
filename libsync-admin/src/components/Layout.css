@@ -2,13 +2,15 @@
 /* Force recalculation on load */
 .layout-main,
 [class*="layout-main"] {
-  min-height: 100% !important;
+  min-height: 100vh !important;
   height: auto !important;
   max-height: none !important;
+  flex: 1 1 auto !important;
 }
 
 /* Force container to be flexible */
 [style*="display: flex"][style*="minHeight"] {
+  min-height: 100vh !important;
   height: auto !important;
   max-height: none !important;
 }
@@ -16,6 +18,7 @@
 .layout-content {
   min-height: auto !important;
   height: auto !important;
+  flex: 1 1 auto !important;
 }
 
 /* Mobile Menu Button */
