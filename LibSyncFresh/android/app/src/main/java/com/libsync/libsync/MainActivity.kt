@@ -15,11 +15,9 @@ import com.libsync.R
 
 class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
-    // Set the theme to AppTheme BEFORE onCreate to support
-    // coloring the background, status bar, and navigation bar.
-    // This is required for expo-splash-screen.
-    setTheme(R.style.AppTheme);
-    super.onCreate(null)
+    // Call super first to ensure proper initialization
+    super.onCreate(savedInstanceState)
+    // Theme is already set in AndroidManifest.xml, no need to set it here
   }
 
   /**

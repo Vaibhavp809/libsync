@@ -4,6 +4,18 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 
+// Try to import expo-splash-screen (may not be available in all Expo versions)
+let SplashScreen;
+try {
+  SplashScreen = require('expo-splash-screen');
+} catch (e) {
+  console.log('expo-splash-screen not available, using fallback');
+  SplashScreen = {
+    preventAutoHideAsync: async () => {},
+    hideAsync: async () => {},
+  };
+}
+
 // Minimal styles for error screens (defined early)
 const errorStyle = { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' };
 
@@ -46,12 +58,22 @@ try {
   console.error('Failed to load screens:', e);
 }
 
+// Load MyReservationsScreen separately
+let MyReservationsScreen;
+try {
+  MyReservationsScreen = require('./screens/MyReservationsScreen').default;
+} catch (e) {
+  console.error('Failed to load MyReservationsScreen:', e);
+  MyReservationsScreen = () => <View style={errorStyle}><Text>MyReservations Screen Error</Text></View>;
+}
+
 const Stack = createNativeStackNavigator();
 const Drawer = createDrawerNavigator();
 
 function App() {
   const [isReady, setIsReady] = useState(false);
   const [initError, setInitError] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   useEffect(() => {
     console.log('📱 App useEffect started');
@@ -70,14 +92,21 @@ function App() {
           console.warn('⚠️ API config init failed:', error.message);
         }
 
-        // Initialize Auth service (non-blocking)
+        // Initialize Auth service and check authentication state
+        let authState = false;
         try {
           const { authService } = require('./services/authService');
-          await authService.initialize();
-          console.log('✅ Auth service initialized');
+          const authData = await authService.initialize();
+          if (authData && authData.token && authData.user) {
+            authState = true;
+            console.log('✅ Auth service initialized - user is logged in');
+          } else {
+            console.log('✅ Auth service initialized - user is not logged in');
+          }
         } catch (error) {
           console.warn('⚠️ Auth service init failed:', error.message);
         }
+        setIsAuthenticated(authState);
 
         // Initialize API service (non-blocking)
         try {
@@ -91,28 +120,48 @@ function App() {
         // Configure notifications AFTER app is ready (delayed)
         setTimeout(async () => {
           try {
-            const Notifications = require('expo-notifications');
-            Notifications.setNotificationHandler({
-              handleNotification: async () => ({
-                shouldShowAlert: true,
-                shouldPlaySound: true,
-                shouldSetBadge: true,
-              }),
-            });
+            const { notificationService } = require('./services/notificationService');
+            // Always configure notification handler first
+            notificationService.configure();
             console.log('✅ Notification handler configured');
+            
+            // Initialize notification service (for handling received notifications and push token registration)
+            await notificationService.initialize();
+            console.log('✅ Notification service initialized');
           } catch (error) {
-            console.warn('⚠️ Notification setup failed:', error.message);
+            console.error('❌ Notification service initialization failed:', error);
+            console.log('Continuing without push notifications...');
           }
         }, 2000);
 
         console.log('✅ All services initialized');
         setIsReady(true);
+        
+        // Hide splash screen after initialization
+        try {
+          await SplashScreen.hideAsync();
+          console.log('✅ Splash screen hidden');
+        } catch (splashError) {
+          console.warn('⚠️ Could not hide splash screen:', splashError.message);
+        }
       } catch (error) {
         console.error('❌ Service initialization error:', error);
         setInitError(error.message);
         setIsReady(true); // Still show app even if init fails
+        
+        // Try to hide splash screen even on error
+        try {
+          await SplashScreen.hideAsync();
+        } catch (splashError) {
+          // Ignore splash screen errors
+        }
       }
     };
+
+    // Keep splash screen visible during initialization
+    SplashScreen.preventAutoHideAsync().catch(() => {
+      // Ignore if already hidden or not available
+    });
 
     initializeServices();
   }, []);
@@ -179,8 +228,16 @@ function App() {
       >
         {HomeScreen && <Drawer.Screen name="Home" component={HomeScreen} />}
         {BookListScreen && <Drawer.Screen name="Books" component={BookListScreen} />}
+        {MyReservationsScreen && <Drawer.Screen name="MyReservations" component={MyReservationsScreen} />}
+        {ScannerScreen && <Drawer.Screen name="Scanner" component={ScannerScreen} />}
+        {AttendanceScannerScreen && <Drawer.Screen name="AttendanceScanner" component={AttendanceScannerScreen} />}
+        {LoanHistoryScreen && <Drawer.Screen name="LoanHistory" component={LoanHistoryScreen} />}
+        {NewArrivalsScreen && <Drawer.Screen name="NewArrivals" component={NewArrivalsScreen} />}
+        {LibraryUpdatesScreen && <Drawer.Screen name="LibraryUpdates" component={LibraryUpdatesScreen} />}
+        {EResourcesScreen && <Drawer.Screen name="EResources" component={EResourcesScreen} />}
         {NotificationsScreen && <Drawer.Screen name="Notifications" component={NotificationsScreen} />}
         {SettingsScreen && <Drawer.Screen name="Settings" component={SettingsScreen} />}
+        {DebugScreen && <Drawer.Screen name="Debug" component={DebugScreen} />}
       </Drawer.Navigator>
     );
   };
@@ -192,7 +249,7 @@ function App() {
         onReady={() => console.log('✅ NavigationContainer ready')}
       >
         <Stack.Navigator 
-          initialRouteName="Login"
+          initialRouteName={isAuthenticated ? "Main" : "Login"}
           screenOptions={{ headerShown: false }}
         >
           <Stack.Screen name="Login" component={LoginScreen} />

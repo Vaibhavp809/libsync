@@ -159,16 +159,25 @@ class NotificationService {
   configure() {
     Notifications.setNotificationHandler({
       handleNotification: async (notification) => {
+        console.log('📬 Notification received in handler:', {
+          title: notification.request.content.title,
+          body: notification.request.content.body,
+          data: notification.request.content.data
+        });
+        
         // Always show notifications, even when app is in foreground
+        // This ensures notifications appear in the system tray
         return {
           shouldShowAlert: true,
           shouldPlaySound: true,
           shouldSetBadge: true,
-          // For Android: ensure notification appears in system tray
+          // For Android: ensure notification appears in system tray and lock screen
           priority: Notifications.AndroidNotificationPriority.MAX,
         };
       },
     });
+    
+    console.log('✅ Notification handler configured - notifications will appear in tray');
   }
 
   // Initialize notification service
@@ -187,6 +196,7 @@ class NotificationService {
         this.expoPushToken = token;
         await this.savePushTokenToStorage(token);
         console.log('✅ Push token obtained:', token.substring(0, 20) + '...');
+        console.log('📱 Full push token:', token);
         
         // Send token to server (will retry if user not logged in yet)
         try {
@@ -199,6 +209,7 @@ class NotificationService {
         }
       } else {
         console.warn('⚠️ No push token obtained - notifications may not work');
+        console.warn('⚠️ Please check notification permissions in device settings');
         // Still mark as initialized so handlers work for local notifications
       }
       
@@ -418,6 +429,8 @@ class NotificationService {
       }
 
       console.log('📤 Sending push token to server...');
+      console.log('📤 Token:', token.substring(0, 30) + '...');
+      console.log('📤 Platform:', Platform.OS);
 
       // Send token to your backend
       const response = await apiService.post('/users/push-token', {
@@ -425,7 +438,8 @@ class NotificationService {
         platform: Platform.OS
       });
 
-      console.log('✅ Push token sent to server successfully:', response);
+      console.log('✅ Push token sent to server successfully');
+      console.log('✅ Server response:', JSON.stringify(response, null, 2));
       return response;
     } catch (error) {
       console.error('❌ Failed to send push token to server:', error.message);

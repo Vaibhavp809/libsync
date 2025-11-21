@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Background color -->
+  <item android:drawable="@color/splashscreen_background"/>
+  
+  <!-- Centered icon - using inset to make it smaller -->
+  <item>
+    <inset 
+      android:drawable="@mipmap/ic_launcher"
+      android:insetLeft="35%"
+      android:insetRight="35%"
+      android:insetTop="35%"
+      android:insetBottom="35%"/>
+  </item>
+</layer-list>
+
