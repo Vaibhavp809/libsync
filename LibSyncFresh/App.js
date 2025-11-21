@@ -31,23 +31,30 @@ const Drawer = createDrawerNavigator();
 
 function App() {
   const [isReady, setIsReady] = React.useState(false);
+  const [initError, setInitError] = React.useState(null);
 
   useEffect(() => {
-    // Configure notification handler FIRST - this must be done before any notifications arrive
-    // This ensures notifications are displayed even when app is in background or closed
-    Notifications.setNotificationHandler({
-      handleNotification: async (notification) => {
-        // Always show notifications, even when app is in foreground, background, or closed
-        return {
-          shouldShowAlert: true,
-          shouldPlaySound: true,
-          shouldSetBadge: true,
-          // For Android: ensure notification appears in system tray and lock screen
-          priority: Notifications.AndroidNotificationPriority.MAX,
-        };
-      },
-    });
-    console.log('✅ Notification handler configured for background/foreground display');
+    // Wrap everything in try-catch to prevent crashes
+    try {
+      // Configure notification handler FIRST - this must be done before any notifications arrive
+      // This ensures notifications are displayed even when app is in background or closed
+      Notifications.setNotificationHandler({
+        handleNotification: async (notification) => {
+          // Always show notifications, even when app is in foreground, background, or closed
+          return {
+            shouldShowAlert: true,
+            shouldPlaySound: true,
+            shouldSetBadge: true,
+            // For Android: ensure notification appears in system tray and lock screen
+            priority: Notifications.AndroidNotificationPriority.MAX,
+          };
+        },
+      });
+      console.log('✅ Notification handler configured for background/foreground display');
+    } catch (error) {
+      console.error('❌ Failed to configure notification handler:', error);
+      // Continue without notification handler
+    }
 
     // Initialize API and Auth services (non-blocking)
     const initializeServices = async () => {
@@ -78,37 +85,20 @@ function App() {
         
         // Initialize Notification service (for handling received notifications and push token registration)
         // This should always be initialized to set up notification handlers
-        try {
-          const { isDevice } = require('expo-device');
-          const Constants = require('expo-constants');
-          
-          // Always initialize notification service to set up handlers
-          // The service will handle device checks internally
-          await notificationService.initialize();
-          console.log('✅ Notification service initialized');
-        } catch (notificationError) {
-          console.error('❌ Notification service initialization failed:', notificationError);
-          console.log('Continuing without push notifications...');
-          // Try to register for push notifications manually as fallback
+        // Wrap in setTimeout to ensure it doesn't block app startup
+        setTimeout(async () => {
           try {
-            const token = await registerForPushNotificationsAsync();
-            if (token) {
-              console.log('✅ Push token obtained via fallback method');
-              const AsyncStorage = require('@react-native-async-storage/async-storage').default;
-              await AsyncStorage.setItem('expo_push_token', token);
-              
-              // Try to send token to server if user is already logged in
-              try {
-                await notificationService.sendPushTokenToServer(token);
-                console.log('✅ Push token sent to server via fallback');
-              } catch (pushError) {
-                console.log('ℹ️ Could not send push token to server (user may not be logged in yet):', pushError.message);
-              }
-            }
-          } catch (fallbackError) {
-            console.warn('⚠️ Fallback push notification registration also failed:', fallbackError.message);
+            // Always initialize notification service to set up handlers
+            // The service will handle device checks internally
+            await notificationService.initialize();
+            console.log('✅ Notification service initialized');
+          } catch (notificationError) {
+            console.error('❌ Notification service initialization failed:', notificationError);
+            console.error('Error details:', notificationError.message, notificationError.stack);
+            console.log('Continuing without push notifications...');
+            // Don't try fallback - just continue without notifications
           }
-        }
+        }, 1000); // Delay by 1 second to let app render first
       } catch (error) {
         console.error('Service initialization failed:', error);
         // Don't crash the app - continue with default configuration
@@ -118,10 +108,13 @@ function App() {
     // Initialize services asynchronously without blocking app render
     initializeServices()
       .then(() => {
+        console.log('✅ All services initialized successfully');
         setIsReady(true);
       })
       .catch(err => {
-        console.error('Fatal initialization error:', err);
+        console.error('❌ Fatal initialization error:', err);
+        console.error('Error stack:', err.stack);
+        setInitError(err.message || 'Initialization failed');
         // App will still render even if initialization fails
         setIsReady(true);
       });
@@ -133,6 +126,11 @@ function App() {
       <ErrorBoundary>
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' }}>
           <Text style={{ fontSize: 18, color: '#333' }}>Loading LibSync...</Text>
+          {initError && (
+            <Text style={{ fontSize: 12, color: '#ff0000', marginTop: 10, padding: 10 }}>
+              Warning: {initError}
+            </Text>
+          )}
         </View>
       </ErrorBoundary>
     );
@@ -194,20 +192,38 @@ function App() {
     return titles[routeName] || 'LibSync';
   };
 
-  return (
-    <ErrorBoundary>
-      <NavigationContainer>
-        <Stack.Navigator 
-          initialRouteName="Login"
-          screenOptions={{ headerShown: false }}
+  // Wrap everything in try-catch for safety
+  try {
+    return (
+      <ErrorBoundary>
+        <NavigationContainer
+          onReady={() => console.log('✅ NavigationContainer ready')}
+          onStateChange={() => console.log('Navigation state changed')}
         >
-          <Stack.Screen name="Login" component={LoginScreen} />
-          <Stack.Screen name="Register" component={RegisterScreen} />
-          <Stack.Screen name="Main" component={DrawerNavigator} />
-        </Stack.Navigator>
-      </NavigationContainer>
-    </ErrorBoundary>
-  );
+          <Stack.Navigator 
+            initialRouteName="Login"
+            screenOptions={{ headerShown: false }}
+          >
+            <Stack.Screen name="Login" component={LoginScreen} />
+            <Stack.Screen name="Register" component={RegisterScreen} />
+            <Stack.Screen name="Main" component={DrawerNavigator} />
+          </Stack.Navigator>
+        </NavigationContainer>
+      </ErrorBoundary>
+    );
+  } catch (error) {
+    console.error('❌ Fatal error in App render:', error);
+    return (
+      <ErrorBoundary>
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff', padding: 20 }}>
+          <Text style={{ fontSize: 18, color: '#ff0000', marginBottom: 10 }}>App Error</Text>
+          <Text style={{ fontSize: 14, color: '#666', textAlign: 'center' }}>
+            {error.message || 'An unexpected error occurred'}
+          </Text>
+        </View>
+      </ErrorBoundary>
+    );
+  }
 }
 
 export default App;
