@@ -1,12 +1,11 @@
 import React from 'react';
-import './Table.css';
 
 const Table = ({ columns, data, onRowClick, emptyMessage = "No data available" }) => {
   const actionsColumnIndex = columns.findIndex(col => col.key === 'actions');
   
   return (
-    <div style={styles.tableContainer} className="table-container">
-      <table style={styles.table} className="table">
+    <div style={styles.tableContainer}>
+      <table style={styles.table}>
         <thead>
           <tr style={styles.headerRow}>
             {columns.map((column, index) => (

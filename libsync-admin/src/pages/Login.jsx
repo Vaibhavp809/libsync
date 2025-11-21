@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
-import './Login.css';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -140,7 +139,7 @@ export default function Login() {
   };
 
   return (
-    <div style={styles.container} className="login-container">
+    <div style={styles.container}>
       {/* Background Animation */}
       <div style={styles.backgroundAnimation}>
         <div style={styles.floatingShape}></div>
@@ -149,15 +148,15 @@ export default function Login() {
       </div>
 
       {/* Main Content */}
-      <div style={styles.content} className="login-content">
+      <div style={styles.content}>
         {/* Left Panel - Branding */}
-        <div style={styles.brandPanel} className="login-brand-panel">
+        <div style={styles.brandPanel}>
           <div style={styles.brandContent}>
             <div style={styles.logoContainer}>
-              <div style={styles.logoIcon} className="login-logo-icon">📚</div>
-              <h1 style={styles.brandTitle} className="login-brand-title">LibSync</h1>
+              <div style={styles.logoIcon}>📚</div>
+              <h1 style={styles.brandTitle}>LibSync</h1>
             </div>
-            <p style={styles.brandSubtitle} className="login-brand-subtitle">
+            <p style={styles.brandSubtitle}>
               Modern Library Management System
             </p>
             <div style={styles.featureList}>
@@ -178,11 +177,11 @@ export default function Login() {
         </div>
 
         {/* Right Panel - Login Form */}
-        <div style={styles.formPanel} className="login-form-panel">
-          <div style={styles.formContainer} className="login-form-container">
-            <div style={styles.formHeader} className="login-form-header">
-              <h2 style={styles.formTitle} className="login-form-title">Welcome Back</h2>
-              <p style={styles.formSubtitle} className="login-form-subtitle">
+        <div style={styles.formPanel}>
+          <div style={styles.formContainer}>
+            <div style={styles.formHeader}>
+              <h2 style={styles.formTitle}>Welcome Back</h2>
+              <p style={styles.formSubtitle}>
                 Sign in to access your library dashboard
               </p>
             </div>
@@ -216,7 +215,6 @@ export default function Login() {
                     onChange={(e) => setEmail(e.target.value)}
                     placeholder="Enter your email"
                     style={styles.input}
-                    className="login-input"
                     required
                   />
                 </div>
@@ -232,7 +230,6 @@ export default function Login() {
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
                     style={styles.input}
-                    className="login-input"
                     required
                   />
                   <button
@@ -248,7 +245,6 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={isLoading}
-                className="login-submit-button"
                 style={{
                   ...styles.submitButton,
                   ...(isLoading && styles.submitButtonLoading)

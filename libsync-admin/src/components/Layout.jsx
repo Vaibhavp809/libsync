@@ -1,13 +1,12 @@
 import React from 'react';
 import Sidebar from './Sidebar';
-import './Layout.css';
 
 const Layout = ({ children }) => {
   return (
     <div style={styles.container}>
       <Sidebar />
-      <main style={styles.main} className="layout-main">
-        <div style={styles.content} className="layout-content">
+      <main style={styles.main}>
+        <div style={styles.content}>
           {children}
         </div>
       </main>
