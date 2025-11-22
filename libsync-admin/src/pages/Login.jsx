@@ -540,8 +540,7 @@ const styles = {
     backdropFilter: 'blur(10px)',
     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
     cursor: 'pointer',
-    overflow: 'hidden',
-    position: 'relative'
+    overflow: 'hidden'
   },
   homeButtonIcon: {
     fontSize: '20px',
