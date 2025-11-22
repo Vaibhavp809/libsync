@@ -235,41 +235,59 @@ export default function ManageBooks() {
     }
   };
 
+  // Helper function to safely get string value (defined outside to avoid recreation)
+  const getStringValue = (value) => {
+    if (value == null || value === undefined || value === '') return '';
+    // Handle numbers and strings safely
+    const str = String(value);
+    return str ? str.trim() : '';
+  };
+
   const handleAddBook = async (e) => {
     e.preventDefault();
 
     try {
-      // Validate form data (convert to string first to handle numbers safely)
-      if (!form.accessionNumber || !String(form.accessionNumber).trim()) throw new Error('Accession Number is required');
-      if (!form.title || !String(form.title).trim()) throw new Error('Title is required');
-      if (!form.author || !String(form.author).trim()) throw new Error('Author is required');
-      if (!form.publisher || !String(form.publisher).trim()) throw new Error('Publisher is required');
-      if (!form.yearOfPublishing || !String(form.yearOfPublishing).trim()) throw new Error('Year of Publishing is required');
-      if (!form.edition || !String(form.edition).trim()) throw new Error('Edition is required');
-      if (!form.category || !String(form.category).trim()) throw new Error('Category is required');
-      if (!form.price || !String(form.price).trim()) throw new Error('Price is required');
+      // Validate form data (safely handle both strings and numbers)
+      // Use helper function to avoid any trim() errors on non-strings
+      const accessionNumber = getStringValue(form.accessionNumber);
+      const title = getStringValue(form.title);
+      const author = getStringValue(form.author);
+      const publisher = getStringValue(form.publisher);
+      const yearOfPublishingStr = getStringValue(form.yearOfPublishing);
+      const edition = getStringValue(form.edition);
+      const category = getStringValue(form.category);
+      const priceStr = getStringValue(form.price);
+
+      if (!accessionNumber) throw new Error('Accession Number is required');
+      if (!title) throw new Error('Title is required');
+      if (!author) throw new Error('Author is required');
+      if (!publisher) throw new Error('Publisher is required');
+      if (!yearOfPublishingStr) throw new Error('Year of Publishing is required');
+      if (!edition) throw new Error('Edition is required');
+      if (!category) throw new Error('Category is required');
+      if (!priceStr) throw new Error('Price is required');
 
       // Validate year and price
-      const year = parseInt(form.yearOfPublishing);
+      const year = parseInt(yearOfPublishingStr);
       if (isNaN(year) || year < 1000 || year > new Date().getFullYear()) {
         throw new Error('Please enter a valid year of publishing');
       }
       
-      const price = parseFloat(form.price);
-      if (isNaN(price) || price <= 0) {
+      const priceValue = parseFloat(priceStr);
+      if (isNaN(priceValue) || priceValue <= 0) {
         throw new Error('Please enter a valid price');
       }
 
-      // Prepare the data (convert to string first to safely trim)
+      // Prepare the data
       const bookData = {
-        accessionNumber: String(form.accessionNumber).trim(),
-        title: String(form.title).trim(),
-        author: String(form.author).trim(),
-        publisher: String(form.publisher).trim(),
+        accessionNumber: accessionNumber,
+        title: title,
+        author: author,
+        publisher: publisher,
         yearOfPublishing: year,
-        edition: String(form.edition).trim(),
-        category: String(form.category).trim(),
-        price: price
+        edition: edition,
+        category: category,
+        price: priceValue
       };
 
       console.log('Processing book data:', {
@@ -290,7 +308,7 @@ export default function ManageBooks() {
           response = await api.post('/books/multiple', {
             ...bookData,
             numberOfCopies: numberOfCopies,
-            startingAccessionNumber: form.accessionNumber.trim()
+            startingAccessionNumber: accessionNumber
           });
           console.log('Multiple books created:', response.data);
         } else {
@@ -670,9 +688,20 @@ export default function ManageBooks() {
                   setAdvancedMode(false);
                   setNumberOfCopies(1);
                 } else {
-                  // Open form and ensure advanced mode state is reset
+                  // Open form for creating new book - reset all states
+                  setEditingBook(null); // Ensure we're in create mode
                   setAdvancedMode(false);
                   setNumberOfCopies(1);
+                  setForm({ 
+                    accessionNumber: '', 
+                    title: '', 
+                    author: '', 
+                    publisher: '', 
+                    yearOfPublishing: '', 
+                    edition: '', 
+                    category: '', 
+                    price: '' 
+                  });
                   setShowForm(true);
                 }
               }}
@@ -874,10 +903,12 @@ export default function ManageBooks() {
                   </div>
                 </div>
                 <div style={styles.formActions}>
+                  {/* Refresh Form Button - Only show when creating (not editing) */}
                   {!editingBook && (
                     <button 
                       type="button"
                       onClick={() => {
+                        // Clear all form fields
                         setForm({ 
                           accessionNumber: '', 
                           title: '', 
@@ -888,11 +919,12 @@ export default function ManageBooks() {
                           category: '', 
                           price: '' 
                         });
+                        // Reset advanced mode settings
                         setAdvancedMode(false);
                         setNumberOfCopies(1);
                       }}
                       style={styles.refreshButton}
-                      title="Clear form and start fresh"
+                      title="Clear all form fields and reset to default"
                     >
                       🔄 Refresh Form
                     </button>
@@ -1373,8 +1405,12 @@ const styles = {
   formActions: {
     display: 'flex',
     justifyContent: 'flex-end',
+    alignItems: 'center',
     gap: '12px',
-    flexWrap: 'wrap'
+    flexWrap: 'wrap',
+    marginTop: '8px',
+    paddingTop: '8px',
+    borderTop: '1px solid #e5e7eb'
   },
   submitButton: {
     background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
