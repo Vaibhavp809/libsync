@@ -15,6 +15,7 @@ export default function ManageStudents() {
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
   const [newDepartment, setNewDepartment] = useState({ id: '', name: '' });
   const [searchTerm, setSearchTerm] = useState('');
+  const [activeSearchTerm, setActiveSearchTerm] = useState(''); // The term actually used for search
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loadingDepartments, setLoadingDepartments] = useState(true);
@@ -25,7 +26,7 @@ export default function ManageStudents() {
   const [totalStudents, setTotalStudents] = useState(0);
   const [limit] = useState(50); // Students per page
 
-  const fetchStudents = async (page = currentPage, searchQuery = searchTerm) => {
+  const fetchStudents = async (page = currentPage, searchQuery = activeSearchTerm) => {
     try {
       setLoading(true);
       const params = {
@@ -100,7 +101,6 @@ export default function ManageStudents() {
   
   // Track initial mount to avoid unnecessary API calls
   const isInitialMount = useRef(true);
-  const searchTimerRef = useRef(null);
   
   // Fetch students when page changes (but not on initial mount)
   useEffect(() => {
@@ -109,37 +109,22 @@ export default function ManageStudents() {
       return;
     }
     if (currentPage > 0) {
-      fetchStudents(currentPage, searchTerm);
+      fetchStudents(currentPage, activeSearchTerm);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
-  // Handle search - fetch from server when search term changes
+  // Handle search - fetch from server when activeSearchTerm changes
   useEffect(() => {
-    // Clear any existing timer
-    if (searchTimerRef.current) {
-      clearTimeout(searchTimerRef.current);
-    }
-    
     // Skip on initial mount
     if (isInitialMount.current) {
       return;
     }
-    
-    // Debounce search to avoid too many API calls
-    searchTimerRef.current = setTimeout(() => {
-      // Reset to page 1 when searching
-      setCurrentPage(1);
-      fetchStudents(1, searchTerm);
-    }, 500); // 500ms debounce
-    
-    return () => {
-      if (searchTimerRef.current) {
-        clearTimeout(searchTimerRef.current);
-      }
-    };
+    // Reset to page 1 when searching
+    setCurrentPage(1);
+    fetchStudents(1, activeSearchTerm);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchTerm]);
+  }, [activeSearchTerm]);
   
   // Update filtered students when students data changes (server already filters, but we show all on current page)
   useEffect(() => {
@@ -251,7 +236,7 @@ export default function ManageStudents() {
       }
       setShowForm(false);
       setEditing(null);
-      fetchStudents(currentPage, searchTerm);
+      fetchStudents(currentPage, activeSearchTerm);
     } catch (err) {
       alert(err.response?.data?.message || 'Save failed');
     }
@@ -267,7 +252,7 @@ export default function ManageStudents() {
       console.log('Deleting student with ID:', id);
       await api.delete(`/users/${id}`);
       alert('Student deleted successfully!');
-      await fetchStudents(currentPage, searchTerm);
+      await fetchStudents(currentPage, activeSearchTerm);
     } catch (err) {
       console.error('Failed to delete student:', err);
       alert('Delete failed: ' + (err.response?.data?.message || err.message || 'Unknown error'));
@@ -353,12 +338,37 @@ export default function ManageStudents() {
         color="#3b82f6"
         style={styles.searchCard}
       >
-        <SearchInput
-          placeholder="Search students by name, email, USN, or department..."
-          value={searchTerm}
-          onChange={setSearchTerm}
-          style={styles.searchInput}
-        />
+        <div style={styles.searchContainer}>
+          <input
+            type="text"
+            placeholder="Search students by name, email, USN, or department..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') {
+                setActiveSearchTerm(searchTerm.trim());
+              }
+            }}
+            style={styles.searchInputField}
+          />
+          <button
+            onClick={() => setActiveSearchTerm(searchTerm.trim())}
+            style={styles.searchButton}
+          >
+            Search
+          </button>
+          {activeSearchTerm && (
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setActiveSearchTerm('');
+              }}
+              style={styles.clearButton}
+            >
+              Clear
+            </button>
+          )}
+        </div>
       </Card>
 
       <Card
@@ -635,6 +645,58 @@ export default function ManageStudents() {
 const styles = {
   searchCard: {
     marginBottom: '24px'
+  },
+  searchContainer: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center',
+    maxWidth: '600px'
+  },
+  searchInputField: {
+    flex: 1,
+    padding: '12px 16px',
+    border: '2px solid #e2e8f0',
+    borderRadius: '12px',
+    fontSize: '14px',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    backgroundColor: 'white',
+    ':focus': {
+      borderColor: '#3b82f6',
+      boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)'
+    }
+  },
+  searchButton: {
+    padding: '12px 24px',
+    border: 'none',
+    borderRadius: '12px',
+    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+    color: 'white',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    whiteSpace: 'nowrap',
+    ':hover': {
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(59, 130, 246, 0.3)'
+    }
+  },
+  clearButton: {
+    padding: '12px 20px',
+    border: '1px solid #d1d5db',
+    borderRadius: '12px',
+    background: 'white',
+    color: '#374151',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    whiteSpace: 'nowrap',
+    ':hover': {
+      background: '#f9fafb',
+      borderColor: '#9ca3af'
+    }
   },
   searchInput: {
     maxWidth: '600px'

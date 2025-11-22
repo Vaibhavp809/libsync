@@ -11,10 +11,10 @@ export default function StockImport() {
   const [error, setError] = useState('');
   
   // Single import form state
-  const [singleAccession, setSingleAccession] = useState('');
   const [singleStatus, setSingleStatus] = useState('Verified');
   const [singleImporting, setSingleImporting] = useState(false);
   const [singleError, setSingleError] = useState('');
+  const [accessionList, setAccessionList] = useState([{ id: 1, value: '' }]); // Array of accession inputs
 
   /**
    * Normalize accession number to 6 digits (same logic as backend)
@@ -270,19 +270,53 @@ export default function StockImport() {
   };
 
   /**
-   * Handle single item import
+   * Handle adding a new accession number field
+   */
+  const handleAddAccessionField = () => {
+    setAccessionList([...accessionList, { id: Date.now(), value: '' }]);
+  };
+
+  /**
+   * Handle removing an accession number field
+   */
+  const handleRemoveAccessionField = (id) => {
+    if (accessionList.length > 1) {
+      setAccessionList(accessionList.filter(item => item.id !== id));
+    }
+  };
+
+  /**
+   * Handle updating an accession number value
+   */
+  const handleUpdateAccession = (id, value) => {
+    setAccessionList(accessionList.map(item => 
+      item.id === id ? { ...item, value } : item
+    ));
+  };
+
+  /**
+   * Handle single/multiple item import
    */
   const handleSingleImport = async () => {
+    // Collect all accession numbers from the list
+    const accessionNumbers = accessionList
+      .map(item => item.value.trim())
+      .filter(val => val.length > 0);
+
     // Validate input
-    if (!singleAccession || !singleAccession.trim()) {
-      setSingleError('Accession number is required');
+    if (accessionNumbers.length === 0) {
+      setSingleError('At least one accession number is required');
       return;
     }
 
-    // Validate numeric only
-    const numericOnly = singleAccession.replace(/[^\d]/g, '');
-    if (!numericOnly) {
-      setSingleError('Accession number must contain at least one digit');
+    // Validate all accession numbers contain at least one digit
+    const invalidNumbers = accessionNumbers.filter(acc => {
+      const numericOnly = acc.replace(/[^\d]/g, '');
+      return !numericOnly;
+    });
+
+    if (invalidNumbers.length > 0) {
+      setSingleError('All accession numbers must contain at least one digit');
       return;
     }
 
@@ -290,57 +324,103 @@ export default function StockImport() {
     setSingleImporting(true);
 
     try {
-      const normalized = normalizeAccessionNumber(singleAccession);
-      
-      const response = await api.post('/stock/import/single', {
-        accessionNumber: normalized,
-        status: singleStatus
-      });
+      // Normalize all accession numbers
+      const normalizedNumbers = accessionNumbers
+        .map(acc => normalizeAccessionNumber(acc))
+        .filter(acc => acc !== null);
 
-      // Show success toast (simple alert for now, can be replaced with toast library)
-      if (response.data.updated) {
-        // Success - add to results
+      if (normalizedNumbers.length === 0) {
+        setSingleError('No valid accession numbers found');
+        setSingleImporting(false);
+        return;
+      }
+
+      // If single accession number, use the old endpoint for backward compatibility
+      if (normalizedNumbers.length === 1) {
+        const response = await api.post('/stock/import/single', {
+          accessionNumber: normalizedNumbers[0],
+          status: singleStatus
+        });
+
+        // Show success toast (simple alert for now, can be replaced with toast library)
+        if (response.data.updated) {
+          // Success - add to results
+          const newResult = {
+            summary: {
+              updated: (results?.summary?.updated || 0) + 1,
+              notFound: results?.summary?.notFound || 0,
+              errors: results?.summary?.errors || 0,
+              totalProcessed: (results?.summary?.totalProcessed || 0) + 1
+            },
+            results: {
+              updated: [...(results?.results?.updated || []), {
+                accessionNumber: normalizedNumbers[0],
+                status: singleStatus
+              }],
+              notFound: results?.results?.notFound || [],
+              errors: results?.results?.errors || []
+            }
+          };
+          setResults(newResult);
+          setAccessionList([{ id: 1, value: '' }]);
+          setSingleStatus('Verified');
+          // Show success message
+          alert(`Imported successfully: ${normalizedNumbers[0]}`);
+        } else if (response.data.notFound) {
+          // Not found - add to results
+          const newResult = {
+            summary: {
+              updated: results?.summary?.updated || 0,
+              notFound: (results?.summary?.notFound || 0) + 1,
+              errors: results?.summary?.errors || 0,
+              totalProcessed: (results?.summary?.totalProcessed || 0) + 1
+            },
+            results: {
+              updated: results?.results?.updated || [],
+              notFound: [...(results?.results?.notFound || []), normalizedNumbers[0]],
+              errors: results?.results?.errors || []
+            }
+          };
+          setResults(newResult);
+          setAccessionList([{ id: 1, value: '' }]);
+          setSingleStatus('Verified');
+          // Show not found message
+          alert(`Book not found: ${normalizedNumbers[0]}`);
+        }
+      } else {
+        // Multiple accession numbers - use bulk import endpoint
+        const response = await api.post('/stock/import/bulk', {
+          accessionNumbers: normalizedNumbers,
+          status: singleStatus
+        });
+
+        // Process results
+        const updatedItems = response.data.results?.updated || [];
+        const notFoundItems = response.data.results?.notFound || [];
+        const errorItems = response.data.results?.errors || [];
+
         const newResult = {
           summary: {
-            updated: (results?.summary?.updated || 0) + 1,
-            notFound: results?.summary?.notFound || 0,
-            errors: results?.summary?.errors || 0,
-            totalProcessed: (results?.summary?.totalProcessed || 0) + 1
+            updated: (results?.summary?.updated || 0) + updatedItems.length,
+            notFound: (results?.summary?.notFound || 0) + notFoundItems.length,
+            errors: (results?.summary?.errors || 0) + errorItems.length,
+            totalProcessed: (results?.summary?.totalProcessed || 0) + normalizedNumbers.length
           },
           results: {
-            updated: [...(results?.results?.updated || []), {
-              accessionNumber: normalized,
-              status: singleStatus
-            }],
-            notFound: results?.results?.notFound || [],
-            errors: results?.results?.errors || []
+            updated: [...(results?.results?.updated || []), ...updatedItems],
+            notFound: [...(results?.results?.notFound || []), ...notFoundItems],
+            errors: [...(results?.results?.errors || []), ...errorItems]
           }
         };
         setResults(newResult);
-        setSingleAccession('');
+        setAccessionList([{ id: 1, value: '' }]);
         setSingleStatus('Verified');
-        // Show success message
-        alert(`Imported successfully: ${normalized}`);
-      } else if (response.data.notFound) {
-        // Not found - add to results
-        const newResult = {
-          summary: {
-            updated: results?.summary?.updated || 0,
-            notFound: (results?.summary?.notFound || 0) + 1,
-            errors: results?.summary?.errors || 0,
-            totalProcessed: (results?.summary?.totalProcessed || 0) + 1
-          },
-          results: {
-            updated: results?.results?.updated || [],
-            notFound: [...(results?.results?.notFound || []), normalized],
-            errors: results?.results?.errors || []
-          }
-        };
-        setResults(newResult);
-        setSingleAccession('');
-        setSingleStatus('Verified');
-        // Show not found message
-        alert(`Book not found: ${normalized}`);
+        
+        // Show summary message
+        const successCount = updatedItems.length;
+        const notFoundCount = notFoundItems.length;
+        const errorCount = errorItems.length;
+        alert(`Import complete: ${successCount} updated, ${notFoundCount} not found, ${errorCount} errors`);
       }
     } catch (err) {
       const errorMsg = err.response?.data?.message || err.message || 'Import failed';
@@ -410,23 +490,47 @@ export default function StockImport() {
               
               <div style={styles.singleImportForm}>
                 <div style={styles.formGroup}>
-                  <label style={styles.label}>Accession Number *</label>
-                  <input
-                    type="text"
-                    value={singleAccession}
-                    onChange={(e) => {
-                      setSingleAccession(e.target.value);
-                      setSingleError('');
-                    }}
-                    placeholder="Enter accession number (e.g., 1, 123)"
-                    disabled={singleImporting}
-                    style={styles.input}
-                  />
-                  {singleAccession && (
-                    <div style={styles.previewText}>
-                      Preview: <strong>{normalizeAccessionNumber(singleAccession) || 'Invalid'}</strong>
+                  <label style={styles.label}>Accession Number(s) *</label>
+                  {accessionList.map((item, index) => (
+                    <div key={item.id} style={styles.accessionRow}>
+                      <input
+                        type="text"
+                        value={item.value}
+                        onChange={(e) => {
+                          handleUpdateAccession(item.id, e.target.value);
+                          setSingleError('');
+                        }}
+                        placeholder={`Accession number ${index + 1} (e.g., 1, 123)`}
+                        disabled={singleImporting}
+                        style={styles.input}
+                      />
+                      {item.value && (
+                        <div style={styles.previewText}>
+                          Preview: <strong>{normalizeAccessionNumber(item.value) || 'Invalid'}</strong>
+                        </div>
+                      )}
+                      {accessionList.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAccessionField(item.id)}
+                          disabled={singleImporting}
+                          style={styles.removeButton}
+                          title="Remove this accession number"
+                        >
+                          ✕
+                        </button>
+                      )}
                     </div>
-                  )}
+                  ))}
+                  <button
+                    type="button"
+                    onClick={handleAddAccessionField}
+                    disabled={singleImporting}
+                    style={styles.addButton}
+                    title="Add another accession number"
+                  >
+                    + Add Another Accession Number
+                  </button>
                 </div>
 
                 <div style={styles.formGroup}>
@@ -445,14 +549,14 @@ export default function StockImport() {
 
                 <button
                   onClick={handleSingleImport}
-                  disabled={singleImporting || !singleAccession.trim()}
+                  disabled={singleImporting || accessionList.every(item => !item.value.trim())}
                   style={{
                     ...styles.singleImportButton,
-                    opacity: (singleImporting || !singleAccession.trim()) ? 0.6 : 1,
-                    cursor: (singleImporting || !singleAccession.trim()) ? 'not-allowed' : 'pointer'
+                    opacity: (singleImporting || accessionList.every(item => !item.value.trim())) ? 0.6 : 1,
+                    cursor: (singleImporting || accessionList.every(item => !item.value.trim())) ? 'not-allowed' : 'pointer'
                   }}
                 >
-                  {singleImporting ? '⏳ Importing...' : '✅ Import Single Entry'}
+                  {singleImporting ? '⏳ Importing...' : `✅ Import ${accessionList.filter(item => item.value.trim()).length || ''} Entry${accessionList.filter(item => item.value.trim()).length !== 1 ? 'ies' : ''}`}
                 </button>
 
                 {singleError && (
@@ -1060,6 +1164,46 @@ const styles = {
     fontWeight: '600',
     transition: 'all 0.2s ease',
     alignSelf: 'flex-start'
+  },
+  accessionRow: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '4px',
+    marginBottom: '16px',
+    position: 'relative'
+  },
+  addButton: {
+    padding: '10px 16px',
+    backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    marginTop: '8px',
+    alignSelf: 'flex-start',
+    ':hover': {
+      backgroundColor: '#2563eb'
+    }
+  },
+  removeButton: {
+    position: 'absolute',
+    top: '0',
+    right: '0',
+    padding: '8px 12px',
+    backgroundColor: '#ef4444',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    fontSize: '14px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    ':hover': {
+      backgroundColor: '#dc2626'
+    }
   }
 };
 

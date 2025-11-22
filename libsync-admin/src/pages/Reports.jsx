@@ -90,19 +90,53 @@ export default function Reports() {
     }
   };
 
-  // Fetch latest import info on component mount
+  // Fetch latest import info on component mount and when it changes
   useEffect(() => {
     const fetchLatestImport = async () => {
       try {
         const res = await api.get('/stock/imports/latest');
         if (res.data && res.data.data) {
-          setLatestImport(res.data.data);
+          const newLatestImport = res.data.data;
+          
+          // If the latest import is a reset action, clear the batchId filter
+          if (newLatestImport.action === 'reset-all' || newLatestImport.fileName === 'reset-all-button') {
+            setStockVerificationFilters(prev => ({
+              ...prev,
+              batchId: ''
+            }));
+          }
+          
+          // Clear batchId if it doesn't match the latest import batchId (only if latest import is not a reset)
+          if (!newLatestImport.action || (newLatestImport.action !== 'reset-all' && newLatestImport.fileName !== 'reset-all-button')) {
+            setStockVerificationFilters(prev => {
+              // If current batchId exists and doesn't match latest, clear it
+              if (prev.batchId && newLatestImport.batchId && prev.batchId !== newLatestImport.batchId) {
+                return {
+                  ...prev,
+                  batchId: ''
+                };
+              }
+              return prev;
+            });
+          }
+          
+          setLatestImport(newLatestImport);
+        } else {
+          // If no latest import, clear batchId
+          setStockVerificationFilters(prev => ({
+            ...prev,
+            batchId: ''
+          }));
         }
       } catch (err) {
         console.error('Failed to fetch latest import:', err);
       }
     };
     fetchLatestImport();
+    
+    // Poll for latest import changes every 10 seconds (useful if reset happens on another tab/page)
+    const interval = setInterval(fetchLatestImport, 10000);
+    return () => clearInterval(interval);
   }, []);
 
   const handleStockVerificationDownload = async () => {
@@ -306,12 +340,21 @@ export default function Reports() {
                     value={stockVerificationFilters.batchId}
                     onChange={(e) => setStockVerificationFilters({ ...stockVerificationFilters, batchId: e.target.value })}
                   />
-                  {latestImport && latestImport.batchId && (
+                  {latestImport && latestImport.batchId && latestImport.action !== 'reset-all' && latestImport.fileName !== 'reset-all-button' && (
                     <button
                       style={styles.useLatestButton}
                       onClick={() => setStockVerificationFilters({ ...stockVerificationFilters, batchId: latestImport.batchId })}
                     >
                       Use Latest
+                    </button>
+                  )}
+                  {stockVerificationFilters.batchId && (
+                    <button
+                      style={styles.clearBatchButton}
+                      onClick={() => setStockVerificationFilters({ ...stockVerificationFilters, batchId: '' })}
+                      title="Clear batch ID filter"
+                    >
+                      Clear
                     </button>
                   )}
                 </div>
@@ -455,6 +498,16 @@ const styles = {
     padding: '4px 8px',
     fontSize: '11px',
     backgroundColor: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '4px',
+    cursor: 'pointer'
+  },
+  clearBatchButton: {
+    marginLeft: '8px',
+    padding: '4px 8px',
+    fontSize: '11px',
+    backgroundColor: '#ef4444',
     color: 'white',
     border: 'none',
     borderRadius: '4px',

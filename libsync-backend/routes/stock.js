@@ -3,7 +3,7 @@ const router = express.Router();
 const multer = require("multer");
 const verifyToken = require("../middleware/auth");
 const verifyAdmin = require("../middleware/adminAuth");
-const { importStock, importSingleStock } = require("../controllers/stockController");
+const { importStock, importSingleStock, importBulkStock } = require("../controllers/stockController");
 const StockImport = require("../models/StockImport");
 
 // Configure multer for file uploads (max 5MB)
@@ -49,6 +49,16 @@ router.post("/import", verifyToken, verifyAdmin, upload.single('file'), importSt
  * Status: Verified / Damaged / Lost
  */
 router.post("/import/single", verifyToken, verifyAdmin, importSingleStock);
+
+/**
+ * POST /api/stock/import/bulk
+ * Import multiple stock verification entries
+ * Requires admin authentication
+ * 
+ * Body: { accessionNumbers: ["<value1>", "<value2>", ...], status: "<status>" }
+ * Status: Verified / Damaged / Lost
+ */
+router.post("/import/bulk", verifyToken, verifyAdmin, importBulkStock);
 
 /**
  * GET /api/stock-imports/latest

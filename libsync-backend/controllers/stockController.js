@@ -344,6 +344,129 @@ exports.importStock = async (req, res) => {
 };
 
 /**
+ * Bulk Stock Import Controller (from single entry form)
+ * POST /api/stock/import/bulk
+ * Accepts array of accession numbers and status
+ */
+exports.importBulkStock = async (req, res) => {
+  try {
+    const { accessionNumbers, status } = req.body;
+
+    // Validate input
+    if (!accessionNumbers || !Array.isArray(accessionNumbers) || accessionNumbers.length === 0) {
+      return res.status(400).json({ message: "Accession numbers array is required" });
+    }
+
+    if (!status) {
+      return res.status(400).json({ message: "Status is required" });
+    }
+
+    // Validate status value
+    const validStatuses = ['Verified', 'Damaged', 'Lost'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` 
+      });
+    }
+
+    // Get user ID from request (set by auth middleware)
+    const userId = req.user ? req.user._id || req.user.id : null;
+    const now = new Date();
+
+    // Normalize all accession numbers
+    const normalizedNumbers = accessionNumbers
+      .map(acc => normalizeAccessionNumber(acc))
+      .filter(acc => acc !== null);
+
+    if (normalizedNumbers.length === 0) {
+      return res.status(400).json({ message: "No valid accession numbers found" });
+    }
+
+    // Process each accession number
+    const results = {
+      updated: [],
+      notFound: [],
+      errors: []
+    };
+
+    for (const normalizedAcc of normalizedNumbers) {
+      try {
+        const book = await Book.findOne({ accessionNumber: normalizedAcc });
+        
+        if (!book) {
+          results.notFound.push(normalizedAcc);
+          continue;
+        }
+
+        // Determine updates based on status
+        let updateData = {};
+        
+        if (status === 'Verified') {
+          updateData.verified = true;
+          updateData.condition = 'Good';
+        } else if (status === 'Damaged') {
+          updateData.verified = false;
+          updateData.condition = 'Damaged';
+        } else if (status === 'Lost') {
+          updateData.verified = false;
+          updateData.condition = 'Lost';
+        }
+
+        // Set lastVerifiedAt
+        updateData.lastVerifiedAt = now;
+
+        // Add verification history entry
+        const historyEntry = {
+          status: status,
+          by: userId,
+          at: now,
+          source: 'bulk-import'
+        };
+
+        // Update book
+        await Book.updateOne(
+          { _id: book._id },
+          {
+            $set: updateData,
+            $push: { verificationHistory: historyEntry }
+          }
+        );
+
+        results.updated.push({
+          accessionNumber: normalizedAcc,
+          status: status
+        });
+      } catch (error) {
+        results.errors.push({
+          accessionNumber: normalizedAcc,
+          error: error.message
+        });
+      }
+    }
+
+    console.log(`Bulk import complete: ${results.updated.length} updated, ${results.notFound.length} not found, ${results.errors.length} errors`);
+
+    res.json({
+      message: "Bulk import complete",
+      results: results,
+      summary: {
+        totalProcessed: normalizedNumbers.length,
+        updated: results.updated.length,
+        notFound: results.notFound.length,
+        errors: results.errors.length
+      }
+    });
+
+  } catch (error) {
+    console.error('Bulk stock import error:', error);
+    res.status(500).json({ 
+      message: "Bulk stock import failed", 
+      error: error.message 
+    });
+  }
+};
+
+/**
  * Single Stock Import Controller
  * POST /api/stock/import/single
  * Accepts single accession number and status

@@ -192,8 +192,14 @@ exports.stockVerificationExcel = async (req, res) => {
     }
     
     // Apply batchId filter if provided (search in verificationHistory source)
+    // This should only show books that have verification history entries from this specific batch
     if (batchId) {
-      filter['verificationHistory.source'] = { $regex: batchId, $options: 'i' };
+      // Match books where at least one verificationHistory entry has this batchId
+      filter['verificationHistory'] = {
+        $elemMatch: {
+          source: { $regex: batchId, $options: 'i' }
+        }
+      };
     }
     
     // Apply date filter if provided (filter by lastVerifiedAt)
