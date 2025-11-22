@@ -680,28 +680,6 @@ export default function ManageBooks() {
             >
               {showForm ? 'Cancel' : 'Add New Book'}
             </button>
-            {showForm && !editingBook && (
-              <button
-                onClick={() => {
-                  setForm({ 
-                    accessionNumber: '', 
-                    title: '', 
-                    author: '', 
-                    publisher: '', 
-                    yearOfPublishing: '', 
-                    edition: '', 
-                    category: '', 
-                    price: '' 
-                  });
-                  setAdvancedMode(false);
-                  setNumberOfCopies(1);
-                }}
-                style={styles.refreshButton}
-                title="Clear form and start fresh"
-              >
-                🔄 Refresh Form
-              </button>
-            )}
           </div>
         }
       />
@@ -896,6 +874,29 @@ export default function ManageBooks() {
                   </div>
                 </div>
                 <div style={styles.formActions}>
+                  {!editingBook && (
+                    <button 
+                      type="button"
+                      onClick={() => {
+                        setForm({ 
+                          accessionNumber: '', 
+                          title: '', 
+                          author: '', 
+                          publisher: '', 
+                          yearOfPublishing: '', 
+                          edition: '', 
+                          category: '', 
+                          price: '' 
+                        });
+                        setAdvancedMode(false);
+                        setNumberOfCopies(1);
+                      }}
+                      style={styles.refreshButton}
+                      title="Clear form and start fresh"
+                    >
+                      🔄 Refresh Form
+                    </button>
+                  )}
                   <button type="submit" style={styles.submitButton}>
                     {editingBook 
                       ? "Update Book" 
@@ -1371,7 +1372,9 @@ const styles = {
   },
   formActions: {
     display: 'flex',
-    justifyContent: 'flex-end'
+    justifyContent: 'flex-end',
+    gap: '12px',
+    flexWrap: 'wrap'
   },
   submitButton: {
     background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
