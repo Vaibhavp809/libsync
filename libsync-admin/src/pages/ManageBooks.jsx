@@ -46,15 +46,16 @@ export default function ManageBooks() {
       });
 
       // Set the form data first with proper validation
+      // Convert all values to strings to avoid trim() errors on numbers
       const formData = {
-        accessionNumber: book.accessionNumber ? book.accessionNumber.trim() : '',
-        title: book.title.trim(),
-        author: book.author.trim(),
-        publisher: book.publisher ? book.publisher.trim() : '',
-        yearOfPublishing: book.yearOfPublishing || '',
-        edition: book.edition ? book.edition.trim() : '',
-        category: book.category ? book.category.trim() : '',
-        price: book.price || ''
+        accessionNumber: book.accessionNumber ? String(book.accessionNumber).trim() : '',
+        title: book.title ? String(book.title).trim() : '',
+        author: book.author ? String(book.author).trim() : '',
+        publisher: book.publisher ? String(book.publisher).trim() : '',
+        yearOfPublishing: book.yearOfPublishing != null ? String(book.yearOfPublishing) : '',
+        edition: book.edition ? String(book.edition).trim() : '',
+        category: book.category ? String(book.category).trim() : '',
+        price: book.price != null ? String(book.price) : ''
       };
 
       // Important: Set these in the correct order
@@ -238,15 +239,15 @@ export default function ManageBooks() {
     e.preventDefault();
 
     try {
-      // Validate form data
-      if (!form.accessionNumber?.trim()) throw new Error('Accession Number is required');
-      if (!form.title?.trim()) throw new Error('Title is required');
-      if (!form.author?.trim()) throw new Error('Author is required');
-      if (!form.publisher?.trim()) throw new Error('Publisher is required');
-      if (!form.yearOfPublishing?.trim()) throw new Error('Year of Publishing is required');
-      if (!form.edition?.trim()) throw new Error('Edition is required');
-      if (!form.category?.trim()) throw new Error('Category is required');
-      if (!form.price?.trim()) throw new Error('Price is required');
+      // Validate form data (convert to string first to handle numbers safely)
+      if (!form.accessionNumber || !String(form.accessionNumber).trim()) throw new Error('Accession Number is required');
+      if (!form.title || !String(form.title).trim()) throw new Error('Title is required');
+      if (!form.author || !String(form.author).trim()) throw new Error('Author is required');
+      if (!form.publisher || !String(form.publisher).trim()) throw new Error('Publisher is required');
+      if (!form.yearOfPublishing || !String(form.yearOfPublishing).trim()) throw new Error('Year of Publishing is required');
+      if (!form.edition || !String(form.edition).trim()) throw new Error('Edition is required');
+      if (!form.category || !String(form.category).trim()) throw new Error('Category is required');
+      if (!form.price || !String(form.price).trim()) throw new Error('Price is required');
 
       // Validate year and price
       const year = parseInt(form.yearOfPublishing);
@@ -259,15 +260,15 @@ export default function ManageBooks() {
         throw new Error('Please enter a valid price');
       }
 
-      // Prepare the data
+      // Prepare the data (convert to string first to safely trim)
       const bookData = {
-        accessionNumber: form.accessionNumber.trim(),
-        title: form.title.trim(),
-        author: form.author.trim(),
-        publisher: form.publisher.trim(),
+        accessionNumber: String(form.accessionNumber).trim(),
+        title: String(form.title).trim(),
+        author: String(form.author).trim(),
+        publisher: String(form.publisher).trim(),
         yearOfPublishing: year,
-        edition: form.edition.trim(),
-        category: form.category.trim(),
+        edition: String(form.edition).trim(),
+        category: String(form.category).trim(),
         price: price
       };
 
@@ -661,12 +662,25 @@ export default function ManageBooks() {
               📄 Bulk Import
             </button>
             <button
-              onClick={() => setShowForm(!showForm)}
+              onClick={() => {
+                if (showForm) {
+                  // Close form and reset
+                  setShowForm(false);
+                  setEditingBook(null);
+                  setAdvancedMode(false);
+                  setNumberOfCopies(1);
+                } else {
+                  // Open form and ensure advanced mode state is reset
+                  setAdvancedMode(false);
+                  setNumberOfCopies(1);
+                  setShowForm(true);
+                }
+              }}
               style={styles.addButton}
             >
               {showForm ? 'Cancel' : 'Add New Book'}
             </button>
-            {showForm && (
+            {showForm && !editingBook && (
               <button
                 onClick={() => {
                   setForm({ 

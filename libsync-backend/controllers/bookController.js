@@ -60,7 +60,7 @@ exports.addMultipleBooks = async (req, res) => {
       return res.status(400).json({ message: "Number of copies must be between 1 and 100" });
     }
     
-    // Keep accession number as-is (no padding with zeros)
+    // Keep accession numbers as-is (no zero-padding)
     const startingAccStr = String(startingAccessionNumber).trim();
     
     // Extract numeric part for comparison
@@ -71,8 +71,15 @@ exports.addMultipleBooks = async (req, res) => {
     
     let startNum = parseInt(numericPart);
     
-    // Check if the starting accession number exists
-    const existingBook = await Book.findOne({ accessionNumber: startingAccStr });
+    // Check if the starting accession number exists (try both padded and unpadded versions)
+    const normalizedStartingAcc = String(startNum).padStart(6, '0');
+    let existingBook = await Book.findOne({ 
+      $or: [
+        { accessionNumber: startingAccStr },
+        { accessionNumber: normalizedStartingAcc },
+        { accessionNumber: String(startNum) }
+      ]
+    });
     
     if (existingBook) {
       // If book exists at starting number, find the highest accession number 
