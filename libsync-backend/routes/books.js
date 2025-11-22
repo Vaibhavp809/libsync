@@ -24,6 +24,7 @@ const upload = multer({
 
 const {
   addBook,
+  addMultipleBooks,
   getBooks,
   getBookById,
   updateBook,
@@ -41,6 +42,7 @@ const {
 
 // 📚 Existing routes with authentication
 router.post("/", verifyToken, addBook);
+router.post("/multiple", verifyToken, verifyAdmin, addMultipleBooks);
 router.post("/bulk-import", verifyToken, upload.single('file'), bulkImportBooks);
 router.get("/", verifyStudentOrAdmin, getBooks);
 router.get("/statistics", verifyStudentOrAdmin, getBookStatistics);

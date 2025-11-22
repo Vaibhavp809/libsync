@@ -34,6 +34,132 @@ exports.addBook = async (req, res) => {
   }
 };
 
+// Add multiple copies of the same book with consecutive accession numbers
+exports.addMultipleBooks = async (req, res) => {
+  try {
+    const { 
+      startingAccessionNumber, 
+      numberOfCopies, 
+      title, 
+      author, 
+      publisher, 
+      yearOfPublishing, 
+      edition, 
+      category, 
+      price 
+    } = req.body;
+    
+    // Validate required fields
+    if (!startingAccessionNumber || !numberOfCopies || !title || !author || !publisher || !yearOfPublishing || !edition || !category || !price) {
+      return res.status(400).json({ message: "All fields are required" });
+    }
+    
+    // Validate number of copies
+    const copies = parseInt(numberOfCopies);
+    if (isNaN(copies) || copies < 1 || copies > 100) {
+      return res.status(400).json({ message: "Number of copies must be between 1 and 100" });
+    }
+    
+    // Extract numeric part from starting accession number
+    const numericPart = String(startingAccessionNumber).replace(/\D/g, '');
+    if (!numericPart) {
+      return res.status(400).json({ message: "Invalid accession number format" });
+    }
+    
+    let startNum = parseInt(numericPart);
+    
+    // Normalize starting accession number to 6 digits
+    const startingAccStr = String(startNum).padStart(6, '0');
+    
+    // Check if the starting accession number exists
+    const existingBook = await Book.findOne({ accessionNumber: startingAccStr });
+    
+    if (existingBook) {
+      // If book exists at starting number, find the highest accession number 
+      // by extracting numeric values from all accession numbers and finding the max
+      const allBooks = await Book.find({}).select('accessionNumber').lean();
+      
+      let maxNum = startNum - 1;
+      
+      for (const book of allBooks) {
+        const accNum = book.accessionNumber;
+        if (accNum) {
+          const numeric = parseInt(String(accNum).replace(/\D/g, ''));
+          if (!isNaN(numeric) && numeric >= startNum && numeric > maxNum) {
+            maxNum = numeric;
+          }
+        }
+      }
+      
+      // Start from the next number after the highest found
+      startNum = maxNum + 1;
+    }
+    
+    // Generate consecutive accession numbers
+    const booksToCreate = [];
+    const createdBooks = [];
+    const errors = [];
+    
+    for (let i = 0; i < copies; i++) {
+      const accNum = String(startNum + i).padStart(6, '0');
+      
+      // Check if this accession number already exists
+      const exists = await Book.findOne({ accessionNumber: accNum });
+      if (exists) {
+        errors.push({
+          accessionNumber: accNum,
+          error: "Accession number already exists"
+        });
+        continue;
+      }
+      
+      booksToCreate.push({
+        accessionNumber: accNum,
+        title,
+        author,
+        publisher,
+        yearOfPublishing: parseInt(yearOfPublishing),
+        edition,
+        category,
+        price: parseFloat(price)
+      });
+    }
+    
+    // Insert all books
+    if (booksToCreate.length > 0) {
+      const insertedBooks = await Book.insertMany(booksToCreate, { ordered: false });
+      createdBooks.push(...insertedBooks);
+    }
+    
+    // Prepare response
+    const response = {
+      message: `Successfully created ${createdBooks.length} book${createdBooks.length !== 1 ? 's' : ''}`,
+      books: createdBooks,
+      summary: {
+        requested: copies,
+        created: createdBooks.length,
+        failed: errors.length,
+        startingAccessionNumber: createdBooks.length > 0 ? createdBooks[0].accessionNumber : null,
+        endingAccessionNumber: createdBooks.length > 0 ? createdBooks[createdBooks.length - 1].accessionNumber : null
+      }
+    };
+    
+    if (errors.length > 0) {
+      response.errors = errors;
+      response.message += ` (${errors.length} failed due to duplicate accession numbers)`;
+    }
+    
+    res.status(201).json(response);
+  } catch (err) {
+    console.error('Error adding multiple books:', err);
+    if (err.code === 11000) {
+      res.status(400).json({ message: "One or more accession numbers already exist" });
+    } else {
+      res.status(500).json({ message: err.message });
+    }
+  }
+};
+
 // Delete a book
 exports.deleteBook = async (req, res) => {
   try {

@@ -23,6 +23,8 @@ export default function ManageBooks() {
   const [showForm, setShowForm] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [editingBook, setEditingBook] = useState(null);
+  const [advancedMode, setAdvancedMode] = useState(false);
+  const [numberOfCopies, setNumberOfCopies] = useState(1);
 
   const handleEditBook = (book) => {
     try {
@@ -58,6 +60,8 @@ export default function ManageBooks() {
       // Important: Set these in the correct order
       setForm(formData);
       setEditingBook(book);
+      setAdvancedMode(false); // Disable advanced mode when editing
+      setNumberOfCopies(1); // Reset copies when editing
 
       // Force showForm to true after a small delay to ensure state is updated
       setTimeout(() => {
@@ -275,16 +279,35 @@ export default function ManageBooks() {
 
       let response;
       if (editingBook?._id) {
+        // Editing mode - single book update only
         response = await api.put(`/books/${editingBook._id}`, bookData);
         console.log('Book updated:', response.data);
       } else {
-        response = await api.post('/books', bookData);
-        console.log('Book created:', response.data);
+        // Create mode - check if multiple copies
+        if (advancedMode && numberOfCopies > 1) {
+          // Create multiple copies with consecutive accession numbers
+          response = await api.post('/books/multiple', {
+            ...bookData,
+            numberOfCopies: numberOfCopies,
+            startingAccessionNumber: form.accessionNumber.trim()
+          });
+          console.log('Multiple books created:', response.data);
+        } else {
+          // Single book creation
+          response = await api.post('/books', bookData);
+          console.log('Book created:', response.data);
+        }
       }
 
       // Only proceed if we got a successful response
       if (response?.data) {
-        alert(editingBook ? 'Book updated successfully!' : 'Book added successfully!');
+        if (editingBook) {
+          alert('Book updated successfully!');
+        } else if (advancedMode && numberOfCopies > 1) {
+          alert(`Successfully created ${response.data.books?.length || numberOfCopies} book copies!`);
+        } else {
+          alert('Book added successfully!');
+        }
 
         // Reset form and states
         setForm({ 
@@ -299,6 +322,8 @@ export default function ManageBooks() {
         });
         setShowForm(false);
         setEditingBook(null);
+        setAdvancedMode(false);
+        setNumberOfCopies(1);
 
         // Refresh book list
         await fetchBooks(1, itemsPerPage, searchTerm, selectedCategory, sortBy, sortOrder);
@@ -658,18 +683,86 @@ export default function ManageBooks() {
               style={styles.formCard}
             >
               <form onSubmit={handleAddBook} style={styles.form}>
+                {/* Advanced Mode Toggle - Only show when creating, not editing */}
+                {!editingBook && (
+                  <div style={styles.advancedModeSection}>
+                    <label style={styles.advancedToggle}>
+                      <input
+                        type="checkbox"
+                        checked={advancedMode}
+                        onChange={(e) => {
+                          setAdvancedMode(e.target.checked);
+                          if (!e.target.checked) {
+                            setNumberOfCopies(1);
+                          }
+                        }}
+                        style={styles.checkbox}
+                      />
+                      <span style={styles.advancedLabel}>
+                        ⚡ Advanced: Create Multiple Copies
+                      </span>
+                    </label>
+                    {advancedMode && (
+                      <div style={styles.advancedInfo}>
+                        <p style={styles.advancedInfoText}>
+                          📘 Enable this to create multiple copies of the same book with consecutive accession numbers.
+                          The system will automatically assign accession numbers starting from your specified number.
+                        </p>
+                      </div>
+                    )}
+                  </div>
+                )}
                 <div style={styles.formGrid}>
                   <div style={styles.formGroup}>
-                    <label style={styles.label}>Accession Number *</label>
+                    <label style={styles.label}>
+                      Accession Number *
+                      {advancedMode && !editingBook && (
+                        <span style={styles.hintText}> (Starting number)</span>
+                      )}
+                    </label>
                     <input
                       name="accessionNumber"
-                      placeholder="Enter accession number"
+                      placeholder={advancedMode && !editingBook ? "Enter starting accession number (e.g., 26494)" : "Enter accession number"}
                       value={form.accessionNumber}
                       onChange={handleChange}
                       required
+                      disabled={editingBook ? false : false}
                       style={styles.input}
                     />
+                    {advancedMode && !editingBook && (
+                      <div style={styles.hintBox}>
+                        ℹ️ System will create consecutive accession numbers starting from this number
+                      </div>
+                    )}
                   </div>
+                  {advancedMode && !editingBook && (
+                    <div style={styles.formGroup}>
+                      <label style={styles.label}>Number of Copies *</label>
+                      <input
+                        type="number"
+                        min="1"
+                        max="100"
+                        placeholder="Enter number of copies (e.g., 10)"
+                        value={numberOfCopies}
+                        onChange={(e) => {
+                          const value = parseInt(e.target.value) || 1;
+                          setNumberOfCopies(Math.max(1, Math.min(100, value)));
+                        }}
+                        required
+                        style={styles.input}
+                      />
+                      <div style={styles.previewBox}>
+                        📚 Preview: Will create {numberOfCopies} copy{numberOfCopies !== 1 ? 'ies' : ''} 
+                        {form.accessionNumber && numberOfCopies > 1 && (
+                          <span style={styles.accessionPreview}>
+                            <br />
+                            Starting from: {form.accessionNumber}
+                            {numberOfCopies > 1 && ` → ${parseInt(form.accessionNumber.replace(/\D/g, '')) + numberOfCopies - 1 || ''}`}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                   <div style={styles.formGroup}>
                     <label style={styles.label}>Title *</label>
                     <input
@@ -760,9 +853,22 @@ export default function ManageBooks() {
                 </div>
                 <div style={styles.formActions}>
                   <button type="submit" style={styles.submitButton}>
-                    {editingBook ? "Update Book" : "Add Book"}
+                    {editingBook 
+                      ? "Update Book" 
+                      : advancedMode && numberOfCopies > 1 
+                        ? `Add ${numberOfCopies} Copies` 
+                        : "Add Book"}
                   </button>
-                  <button type="button" onClick={() => setShowForm(false)} style={styles.cancelButton}>
+                  <button 
+                    type="button" 
+                    onClick={() => {
+                      setShowForm(false);
+                      setEditingBook(null);
+                      setAdvancedMode(false);
+                      setNumberOfCopies(1);
+                    }} 
+                    style={styles.cancelButton}
+                  >
                     Cancel
                   </button>
                 </div>
@@ -1576,5 +1682,73 @@ const styles = {
       backgroundColor: '#f9fafb',
       borderColor: '#9ca3af'
     }
+  },
+  advancedModeSection: {
+    marginBottom: '20px',
+    padding: '16px',
+    backgroundColor: '#f0f9ff',
+    borderRadius: '12px',
+    border: '2px solid #bae6fd'
+  },
+  advancedToggle: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    cursor: 'pointer',
+    marginBottom: '12px'
+  },
+  checkbox: {
+    width: '20px',
+    height: '20px',
+    cursor: 'pointer'
+  },
+  advancedLabel: {
+    fontSize: '16px',
+    fontWeight: '600',
+    color: '#1e40af'
+  },
+  advancedInfo: {
+    marginTop: '12px',
+    padding: '12px',
+    backgroundColor: '#e0f2fe',
+    borderRadius: '8px',
+    border: '1px solid #7dd3fc'
+  },
+  advancedInfoText: {
+    margin: 0,
+    fontSize: '14px',
+    color: '#1e3a8a',
+    lineHeight: '1.6'
+  },
+  hintText: {
+    fontSize: '12px',
+    color: '#64748b',
+    fontWeight: 'normal',
+    marginLeft: '4px'
+  },
+  hintBox: {
+    marginTop: '6px',
+    padding: '8px 12px',
+    backgroundColor: '#fef3c7',
+    borderRadius: '6px',
+    fontSize: '12px',
+    color: '#92400e',
+    border: '1px solid #fcd34d'
+  },
+  previewBox: {
+    marginTop: '8px',
+    padding: '10px 12px',
+    backgroundColor: '#dcfce7',
+    borderRadius: '6px',
+    fontSize: '13px',
+    color: '#166534',
+    border: '1px solid #86efac',
+    fontWeight: '500'
+  },
+  accessionPreview: {
+    display: 'block',
+    marginTop: '4px',
+    fontSize: '12px',
+    color: '#15803d'
   }
 };
