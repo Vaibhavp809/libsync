@@ -666,6 +666,28 @@ export default function ManageBooks() {
             >
               {showForm ? 'Cancel' : 'Add New Book'}
             </button>
+            {showForm && (
+              <button
+                onClick={() => {
+                  setForm({ 
+                    accessionNumber: '', 
+                    title: '', 
+                    author: '', 
+                    publisher: '', 
+                    yearOfPublishing: '', 
+                    edition: '', 
+                    category: '', 
+                    price: '' 
+                  });
+                  setAdvancedMode(false);
+                  setNumberOfCopies(1);
+                }}
+                style={styles.refreshButton}
+                title="Clear form and start fresh"
+              >
+                🔄 Refresh Form
+              </button>
+            )}
           </div>
         }
       />
@@ -757,7 +779,15 @@ export default function ManageBooks() {
                           <span style={styles.accessionPreview}>
                             <br />
                             Starting from: {form.accessionNumber}
-                            {numberOfCopies > 1 && ` → ${parseInt(form.accessionNumber.replace(/\D/g, '')) + numberOfCopies - 1 || ''}`}
+                            {(() => {
+                              const numericPart = form.accessionNumber.replace(/\D/g, '');
+                              const startNum = parseInt(numericPart);
+                              if (!isNaN(startNum)) {
+                                const endNum = startNum + numberOfCopies - 1;
+                                return ` → ${endNum}`;
+                              }
+                              return '';
+                            })()}
                           </span>
                         )}
                       </div>
@@ -1485,6 +1515,21 @@ const styles = {
     ':hover': {
       transform: 'translateY(-1px)',
       boxShadow: '0 4px 12px rgba(139, 92, 246, 0.3)'
+    }
+  },
+  refreshButton: {
+    background: 'linear-gradient(135deg, #f59e0b, #d97706)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '10px',
+    padding: '12px 20px',
+    cursor: 'pointer',
+    fontWeight: '600',
+    fontSize: '14px',
+    transition: 'all 0.2s ease',
+    ':hover': {
+      transform: 'translateY(-1px)',
+      boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
     }
   },
   bulkImportContainer: {

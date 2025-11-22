@@ -60,16 +60,16 @@ exports.addMultipleBooks = async (req, res) => {
       return res.status(400).json({ message: "Number of copies must be between 1 and 100" });
     }
     
-    // Extract numeric part from starting accession number
-    const numericPart = String(startingAccessionNumber).replace(/\D/g, '');
+    // Keep accession number as-is (no padding with zeros)
+    const startingAccStr = String(startingAccessionNumber).trim();
+    
+    // Extract numeric part for comparison
+    const numericPart = startingAccStr.replace(/\D/g, '');
     if (!numericPart) {
       return res.status(400).json({ message: "Invalid accession number format" });
     }
     
     let startNum = parseInt(numericPart);
-    
-    // Normalize starting accession number to 6 digits
-    const startingAccStr = String(startNum).padStart(6, '0');
     
     // Check if the starting accession number exists
     const existingBook = await Book.findOne({ accessionNumber: startingAccStr });
@@ -95,13 +95,13 @@ exports.addMultipleBooks = async (req, res) => {
       startNum = maxNum + 1;
     }
     
-    // Generate consecutive accession numbers
+    // Generate consecutive accession numbers (keep as-is, no padding)
     const booksToCreate = [];
     const createdBooks = [];
     const errors = [];
     
     for (let i = 0; i < copies; i++) {
-      const accNum = String(startNum + i).padStart(6, '0');
+      const accNum = String(startNum + i);
       
       // Check if this accession number already exists
       const exists = await Book.findOne({ accessionNumber: accNum });
