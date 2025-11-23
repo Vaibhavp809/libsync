@@ -48,12 +48,10 @@
         {
           "icon": "./assets/icon.png",
           "color": "#ffffff",
-          "sounds": [
-            "default"
-          ],
           "mode": "production"
         }
-      ]
+      ],
+      "expo-splash-screen"
     ],
     "extra": {
       "eas": {

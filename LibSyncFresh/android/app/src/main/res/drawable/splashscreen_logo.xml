@@ -5,11 +5,11 @@
     <color android:color="@color/splashscreen_background"/>
   </item>
   
-  <!-- Centered icon - use mipmap icon with proper scaling -->
+  <!-- Full splash screen image - portrait logo with icon and text -->
   <item>
     <bitmap 
       android:gravity="center"
-      android:src="@mipmap/ic_launcher"
+      android:src="@drawable/splash_image"
       android:tileMode="disabled"
       android:dither="false"/>
   </item>

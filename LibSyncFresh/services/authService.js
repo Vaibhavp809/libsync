@@ -132,51 +132,10 @@ class AuthService {
         // Set axios default header
         axios.defaults.headers.common['Authorization'] = `Bearer ${data.token}`;
         
-        // Request push token registration AFTER successful login
-        // This ensures user understands why permissions are needed (they're logged in now)
-        try {
-          const { notificationService } = require('./notificationService');
-          
-          // Delay token registration slightly to ensure login is fully complete
-          setTimeout(async () => {
-            try {
-              // Always request a fresh token after login
-              // This ensures permissions are requested at the right time (after login)
-              console.log('📱 Requesting push notification token after login...');
-              
-              // Request permissions and get push token (this will show permission dialog)
-              const newToken = await notificationService.registerForPushNotificationsAsync();
-              
-              if (newToken) {
-                // Save token locally
-                await notificationService.savePushTokenToStorage(newToken);
-                notificationService.expoPushToken = newToken;
-                console.log('✅ Push token obtained after login:', newToken.substring(0, 30) + '...');
-                
-                // Send token to server immediately
-                console.log('📤 Sending push token to server...');
-                await notificationService.sendPushTokenToServer(newToken);
-                console.log('✅ Push token sent to server after login');
-              } else {
-                console.warn('⚠️ No push token obtained - user may have denied notification permissions');
-                console.warn('⚠️ Push notifications will not work until permissions are granted');
-                console.warn('⚠️ User can grant permissions later in device Settings > Apps > LibSync > Notifications');
-              }
-            } catch (tokenError) {
-              console.error('❌ Error requesting push token after login:', tokenError.message);
-              console.error('❌ Error stack:', tokenError.stack);
-              // Check if it's a permission denial
-              if (tokenError.message && (tokenError.message.includes('permission') || tokenError.message.includes('denied'))) {
-                console.warn('⚠️ Notification permissions were denied');
-                console.warn('⚠️ User can enable notifications later in device Settings');
-              }
-            }
-          }, 1000); // Wait 1 second after login to ensure everything is settled
-          
-        } catch (pushError) {
-          console.error('❌ Failed to set up push token registration after login:', pushError.message);
-          // Don't fail login if push token registration setup fails
-        }
+        // Note: Push token registration is handled in HomeScreen.js after the screen loads
+        // This ensures the permission dialog appears after the user sees the home screen,
+        // not immediately after login, which provides better UX
+        console.log('✅ Login successful - push token will be requested on home screen');
       } else {
         throw new Error('Invalid response: missing token or user data');
       }

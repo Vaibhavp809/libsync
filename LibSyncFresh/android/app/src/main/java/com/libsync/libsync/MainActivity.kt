@@ -1,4 +1,4 @@
-package com.libsync.libsync
+package com.Libsync.libsync
 
 import android.os.Build
 import android.os.Bundle
@@ -10,8 +10,8 @@ import com.facebook.react.defaults.DefaultReactActivityDelegate
 
 import expo.modules.ReactActivityDelegateWrapper
 
-import com.libsync.BuildConfig
-import com.libsync.R
+import com.Libsync.BuildConfig
+import com.Libsync.R
 
 class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {

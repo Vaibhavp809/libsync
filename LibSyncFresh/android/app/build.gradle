@@ -87,7 +87,7 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace "com.libsync"
+    namespace "com.Libsync"
     defaultConfig {
         applicationId "com.Libsync.libsync"
         minSdkVersion rootProject.ext.minSdkVersion

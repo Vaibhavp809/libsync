@@ -39,8 +39,9 @@ export default function HomeScreen({ navigation }) {
         if (data) {
           setUser(JSON.parse(data));
           
-          // After user data is loaded, check and register push token
-          // This ensures push token is registered when user reaches home screen
+          // After user data is loaded and home screen is fully rendered,
+          // check and register push token ONLY if we don't already have one
+          // This ensures permission dialog appears AFTER home screen loads, not during login
           setTimeout(async () => {
             try {
               const { notificationService } = require('../services/notificationService');
@@ -48,37 +49,58 @@ export default function HomeScreen({ navigation }) {
               
               // Check if user is authenticated
               if (authService.isAuthenticated()) {
-                // Check if we already have a push token
+                // Check if we already have a push token saved
                 const savedToken = await notificationService.getSavedPushToken();
                 
-                // If no token or token might be outdated, request a new one
-                console.log('📱 Home screen: Checking push token registration...');
-                
-                try {
-                  const newToken = await notificationService.registerForPushNotificationsAsync();
-                  if (newToken) {
-                    await notificationService.savePushTokenToStorage(newToken);
-                    notificationService.expoPushToken = newToken;
-                    console.log('✅ Push token obtained on home screen:', newToken.substring(0, 30) + '...');
+                // Only request permission if we don't have a token yet
+                // This prevents showing the dialog every time the home screen loads
+                if (!savedToken) {
+                  console.log('📱 Home screen loaded: Requesting push notification permission...');
+                  
+                  try {
+                    // Request permissions and get push token (this will show permission dialog)
+                    const newToken = await notificationService.registerForPushNotificationsAsync();
                     
-                    // Send token to server
-                    try {
-                      await notificationService.sendPushTokenToServer(newToken);
-                      console.log('✅ Push token sent to server from home screen');
-                    } catch (serverError) {
-                      console.warn('⚠️ Failed to send push token to server:', serverError.message);
+                    if (newToken) {
+                      // Save token locally
+                      await notificationService.savePushTokenToStorage(newToken);
+                      notificationService.expoPushToken = newToken;
+                      console.log('✅ Push token obtained on home screen:', newToken.substring(0, 30) + '...');
+                      
+                      // Send token to server
+                      try {
+                        await notificationService.sendPushTokenToServer(newToken);
+                        console.log('✅ Push token sent to server from home screen');
+                      } catch (serverError) {
+                        console.warn('⚠️ Failed to send push token to server:', serverError.message);
+                      }
+                    } else {
+                      console.warn('⚠️ No push token obtained - user may have denied notification permissions');
+                      console.warn('⚠️ User can grant permissions later in device Settings');
                     }
-                  } else if (!savedToken) {
-                    console.warn('⚠️ No push token obtained - user may need to grant notification permissions');
+                  } catch (tokenError) {
+                    console.warn('⚠️ Error requesting push token on home screen:', tokenError.message);
+                    // Check if it's a permission denial
+                    if (tokenError.message && (tokenError.message.includes('permission') || tokenError.message.includes('denied'))) {
+                      console.warn('⚠️ Notification permissions were denied');
+                      console.warn('⚠️ User can enable notifications later in device Settings');
+                    }
                   }
-                } catch (tokenError) {
-                  console.warn('⚠️ Error requesting push token on home screen:', tokenError.message);
+                } else {
+                  console.log('✅ Push token already exists, no need to request permission again');
+                  // Still try to send the existing token to server in case it wasn't sent before
+                  try {
+                    await notificationService.sendPushTokenToServer(savedToken);
+                    console.log('✅ Existing push token verified with server');
+                  } catch (serverError) {
+                    console.warn('⚠️ Failed to verify existing push token with server:', serverError.message);
+                  }
                 }
               }
             } catch (error) {
               console.warn('⚠️ Error checking push token on home screen:', error.message);
             }
-          }, 2000); // Wait 2 seconds for home screen to fully render
+          }, 3000); // Wait 3 seconds for home screen to fully render before requesting permission
         }
       } catch (error) {
         console.error('Failed to load user data:', error);
