@@ -3,14 +3,11 @@
   <!-- Background color -->
   <item android:drawable="@color/splashscreen_background"/>
   
-  <!-- Centered icon - using inset to make it smaller -->
+  <!-- Centered icon - direct reference without inset to avoid rendering issues -->
   <item>
-    <inset 
-      android:drawable="@mipmap/ic_launcher"
-      android:insetLeft="35%"
-      android:insetRight="35%"
-      android:insetTop="35%"
-      android:insetBottom="35%"/>
+    <bitmap 
+      android:gravity="center"
+      android:src="@mipmap/ic_launcher"/>
   </item>
 </layer-list>
 

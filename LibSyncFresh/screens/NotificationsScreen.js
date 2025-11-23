@@ -397,11 +397,17 @@ export default function NotificationsScreen() {
       if (match) bookTitle = match[1];
     }
     
-    // Extract accession number
+    // Extract accession number (remove any trailing ')' or other punctuation)
     let accessionNumber = '';
-    const accMatch = message.match(/Accession No\.:\s*(\S+)/i);
-    if (accMatch) {
-      accessionNumber = accMatch[1];
+    // First try to get from data
+    if (item.data?.accessionNumber) {
+      accessionNumber = String(item.data.accessionNumber).trim();
+    } else {
+      // Extract from message - match "Accession No.: 12345)" and capture just the number
+      const accMatch = message.match(/Accession No\.:\s*([^\s)]+)/i);
+      if (accMatch) {
+        accessionNumber = accMatch[1].replace(/[)\s]+$/, '').trim(); // Remove trailing ')' and whitespace
+      }
     }
     
     // Extract days overdue
@@ -427,6 +433,45 @@ export default function NotificationsScreen() {
       daysOverdue,
       fine,
       dueDate
+    };
+  };
+
+  const parseReservationNotification = (item) => {
+    // Extract information from message or use data fields
+    const message = item.message || '';
+    const title = item.title || '';
+    
+    // Try to extract book title from title (format: "Reservation Ready: {title}")
+    let bookTitle = '';
+    if (title.includes('Reservation Ready:')) {
+      bookTitle = title.replace('Reservation Ready:', '').trim();
+    } else if (item.data?.bookId?.title) {
+      bookTitle = item.data.bookId.title;
+    } else {
+      // Try to extract from message
+      const match = message.match(/"([^"]+)"/);
+      if (match) bookTitle = match[1];
+    }
+    
+    // Extract accession number (from data or message)
+    let accessionNumber = '';
+    if (item.data?.accessionNumber) {
+      accessionNumber = String(item.data.accessionNumber).trim();
+    } else {
+      // Try to extract from message if present
+      const accMatch = message.match(/Accession No\.:\s*([^\s)]+)/i);
+      if (accMatch) {
+        accessionNumber = accMatch[1].replace(/[)\s]+$/, '').trim();
+      }
+    }
+    
+    // Get reserved date from data
+    const reservedDate = item.data?.reservedAt ? normalizeTimestamp(item.data.reservedAt) : null;
+    
+    return {
+      bookTitle,
+      accessionNumber,
+      reservedDate
     };
   };
 
@@ -616,6 +661,45 @@ export default function NotificationsScreen() {
     );
   };
 
+  const renderReservationNotification = (item, reservationData) => {
+    // Check both isRead (from backend) and read (legacy) for compatibility
+    const isUnread = !(item.isRead || item.read);
+    const isExpanded = expandedNotifications.has(item._id);
+
+    return (
+      <View style={styles.reservationCard}>
+        <View style={styles.reservationHeader}>
+          <Text style={styles.reservationTitle}>📌 {reservationData.bookTitle || 'Reservation Ready'}</Text>
+          {isUnread && <View style={styles.unreadDot} />}
+        </View>
+        
+        <View style={styles.reservationDetails}>
+          {reservationData.accessionNumber && (
+            <View style={styles.reservationDetailRow}>
+              <Text style={styles.reservationLabel}>Accession Number:</Text>
+              <Text style={styles.reservationValue}>{reservationData.accessionNumber}</Text>
+            </View>
+          )}
+          
+          {reservationData.reservedDate && (
+            <View style={styles.reservationDetailRow}>
+              <Text style={styles.reservationLabel}>Reserved Date:</Text>
+              <Text style={styles.reservationValue}>
+                {formatFormattedDate(reservationData.reservedDate instanceof Date ? reservationData.reservedDate.getTime() : reservationData.reservedDate)}
+              </Text>
+            </View>
+          )}
+        </View>
+        
+        <View style={styles.reservationFooter}>
+          <Text style={styles.reservationMessage}>
+            Your reserved book is ready for pickup! Please visit the library to collect it.
+          </Text>
+        </View>
+      </View>
+    );
+  };
+
   const renderNotificationItem = ({ item }) => {
     if (!item || !item._id) {
       return null;
@@ -633,6 +717,10 @@ export default function NotificationsScreen() {
     // Check if this is an overdue notification
     const isOverdueNotification = item.type === 'due_date' && item.title?.includes('Overdue');
     const overdueData = isOverdueNotification ? parseOverdueNotification(item) : null;
+    
+    // Check if this is a reservation notification
+    const isReservationNotification = item.type === 'reservation' && (item.title?.includes('Reservation Ready') || item.title?.includes('Ready'));
+    const reservationData = isReservationNotification ? parseReservationNotification(item) : null;
 
     return (
       <Swipeable
@@ -644,7 +732,8 @@ export default function NotificationsScreen() {
           style={[
             styles.notificationCard,
             isUnread && styles.unreadNotification,
-            isOverdueNotification && styles.overdueNotificationCard
+            isOverdueNotification && styles.overdueNotificationCard,
+            isReservationNotification && styles.reservationNotificationCard
           ]}
           onPress={() => !(item.isRead || item.read) && markAsRead(item._id)}
           activeOpacity={0.8}
@@ -652,6 +741,9 @@ export default function NotificationsScreen() {
           {isOverdueNotification && overdueData ? (
             // Render formatted overdue notification
             renderOverdueNotification(item, overdueData)
+          ) : isReservationNotification && reservationData ? (
+            // Render formatted reservation notification
+            renderReservationNotification(item, reservationData)
           ) : (
             // Render regular notification
             <>
@@ -1647,6 +1739,76 @@ const styles = StyleSheet.create({
   },
 
   overdueMessage: {
+    ...typography.bodySmall,
+    color: colors.textSecondary,
+    fontStyle: 'italic',
+    textAlign: 'center',
+  },
+
+  // Reservation notification styles
+  reservationNotificationCard: {
+    borderLeftColor: colors.info,
+    borderLeftWidth: 4,
+  },
+
+  reservationCard: {
+    padding: spacing.sm,
+  },
+
+  reservationHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.md,
+  },
+
+  reservationTitle: {
+    ...typography.heading2,
+    color: colors.info,
+    fontWeight: '700',
+    flex: 1,
+  },
+
+  reservationDetails: {
+    backgroundColor: colors.gray50,
+    borderRadius: borderRadius.medium,
+    padding: spacing.md,
+    marginBottom: spacing.sm,
+  },
+
+  reservationDetailRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: spacing.xs,
+    paddingVertical: spacing.xs,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.gray200,
+  },
+
+  reservationLabel: {
+    ...typography.labelMedium,
+    color: colors.textSecondary,
+    fontWeight: '600',
+    flex: 1,
+  },
+
+  reservationValue: {
+    ...typography.bodyMedium,
+    color: colors.textPrimary,
+    fontWeight: '600',
+    flex: 1,
+    textAlign: 'right',
+  },
+
+  reservationFooter: {
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: colors.gray200,
+  },
+
+  reservationMessage: {
     ...typography.bodySmall,
     color: colors.textSecondary,
     fontStyle: 'italic',

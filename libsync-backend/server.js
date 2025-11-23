@@ -72,6 +72,9 @@ app.use("/api/departments", departmentRoutes);
 const dashboardRoutes = require("./routes/dashboard");
 app.use("/api/dashboard", dashboardRoutes);
 
+const pushNotificationLogRoutes = require("./routes/pushNotificationLogs");
+app.use("/api/push-notification-logs", pushNotificationLogRoutes);
+
 // Schedule daily cleanup of expired QR codes
 scheduleCleanup();
 

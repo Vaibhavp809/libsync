@@ -1,5 +1,6 @@
 const { Expo } = require('expo-server-sdk');
 const User = require('../models/User');
+const PushNotificationLog = require('../models/PushNotificationLog');
 
 // Create a new Expo SDK client
 let expo = new Expo();
@@ -29,6 +30,14 @@ async function sendPushNotification(pushToken, title, body, data = {}, channelId
       data: data,
       priority: 'high',
       channelId: channelId, // Android notification channel
+      // Ensure notification shows on lock screen
+      android: {
+        priority: 'high',
+        channelId: channelId,
+        visibility: 'public', // Show on lock screen
+        sound: 'default',
+        vibrate: [250, 250, 250],
+      },
     };
 
     // Send the notification
@@ -57,7 +66,7 @@ async function sendPushNotification(pushToken, title, body, data = {}, channelId
     });
 
     if (errors.length > 0) {
-      return { success: false, errors };
+      return { success: false, errors, ticket: tickets[0] || null };
     }
 
     return { success: true, ticket: tickets[0] };
@@ -108,6 +117,14 @@ async function sendPushNotificationsToMultiple(pushTokens, title, body, data = {
       data: data,
       priority: 'high',
       channelId: channelId,
+      // Ensure notification shows on lock screen
+      android: {
+        priority: 'high',
+        channelId: channelId,
+        visibility: 'public', // Show on lock screen
+        sound: 'default',
+        vibrate: [250, 250, 250],
+      },
     }));
 
     console.log(`📤 Constructed ${messages.length} notification messages`);
@@ -123,6 +140,10 @@ async function sendPushNotificationsToMultiple(pushTokens, title, body, data = {
     console.log(`📤 Split into ${chunks.length} chunks for sending`);
     
     const tickets = [];
+    const tokenToIndexMap = {}; // Map tokens to their index in validTokens array
+    validTokens.forEach((token, index) => {
+      tokenToIndexMap[token] = index;
+    });
 
     for (let i = 0; i < chunks.length; i++) {
       try {
@@ -139,16 +160,21 @@ async function sendPushNotificationsToMultiple(pushTokens, title, body, data = {
 
     console.log(`📤 Received ${tickets.length} tickets from Expo`);
 
-    // Check for errors
+    // Check for errors and create error mapping
     const errors = [];
+    const ticketResults = {}; // Map token to ticket result
     tickets.forEach((ticket, i) => {
+      const token = validTokens[i];
       if (ticket.status === 'error') {
-        errors.push({
-          token: validTokens[i],
+        const errorEntry = {
+          token: token,
           error: ticket.message || 'Unknown error'
-        });
+        };
+        errors.push(errorEntry);
+        ticketResults[token] = { status: 'error', error: errorEntry.error, ticket: ticket };
         console.error(`❌ Ticket error for token ${i}:`, ticket.message || 'Unknown error');
       } else {
+        ticketResults[token] = { status: 'success', ticket: ticket };
         console.log(`✅ Ticket ${i} status: ${ticket.status} (ID: ${ticket.id || 'N/A'})`);
       }
     });
@@ -157,7 +183,8 @@ async function sendPushNotificationsToMultiple(pushTokens, title, body, data = {
       success: errors.length === 0,
       sent: validTokens.length - errors.length,
       failed: errors.length,
-      errors: errors.length > 0 ? errors : undefined
+      errors: errors.length > 0 ? errors : undefined,
+      ticketResults: ticketResults // Include ticket results for logging
     };
 
     console.log(`📤 ========== PUSH NOTIFICATION RESULT ==========`);
@@ -204,6 +231,9 @@ async function sendPushNotificationForNotification(notification) {
     let targetUsers = [];
     let channelId = 'default';
 
+    // Use the converted object
+    const notif = notificationObj;
+    
     // Determine channel based on notification type
     switch (notif.type) {
       case 'reservation':
@@ -221,9 +251,6 @@ async function sendPushNotificationForNotification(notification) {
       default:
         channelId = 'default';
     }
-
-    // Use the converted object
-    const notif = notificationObj;
     
     // Determine target users
     // Check both new 'broadcast' field and legacy 'recipients' field
@@ -332,6 +359,67 @@ async function sendPushNotificationForNotification(notification) {
       },
       channelId
     );
+
+    // Create log entry for push notification attempt
+    try {
+      // Map recipients with their send status
+      const recipientEntries = targetUsers.map((user) => {
+        const userToken = user.pushToken;
+        const tokenIndex = pushTokens.findIndex(t => t === userToken);
+        let status = 'sent';
+        let error = null;
+        let ticketId = null;
+
+        // Check if this token had an error
+        if (result.errors && result.errors.length > 0) {
+          const tokenError = result.errors.find(e => e.token === userToken);
+          if (tokenError) {
+            status = tokenError.error === 'Invalid push token' ? 'invalid_token' : 'failed';
+            error = tokenError.error;
+          }
+        }
+
+        // Get ticket ID if available
+        if (result.ticketResults && result.ticketResults[userToken] && result.ticketResults[userToken].ticket) {
+          ticketId = result.ticketResults[userToken].ticket.id;
+        }
+
+        return {
+          userId: user._id,
+          userEmail: user.email || null,
+          userName: user.name || null,
+          studentID: user.studentID || null,
+          pushToken: userToken ? userToken.substring(0, 30) + '...' : null, // Only log partial token for security
+          status: status,
+          error: error,
+          ticketId: ticketId
+        };
+      });
+
+      const logEntry = {
+        notificationId: notif._id || notif.id,
+        notificationTitle: notif.title,
+        notificationMessage: notif.message,
+        notificationType: notif.type,
+        priority: notif.priority || 'medium',
+        channelId: channelId,
+        recipients: recipientEntries,
+        totalRecipients: targetUsers.length,
+        successfulSends: result.sent || 0,
+        failedSends: result.failed || 0,
+        invalidTokens: result.errors?.filter(e => e.error === 'Invalid push token').length || 0,
+        status: result.success ? (result.failed > 0 ? 'partial' : 'sent') : 'failed',
+        error: result.error || null,
+        sentBy: notif.createdBy || null
+      };
+
+      await PushNotificationLog.create(logEntry);
+      console.log(`✅ Push notification log created: ${logEntry.status} - ${logEntry.successfulSends} sent, ${logEntry.failedSends} failed`);
+    } catch (logError) {
+      console.error('⚠️ Failed to create push notification log:', logError.message);
+      console.error('Log error details:', logError);
+      // Don't fail the notification send if logging fails
+    }
 
     if (result.success) {
       console.log(`✅ Push notification sent successfully to ${result.sent || 0} users for notification: ${notif.title}`);
