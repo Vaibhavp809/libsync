@@ -1,6 +1,23 @@
 const Book = require("../models/Book");
 const XLSX = require('xlsx');
 
+// Helper function to normalize accession number (pad to 6 digits with leading zeros)
+const normalizeAccessionNumber = (accessionNumber) => {
+  if (!accessionNumber) return '';
+  
+  const str = String(accessionNumber).trim();
+  // Extract numeric part
+  const numericPart = str.replace(/\D/g, '');
+  
+  if (!numericPart) {
+    // If no numeric part found, return as-is (might be alphanumeric)
+    return str;
+  }
+  
+  // Pad to 6 digits with leading zeros
+  return numericPart.padStart(6, '0');
+};
+
 // Add or update a book
 exports.addBook = async (req, res) => {
   try {
@@ -11,8 +28,11 @@ exports.addBook = async (req, res) => {
       return res.status(400).json({ message: "All fields are required" });
     }
     
+    // Normalize accession number (pad to 6 digits)
+    const normalizedAccessionNumber = normalizeAccessionNumber(accessionNumber);
+    
     const newBook = new Book({ 
-      accessionNumber, 
+      accessionNumber: normalizedAccessionNumber, 
       title, 
       author, 
       publisher, 
@@ -60,7 +80,7 @@ exports.addMultipleBooks = async (req, res) => {
       return res.status(400).json({ message: "Number of copies must be between 1 and 100" });
     }
     
-    // Keep accession numbers as-is (no zero-padding)
+    // Normalize starting accession number (pad to 6 digits)
     const startingAccStr = String(startingAccessionNumber).trim();
     
     // Extract numeric part for comparison
@@ -70,9 +90,9 @@ exports.addMultipleBooks = async (req, res) => {
     }
     
     let startNum = parseInt(numericPart);
+    const normalizedStartingAcc = normalizeAccessionNumber(startingAccessionNumber);
     
     // Check if the starting accession number exists (try both padded and unpadded versions)
-    const normalizedStartingAcc = String(startNum).padStart(6, '0');
     let existingBook = await Book.findOne({ 
       $or: [
         { accessionNumber: startingAccStr },
@@ -102,13 +122,13 @@ exports.addMultipleBooks = async (req, res) => {
       startNum = maxNum + 1;
     }
     
-    // Generate consecutive accession numbers (keep as-is, no padding)
+    // Generate consecutive accession numbers (padded to 6 digits)
     const booksToCreate = [];
     const createdBooks = [];
     const errors = [];
     
     for (let i = 0; i < copies; i++) {
-      const accNum = String(startNum + i);
+      const accNum = normalizeAccessionNumber(String(startNum + i));
       
       // Check if this accession number already exists
       const exists = await Book.findOne({ accessionNumber: accNum });
@@ -203,8 +223,11 @@ exports.getBooks = async (req, res) => {
     const filter = {};
     
     if (search) {
+      // Normalize search query for accession number (try both padded and unpadded)
+      const normalizedSearch = normalizeAccessionNumber(search);
       filter.$or = [
         { accessionNumber: { $regex: search, $options: 'i' } },
+        ...(normalizedSearch !== search ? [{ accessionNumber: { $regex: normalizedSearch, $options: 'i' } }] : []),
         { title: { $regex: search, $options: 'i' } },
         { author: { $regex: search, $options: 'i' } },
         { publisher: { $regex: search, $options: 'i' } }
@@ -340,12 +363,15 @@ exports.updateBook = async (req, res) => {
 
     // Update fields if provided
     if (accessionNumber && accessionNumber !== book.accessionNumber) {
+      // Normalize the new accession number (pad to 6 digits)
+      const normalizedAccessionNumber = normalizeAccessionNumber(accessionNumber);
+      
       // Check if new accession number already exists
-      const existingBook = await Book.findOne({ accessionNumber, _id: { $ne: req.params.id } });
+      const existingBook = await Book.findOne({ accessionNumber: normalizedAccessionNumber, _id: { $ne: req.params.id } });
       if (existingBook) {
         return res.status(400).json({ message: "Accession number already exists" });
       }
-      book.accessionNumber = accessionNumber;
+      book.accessionNumber = normalizedAccessionNumber;
     }
     
     if (title) book.title = title;
@@ -633,10 +659,15 @@ exports.searchBooks = async (req, res) => {
     
     // Enhanced search with better relevance and performance
     const searchRegex = new RegExp(query.trim(), 'i');
+    const normalizedQuery = normalizeAccessionNumber(query.trim());
     
     // First, get books that match exactly by accessionNumber (highest priority)
+    // Try both the original query and normalized version
     const exactAccessionMatch = await Book.find({
-      accessionNumber: { $regex: `^${query.trim()}$`, $options: 'i' }
+      $or: [
+        { accessionNumber: { $regex: `^${query.trim()}$`, $options: 'i' } },
+        ...(normalizedQuery !== query.trim() ? [{ accessionNumber: { $regex: `^${normalizedQuery}$`, $options: 'i' } }] : [])
+      ]
     }).limit(10);
     
     // Then, get books that start with the query in title (medium priority)
@@ -737,8 +768,8 @@ exports.bulkImportBooks = async (req, res) => {
             continue;
           }
 
-          // Convert accession number to string and trim
-          bookData.accessionNumber = String(bookData.accessionNumber).trim();
+          // Normalize accession number (pad to 6 digits)
+          bookData.accessionNumber = normalizeAccessionNumber(bookData.accessionNumber);
           
           // Validate year
           if (isNaN(bookData.yearOfPublishing) || bookData.yearOfPublishing < 1000 || bookData.yearOfPublishing > new Date().getFullYear()) {
