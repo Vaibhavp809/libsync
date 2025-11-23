@@ -4,17 +4,13 @@ import { NavigationContainer } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { createDrawerNavigator } from '@react-navigation/drawer';
 
-// Try to import expo-splash-screen (may not be available in all Expo versions)
-let SplashScreen;
-try {
-  SplashScreen = require('expo-splash-screen');
-} catch (e) {
-  console.log('expo-splash-screen not available, using fallback');
-  SplashScreen = {
-    preventAutoHideAsync: async () => {},
-    hideAsync: async () => {},
-  };
-}
+// Import expo-splash-screen - required for proper splash screen functionality
+import * as SplashScreen from 'expo-splash-screen';
+
+// Keep splash screen visible until we're ready
+SplashScreen.preventAutoHideAsync().catch(() => {
+  // Ignore if already prevented or module not available
+});
 
 // Minimal styles for error screens (defined early)
 const errorStyle = { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#fff' };
@@ -179,30 +175,19 @@ function App() {
         setIsReady(true);
         
         // Hide splash screen after initialization
-        try {
-          await SplashScreen.hideAsync();
-          console.log('✅ Splash screen hidden');
-        } catch (splashError) {
-          console.warn('⚠️ Could not hide splash screen:', splashError.message);
-        }
+        await SplashScreen.hideAsync();
+        console.log('✅ Splash screen hidden');
       } catch (error) {
         console.error('❌ Service initialization error:', error);
         setInitError(error.message);
         setIsReady(true); // Still show app even if init fails
         
-        // Try to hide splash screen even on error
-        try {
-          await SplashScreen.hideAsync();
-        } catch (splashError) {
-          // Ignore splash screen errors
-        }
+        // Hide splash screen even on error
+        await SplashScreen.hideAsync();
       }
     };
 
-    // Keep splash screen visible during initialization
-    SplashScreen.preventAutoHideAsync().catch(() => {
-      // Ignore if already hidden or not available
-    });
+    // Keep splash screen visible during initialization (already called at top level)
 
     initializeServices();
   }, []);

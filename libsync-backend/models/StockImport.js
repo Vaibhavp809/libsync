@@ -2,7 +2,7 @@
 const mongoose = require('mongoose');
 
 const stockImportSchema = new mongoose.Schema({
-  batchId: { type: String, required: true, unique: true },
+  batchId: { type: String, required: true, unique: true }, // unique: true already creates an index
   fileName: { type: String, required: true },
   uploadedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   uploadedAt: { type: Date, default: Date.now, required: true },
@@ -18,8 +18,7 @@ const stockImportSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-stockImportSchema.index({ batchId: 1 });
+// Index for faster queries (batchId already has unique index, so skip it)
 stockImportSchema.index({ uploadedAt: -1 });
 stockImportSchema.index({ uploadedBy: 1 });
 stockImportSchema.index({ action: 1 });

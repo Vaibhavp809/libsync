@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -11,7 +11,8 @@ import {
   RefreshControl,
   Platform,
   TextInput,
-  Keyboard
+  Keyboard,
+  Pressable
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -46,6 +47,10 @@ export default function BookListScreen() {
   const [availableTitles, setAvailableTitles] = useState([]);
   const [availableEditions, setAvailableEditions] = useState([]);
   const [filtersLoading, setFiltersLoading] = useState(false);
+  
+  // Refs to prevent blur when clicking dropdown items
+  const titleDropdownRef = useRef(false);
+  const editionDropdownRef = useRef(false);
   
   // Statistics state
   const [statistics, setStatistics] = useState({
@@ -206,18 +211,6 @@ export default function BookListScreen() {
   const handleSearchSubmit = async (query = searchInputValue) => {
     setSearchQuery(query);
     
-    // Build search params
-    const searchParams = {};
-    if (query.trim()) {
-      searchParams.q = query.trim();
-    }
-    if (selectedTitle) {
-      searchParams.title = selectedTitle;
-    }
-    if (selectedEdition) {
-      searchParams.edition = selectedEdition;
-    }
-    
     // If no search query and no filters, reset to paginated view
     if (!query.trim() && !selectedTitle && !selectedEdition) {
       setIsSearching(false);
@@ -233,34 +226,63 @@ export default function BookListScreen() {
     try {
       let booksData = [];
       
-      // If we have filters but no query, use getBooks with filters
-      if (!query.trim() && (selectedTitle || selectedEdition)) {
-        const params = {
-          page: 1,
-          limit: 100,
-          ...(selectedTitle && { search: selectedTitle }),
-          ...(selectedEdition && { search: selectedEdition })
-        };
-        const response = await apiService.getBooks(params);
-        booksData = response.books || [];
-      } else if (query.trim()) {
-        // Use searchBooks endpoint
-        const data = await apiService.searchBooks(query);
-        // Handle both array response and paginated response
+      // Build search query - combine text search with filters
+      let searchQuery = query.trim();
+      
+      // Strategy: If we have title/edition filters, we need to fetch books and filter by exact match
+      // If we also have a text query, we can use it to narrow down first
+      
+      if (selectedTitle || selectedEdition) {
+        // If we have filters, fetch all books (or use search if there's a text query)
+        if (searchQuery) {
+          // Use text search first, then filter by title/edition
+          const data = await apiService.searchBooks(searchQuery);
+          if (Array.isArray(data)) {
+            booksData = data;
+          } else if (data && data.books && Array.isArray(data.books)) {
+            booksData = data.books;
+          }
+        } else {
+          // No text query, but we have filters - fetch all books with pagination
+          const response = await apiService.getBooks({ page: 1, limit: 1000 });
+          booksData = response.books || [];
+        }
+        
+        // Apply EXACT title and edition filters (case-insensitive but exact match)
+        booksData = booksData.filter(book => {
+          if (!book || !book.title) return false;
+          
+          // Check title filter (exact match, case-insensitive)
+          if (selectedTitle) {
+            const bookTitle = (book.title || '').trim();
+            const filterTitle = selectedTitle.trim();
+            if (bookTitle.toLowerCase() !== filterTitle.toLowerCase()) {
+              return false;
+            }
+          }
+          
+          // Check edition filter (exact match, case-insensitive)
+          if (selectedEdition) {
+            const bookEdition = (book.edition || '').trim();
+            const filterEdition = selectedEdition.trim();
+            if (bookEdition.toLowerCase() !== filterEdition.toLowerCase()) {
+              return false;
+            }
+          }
+          
+          return true;
+        });
+      } else if (searchQuery.trim()) {
+        // Regular text search without filters
+        const data = await apiService.searchBooks(searchQuery);
         if (Array.isArray(data)) {
           booksData = data;
         } else if (data && data.books && Array.isArray(data.books)) {
           booksData = data.books;
         }
-      }
-      
-      // Apply additional filters if needed
-      if (selectedTitle || selectedEdition) {
-        booksData = booksData.filter(book => {
-          if (selectedTitle && book.title !== selectedTitle) return false;
-          if (selectedEdition && book.edition !== selectedEdition) return false;
-          return true;
-        });
+      } else {
+        // No search query and no filters - should not reach here, but fallback
+        booksData = [];
       }
       
       // Filter out null/invalid items
@@ -268,10 +290,21 @@ export default function BookListScreen() {
         return book && typeof book === 'object' && book._id && book.title;
       });
       
+      console.log('Filtered books:', booksData.length, 'with filters:', { 
+        selectedTitle, 
+        selectedEdition,
+        textQuery: searchQuery 
+      });
+      console.log('Sample filtered books:', booksData.slice(0, 3).map(b => ({ 
+        title: b.title, 
+        edition: b.edition 
+      })));
+      
       setBooks(booksData);
       setHasNextPage(false); // Disable pagination for search results
       
     } catch (error) {
+      console.error('Search error:', error);
       Alert.alert(
         'Search Error',
         error.message || 'Failed to search books. Please try again.',
@@ -450,88 +483,160 @@ export default function BookListScreen() {
           {showAdvancedSearch && (
             <View style={styles.advancedSearchPanel}>
               <View style={styles.filterRow}>
-                <Text style={styles.filterLabel}>Title:</Text>
+                <Text style={styles.filterLabel}>
+                  Title: {selectedTitle && <Text style={styles.filterActiveIndicator}>✓</Text>}
+                </Text>
                 <View style={styles.filterSelectContainer}>
-                  <TextInput
-                    style={styles.filterSelect}
-                    placeholder="Select or type title..."
-                    placeholderTextColor={colors.textSecondary}
-                    value={titleInput}
-                    onChangeText={(text) => {
-                      setTitleInput(text);
-                      setShowTitleDropdown(text.length > 0);
-                      if (text.length === 0) {
-                        setSelectedTitle('');
-                      }
-                    }}
-                    onFocus={() => setShowTitleDropdown(titleInput.length > 0)}
-                    onBlur={() => setTimeout(() => setShowTitleDropdown(false), 200)}
-                  />
+                  <View style={styles.filterInputWrapper}>
+                    <TextInput
+                      style={[styles.filterSelect, selectedTitle && styles.filterSelectActive]}
+                      placeholder="Select or type title..."
+                      placeholderTextColor={colors.textSecondary}
+                      value={titleInput}
+                      onChangeText={(text) => {
+                        setTitleInput(text);
+                        setShowTitleDropdown(true);
+                        // Auto-select if exact match found
+                        const exactMatch = availableTitles.find(t => t.toLowerCase() === text.toLowerCase());
+                        if (exactMatch) {
+                          setSelectedTitle(exactMatch);
+                        } else if (text.length === 0) {
+                          setSelectedTitle('');
+                        }
+                      }}
+                      onFocus={() => {
+                        setShowTitleDropdown(true);
+                      }}
+                      onBlur={() => {
+                        // Delay to allow dropdown item click to register
+                        setTimeout(() => {
+                          if (!titleDropdownRef.current) {
+                            setShowTitleDropdown(false);
+                          }
+                          titleDropdownRef.current = false;
+                        }, 300);
+                      }}
+                    />
+                    {selectedTitle && (
+                      <TouchableOpacity
+                        style={styles.filterClearButton}
+                        onPress={() => {
+                          setSelectedTitle('');
+                          setTitleInput('');
+                          setShowTitleDropdown(false);
+                        }}
+                      >
+                        <Text style={styles.filterClearButtonText}>✕</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   {showTitleDropdown && availableTitles.length > 0 && (
                     <View style={styles.filterDropdown}>
-                      <FlatList
-                        data={availableTitles
-                          .filter(title => title.toLowerCase().includes(titleInput.toLowerCase()))
-                          .slice(0, 5)}
-                        keyExtractor={(item, index) => `title-${index}`}
-                        renderItem={({ item }) => (
-                          <TouchableOpacity
-                            style={styles.filterDropdownItem}
+                      {availableTitles
+                        .filter(title => !titleInput || title.toLowerCase().includes(titleInput.toLowerCase()))
+                        .slice(0, 10)
+                        .map((item, index) => (
+                          <Pressable
+                            key={`title-${index}`}
+                            style={({ pressed }) => [
+                              styles.filterDropdownItem,
+                              pressed && styles.filterDropdownItemPressed
+                            ]}
                             onPress={() => {
+                              console.log('Title selected:', item);
+                              titleDropdownRef.current = true;
                               setSelectedTitle(item);
                               setTitleInput(item);
                               setShowTitleDropdown(false);
+                              // Trigger filter immediately
+                              setTimeout(() => {
+                                handleSearchSubmit();
+                              }, 100);
                             }}
                           >
                             <Text style={styles.filterDropdownText}>{item}</Text>
-                          </TouchableOpacity>
-                        )}
-                        nestedScrollEnabled={true}
-                      />
+                          </Pressable>
+                        ))}
                     </View>
                   )}
                 </View>
               </View>
               
               <View style={styles.filterRow}>
-                <Text style={styles.filterLabel}>Edition:</Text>
+                <Text style={styles.filterLabel}>
+                  Edition: {selectedEdition && <Text style={styles.filterActiveIndicator}>✓</Text>}
+                </Text>
                 <View style={styles.filterSelectContainer}>
-                  <TextInput
-                    style={styles.filterSelect}
-                    placeholder="Select or type edition..."
-                    placeholderTextColor={colors.textSecondary}
-                    value={editionInput}
-                    onChangeText={(text) => {
-                      setEditionInput(text);
-                      setShowEditionDropdown(text.length > 0);
-                      if (text.length === 0) {
-                        setSelectedEdition('');
-                      }
-                    }}
-                    onFocus={() => setShowEditionDropdown(editionInput.length > 0)}
-                    onBlur={() => setTimeout(() => setShowEditionDropdown(false), 200)}
-                  />
+                  <View style={styles.filterInputWrapper}>
+                    <TextInput
+                      style={[styles.filterSelect, selectedEdition && styles.filterSelectActive]}
+                      placeholder="Select or type edition..."
+                      placeholderTextColor={colors.textSecondary}
+                      value={editionInput}
+                      onChangeText={(text) => {
+                        setEditionInput(text);
+                        setShowEditionDropdown(true);
+                        // Auto-select if exact match found
+                        const exactMatch = availableEditions.find(e => e.toLowerCase() === text.toLowerCase());
+                        if (exactMatch) {
+                          setSelectedEdition(exactMatch);
+                        } else if (text.length === 0) {
+                          setSelectedEdition('');
+                        }
+                      }}
+                      onFocus={() => {
+                        setShowEditionDropdown(true);
+                      }}
+                      onBlur={() => {
+                        // Delay to allow dropdown item click to register
+                        setTimeout(() => {
+                          if (!editionDropdownRef.current) {
+                            setShowEditionDropdown(false);
+                          }
+                          editionDropdownRef.current = false;
+                        }, 300);
+                      }}
+                    />
+                    {selectedEdition && (
+                      <TouchableOpacity
+                        style={styles.filterClearButton}
+                        onPress={() => {
+                          setSelectedEdition('');
+                          setEditionInput('');
+                          setShowEditionDropdown(false);
+                        }}
+                      >
+                        <Text style={styles.filterClearButtonText}>✕</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
                   {showEditionDropdown && availableEditions.length > 0 && (
                     <View style={styles.filterDropdown}>
-                      <FlatList
-                        data={availableEditions
-                          .filter(edition => edition.toLowerCase().includes(editionInput.toLowerCase()))
-                          .slice(0, 5)}
-                        keyExtractor={(item, index) => `edition-${index}`}
-                        renderItem={({ item }) => (
-                          <TouchableOpacity
-                            style={styles.filterDropdownItem}
+                      {availableEditions
+                        .filter(edition => !editionInput || edition.toLowerCase().includes(editionInput.toLowerCase()))
+                        .slice(0, 10)
+                        .map((item, index) => (
+                          <Pressable
+                            key={`edition-${index}`}
+                            style={({ pressed }) => [
+                              styles.filterDropdownItem,
+                              pressed && styles.filterDropdownItemPressed
+                            ]}
                             onPress={() => {
+                              console.log('Edition selected:', item);
+                              editionDropdownRef.current = true;
                               setSelectedEdition(item);
                               setEditionInput(item);
                               setShowEditionDropdown(false);
+                              // Trigger filter immediately
+                              setTimeout(() => {
+                                handleSearchSubmit();
+                              }, 100);
                             }}
                           >
                             <Text style={styles.filterDropdownText}>{item}</Text>
-                          </TouchableOpacity>
-                        )}
-                        nestedScrollEnabled={true}
-                      />
+                          </Pressable>
+                        ))}
                     </View>
                   )}
                 </View>
@@ -1002,6 +1107,25 @@ const styles = StyleSheet.create({
     position: 'relative',
   },
   
+  filterInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  
+  filterClearButton: {
+    position: 'absolute',
+    right: spacing.sm,
+    padding: spacing.xs,
+    zIndex: 10,
+  },
+  
+  filterClearButtonText: {
+    fontSize: 18,
+    color: colors.textSecondary,
+    fontWeight: 'bold',
+  },
+  
   filterSelect: {
     backgroundColor: colors.surface,
     borderWidth: 1,
@@ -1011,6 +1135,18 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     ...typography.bodyMedium,
     color: colors.textPrimary,
+  },
+  
+  filterSelectActive: {
+    borderColor: colors.primary,
+    borderWidth: 2,
+    backgroundColor: colors.primaryLight + '10',
+  },
+  
+  filterActiveIndicator: {
+    color: colors.primary,
+    fontWeight: 'bold',
+    fontSize: 16,
   },
   
   filterDropdown: {
@@ -1033,6 +1169,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    minHeight: 44, // Ensure touchable area is large enough
+  },
+  
+  filterDropdownItemPressed: {
+    backgroundColor: colors.primaryLight + '20',
   },
   
   filterDropdownText: {
