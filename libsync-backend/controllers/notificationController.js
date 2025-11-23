@@ -38,23 +38,25 @@ exports.createNotification = async (req, res) => {
     await notification.save();
 
     // Send push notifications to targeted users (non-blocking)
-    try {
-      sendPushNotificationForNotification(notification)
-        .then(result => {
-          if (result.success) {
-            console.log(`✅ Push notifications sent: ${result.sent || 0} users notified`);
-          } else {
-            console.warn(`⚠️ Push notification failed: ${result.error || 'Unknown error'}`);
+    (async () => {
+      try {
+        console.log('🚀 Starting push notification send process for notification:', notification._id);
+        const result = await sendPushNotificationForNotification(notification);
+        if (result.success) {
+          console.log(`✅ Push notifications sent: ${result.sent || 0} users notified`);
+          console.log(`✅ Notification: "${notification.title}" sent to ${result.sent || 0} users`);
+        } else {
+          console.error(`❌ Push notification failed: ${result.error || 'Unknown error'}`);
+          if (result.errors) {
+            console.error('❌ Push notification errors:', JSON.stringify(result.errors, null, 2));
           }
-        })
-        .catch(err => {
-          console.error('Error sending push notifications:', err);
-          // Don't fail the request if push notification fails
-        });
-    } catch (pushError) {
-      console.error('Error setting up push notifications:', pushError);
-      // Continue even if push notification setup fails
-    }
+        }
+      } catch (err) {
+        console.error('❌ Error sending push notifications:', err);
+        console.error('❌ Error stack:', err.stack);
+        // Don't fail the request if push notification fails
+      }
+    })();
 
     res.status(201).json({
       message: 'Notification created successfully',

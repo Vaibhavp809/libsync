@@ -351,6 +351,20 @@ exports.sendOverdueReminder = async (req, res) => {
     });
     await notification.save();
 
+    // Send push notification (non-blocking)
+    try {
+      const { sendPushNotificationForNotification } = require('../utils/pushNotifications');
+      const pushResult = await sendPushNotificationForNotification(notification);
+      if (pushResult.success) {
+        console.log(`✅ Push notification sent to ${loan.student.name || loan.student.studentID} for overdue reminder`);
+      } else {
+        console.warn(`⚠️ Push notification failed: ${pushResult.error || 'Unknown error'}`);
+      }
+    } catch (pushError) {
+      console.error('Failed to send push notification for overdue reminder:', pushError);
+      // Continue even if push notification fails
+    }
+
     loan.lastReminderSentAt = new Date();
     await loan.save();
     res.json({ message: 'In-app reminder notification created' });
