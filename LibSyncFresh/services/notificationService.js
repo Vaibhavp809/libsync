@@ -3,7 +3,8 @@ import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 import { Platform, Alert, PermissionsAndroid } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { apiService } from './apiService';
+import axios from 'axios';
+import { apiConfig } from '../config/apiConfig';
 
 /**
  * Standalone function to register for push notifications
@@ -432,17 +433,76 @@ class NotificationService {
       console.log('📤 Token:', token.substring(0, 30) + '...');
       console.log('📤 Platform:', Platform.OS);
 
-      // Send token to your backend
-      const response = await apiService.post('/users/push-token', {
-        pushToken: token,
-        platform: Platform.OS
-      });
+      // Get auth token from AsyncStorage for the request
+      const authToken = await AsyncStorage.getItem('token') || await AsyncStorage.getItem('auth_token');
+      
+      if (!authToken) {
+        console.error('❌ No auth token found - cannot send push token to server');
+        throw new Error('User not authenticated - please log in again');
+      }
+
+      // Get base URL
+      const baseURL = await apiConfig.getBaseURL();
+      let fullBaseURL;
+      if (baseURL.startsWith('http://') || baseURL.startsWith('https://')) {
+        fullBaseURL = `${baseURL}/api`;
+      } else {
+        fullBaseURL = `http://${baseURL}/api`;
+      }
+
+      console.log('📤 Making push token request to:', `${fullBaseURL}/users/push-token`);
+      console.log('📤 Auth token present:', !!authToken);
+      console.log('📤 Auth token preview:', authToken.substring(0, 20) + '...');
+
+      // Send token to your backend using axios directly with auth header
+      const response = await axios.post(
+        `${fullBaseURL}/users/push-token`,
+        {
+          pushToken: token,
+          platform: Platform.OS
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
 
       console.log('✅ Push token sent to server successfully');
-      console.log('✅ Server response:', JSON.stringify(response, null, 2));
-      return response;
+      console.log('✅ Response status:', response.status);
+      console.log('✅ Server response:', JSON.stringify(response.data, null, 2));
+      
+      if (response.data && response.data.success) {
+        console.log('✅ Push token saved in database');
+        console.log('✅ User:', response.data.user?.name || response.data.user?.studentID || 'Unknown');
+        console.log('✅ Has push token:', response.data.user?.hasPushToken);
+      }
+      
+      return response.data;
     } catch (error) {
       console.error('❌ Failed to send push token to server:', error.message);
+      
+      // Log detailed error information
+      if (error.response) {
+        console.error('❌ Server error response:', {
+          status: error.response.status,
+          statusText: error.response.statusText,
+          data: error.response.data,
+          headers: error.response.headers
+        });
+      } else if (error.request) {
+        console.error('❌ No response received from server');
+        console.error('❌ Request config:', {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers
+        });
+      } else {
+        console.error('❌ Error setting up request:', error.message);
+        console.error('❌ Error stack:', error.stack);
+      }
+      
       // Re-throw so caller knows it failed
       throw error;
     }
