@@ -118,18 +118,24 @@ function App() {
         }
 
         // Configure notifications AFTER app is ready (delayed)
+        // Only configure handlers, don't request permissions yet - wait until after login
         setTimeout(async () => {
           try {
             const { notificationService } = require('./services/notificationService');
-            // Always configure notification handler first
+            // Always configure notification handler first (this doesn't request permissions)
             notificationService.configure();
             console.log('✅ Notification handler configured');
             
-            // Initialize notification service (for handling received notifications and push token registration)
-            await notificationService.initialize();
-            console.log('✅ Notification service initialized');
+            // Set up listeners for receiving notifications (but don't request permissions yet)
+            // This allows the app to receive notifications without requesting permissions before login
+            notificationService.setupNotificationListeners();
+            console.log('✅ Notification listeners set up');
+            
+            // DO NOT call initialize() here - it requests permissions
+            // Instead, permissions will be requested after successful login
+            console.log('ℹ️ Push token registration will happen after user logs in');
           } catch (error) {
-            console.error('❌ Notification service initialization failed:', error);
+            console.error('❌ Notification service setup failed:', error);
             console.log('Continuing without push notifications...');
           }
         }, 2000);

@@ -181,45 +181,35 @@ class NotificationService {
     console.log('✅ Notification handler configured - notifications will appear in tray');
   }
 
-  // Initialize notification service
+  // Initialize notification service (setup only, no permission requests)
+  // Permissions will be requested after login
   async initialize() {
     try {
       // Always configure notification handler first
       this.configure();
       
-      // Set up notification listeners (always, even if push token registration fails)
+      // Set up notification listeners (for receiving notifications)
       this.setupNotificationListeners();
       
-      // Request permissions and get push token
-      // Use the standalone function which has better error handling
-      const token = await registerForPushNotificationsAsync();
-      if (token) {
-        this.expoPushToken = token;
-        await this.savePushTokenToStorage(token);
-        console.log('✅ Push token obtained:', token.substring(0, 20) + '...');
-        console.log('📱 Full push token:', token);
-        
-        // Send token to server (will retry if user not logged in yet)
-        try {
-          await this.sendPushTokenToServer(token);
-          console.log('✅ Push token sent to server during initialization');
-        } catch (error) {
-          console.log('ℹ️ Could not send push token to server (user may not be logged in yet):', error.message);
-          console.log('ℹ️ Token will be sent automatically after user logs in');
-          // Don't fail initialization - token will be sent after login via authService
-        }
+      // Check if we already have a saved token (from previous session)
+      const savedToken = await this.getSavedPushToken();
+      if (savedToken) {
+        this.expoPushToken = savedToken;
+        console.log('📱 Found saved push token:', savedToken.substring(0, 20) + '...');
+        console.log('ℹ️ Token will be sent to server after user logs in');
       } else {
-        console.warn('⚠️ No push token obtained - notifications may not work');
-        console.warn('⚠️ Please check notification permissions in device settings');
-        // Still mark as initialized so handlers work for local notifications
+        console.log('ℹ️ No saved push token - will request after login');
       }
       
+      // DO NOT request permissions here - wait until after login
+      // This prevents permission requests before user understands the app
+      
       this.isInitialized = true;
-      console.log('✅ Notification service initialized successfully');
+      console.log('✅ Notification service initialized (permissions will be requested after login)');
 
     } catch (error) {
       console.error('❌ Failed to initialize notification service:', error);
-      // Still set up listeners even if token registration fails
+      // Still set up listeners even if initialization fails
       try {
         this.setupNotificationListeners();
       } catch (listenerError) {
