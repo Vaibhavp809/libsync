@@ -58,8 +58,11 @@ export default function HomeScreen({ navigation }) {
                   console.log('📱 Home screen loaded: Requesting push notification permission...');
                   
                   try {
+                    // Use the standalone function for better production build support
+                    const { registerForPushNotificationsAsync } = require('../services/notificationService');
+                    
                     // Request permissions and get push token (this will show permission dialog)
-                    const newToken = await notificationService.registerForPushNotificationsAsync();
+                    const newToken = await registerForPushNotificationsAsync();
                     
                     if (newToken) {
                       // Save token locally

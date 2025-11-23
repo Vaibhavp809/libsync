@@ -35,3 +35,6 @@ yarn-error.*
 
 # typescript
 *.tsbuildinfo
+
+# Firebase - allow google-services.json (required for build)
+!android/app/google-services.json

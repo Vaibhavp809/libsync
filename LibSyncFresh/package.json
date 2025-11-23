@@ -1,6 +1,7 @@
 {
   "name": "libsyncfresh",
   "version": "1.0.0",
+  "license": "UNLICENSED",
   "main": "index.js",
   "scripts": {
     "start": "expo start",
@@ -9,7 +10,7 @@
     "web": "expo start --web"
   },
   "dependencies": {
-    "@babel/plugin-proposal-export-namespace-from": "^7.18.9",
+    "@babel/plugin-transform-export-namespace-from": "^7.24.0",
     "@expo/metro-runtime": "~6.1.2",
     "@react-native-async-storage/async-storage": "2.2.0",
     "@react-navigation/drawer": "^7.5.10",

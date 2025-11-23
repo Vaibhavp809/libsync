@@ -55,9 +55,9 @@
     ],
     "extra": {
       "eas": {
-        "projectId": "5566e9e8-ca56-4691-a703-b506cf4710af"
+        "projectId": "0d387a65-833c-4eb2-b131-5896a3437bfb"
       }
     },
-    "owner": "libsync"
+    "owner": "libsyncapp"
   }
 }

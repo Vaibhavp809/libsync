@@ -132,6 +132,38 @@ android {
     }
 }
 
+// Ensure google-services.json is available for Google Services plugin
+// The file should be at android/app/google-services.json (as specified in app.json)
+def googleServicesFile = file("google-services.json")
+if (googleServicesFile.exists()) {
+    println "✅ google-services.json found at ${googleServicesFile.absolutePath}"
+} else {
+    println "⚠️  WARNING: google-services.json not found in android/app/. Trying alternative locations..."
+    // Try to find it in other common locations
+    def altLocations = [
+        file("${projectRoot}/android/app/google-services.json"),
+        file("${rootDir}/../google-services.json"),
+        file("${rootDir}/google-services.json")
+    ]
+    
+    boolean found = false
+    for (def altFile : altLocations) {
+        if (altFile.exists()) {
+            copy {
+                from altFile
+                into projectDir
+            }
+            println "✅ Copied google-services.json from ${altFile.absolutePath}"
+            found = true
+            break
+        }
+    }
+    
+    if (!found) {
+        throw new GradleException("❌ google-services.json not found. Expected at: android/app/google-services.json. Please ensure the file exists and is committed to git.")
+    }
+}
+
 // Apply static values from `gradle.properties` to the `android.packagingOptions`
 // Accepts values in comma delimited lists, example:
 // android.packagingOptions.pickFirsts=/LICENSE,**/picasa.ini
@@ -180,3 +212,7 @@ dependencies {
         implementation jscFlavor
     }
 }
+
+// Apply Google Services plugin at the end
+// The plugin will automatically find google-services.json in android/app/ directory
+apply plugin: "com.google.gms.google-services"

@@ -58,6 +58,7 @@ export async function registerForPushNotificationsAsync() {
           
           if (status !== PermissionsAndroid.RESULTS.GRANTED) {
             console.warn('❌ POST_NOTIFICATIONS permission denied on Android 13+');
+            console.warn('❌ Permission status:', status);
             Alert.alert(
               'Notification Permission Required',
               'LibSync needs notification permission to send you important updates. Please enable it in Settings.',
@@ -65,6 +66,7 @@ export async function registerForPushNotificationsAsync() {
             );
             return null;
           }
+          console.log('✅ POST_NOTIFICATIONS permission granted on Android 13+');
         }
       } catch (error) {
         console.error('Error requesting POST_NOTIFICATIONS permission:', error);
@@ -121,24 +123,76 @@ export async function registerForPushNotificationsAsync() {
     }
 
     // Step 5: Get Expo push token
-    // Use projectId from app.json extra.eas.projectId
-    const projectId = Constants.expoConfig?.extra?.eas?.projectId;
+    // In production builds, Constants.expoConfig might not be available
+    // Try multiple ways to get the projectId
+    let projectId = null;
+    
+    // Method 1: Try Constants.expoConfig (works in Expo Go and some builds)
+    if (Constants.expoConfig?.extra?.eas?.projectId) {
+      projectId = Constants.expoConfig.extra.eas.projectId;
+      console.log('📱 Found projectId from Constants.expoConfig:', projectId);
+    }
+    // Method 2: Try Constants.manifest (works in some builds)
+    else if (Constants.manifest?.extra?.eas?.projectId) {
+      projectId = Constants.manifest.extra.eas.projectId;
+      console.log('📱 Found projectId from Constants.manifest:', projectId);
+    }
+    // Method 3: Try Constants.manifest2 (works in EAS builds)
+    else if (Constants.manifest2?.extra?.eas?.projectId) {
+      projectId = Constants.manifest2.extra.eas.projectId;
+      console.log('📱 Found projectId from Constants.manifest2:', projectId);
+    }
+    // Method 4: Try the direct access
+    else if (Constants.manifest?.extra?.expoClient?.extra?.eas?.projectId) {
+      projectId = Constants.manifest.extra.expoClient.extra.eas.projectId;
+      console.log('📱 Found projectId from Constants.manifest.extra.expoClient:', projectId);
+    }
+    // Method 5: Hardcode as fallback (from app.json)
+    else {
+      projectId = '0d387a65-833c-4eb2-b131-5896a3437bfb';
+      console.log('📱 Using hardcoded projectId (fallback):', projectId);
+    }
+    
+    // Debug: Log all available Constants data
+    console.log('🔍 Debug Constants:', {
+      appOwnership: Constants.appOwnership,
+      executionEnvironment: Constants.executionEnvironment,
+      hasExpoConfig: !!Constants.expoConfig,
+      hasManifest: !!Constants.manifest,
+      hasManifest2: !!Constants.manifest2,
+      projectId: projectId
+    });
     
     if (!projectId) {
-      console.error('❌ Project ID not found in app.json. Please ensure extra.eas.projectId is set.');
+      console.error('❌ Project ID not found anywhere. Please ensure extra.eas.projectId is set in app.json.');
+      console.error('❌ Available Constants:', {
+        expoConfig: Constants.expoConfig ? 'exists' : 'missing',
+        manifest: Constants.manifest ? 'exists' : 'missing',
+        manifest2: Constants.manifest2 ? 'exists' : 'missing'
+      });
       return null;
     }
 
     console.log('📱 Registering for push notifications with projectId:', projectId);
     
-    const tokenData = await Notifications.getExpoPushTokenAsync({
-      projectId: projectId,
-    });
+    try {
+      const tokenData = await Notifications.getExpoPushTokenAsync({
+        projectId: projectId,
+      });
 
-    const token = tokenData.data;
-    console.log('✅ Expo push token obtained:', token);
-    
-    return token;
+      const token = tokenData.data;
+      console.log('✅ Expo push token obtained:', token);
+      
+      return token;
+    } catch (tokenError) {
+      console.error('❌ Error getting Expo push token:', tokenError);
+      console.error('❌ Token error details:', {
+        message: tokenError.message,
+        code: tokenError.code,
+        stack: tokenError.stack
+      });
+      return null;
+    }
 
   } catch (error) {
     // Catch any errors and log them without crashing the app
@@ -147,6 +201,9 @@ export async function registerForPushNotificationsAsync() {
     return null;
   }
 }
+
+// Store reference to the standalone function for use in the class
+const _registerForPushNotificationsAsync = registerForPushNotificationsAsync;
 
 class NotificationService {
   constructor() {
@@ -221,111 +278,13 @@ class NotificationService {
   }
 
   // Register for push notifications
+  // This method now delegates to the standalone function for consistency
+  // The standalone function has better production build support with fallback projectId resolution
   async registerForPushNotificationsAsync() {
-    let token;
-
-    if (Platform.OS === 'android') {
-      // Main default channel
-      await Notifications.setNotificationChannelAsync('default', {
-        name: 'LibSync Notifications',
-        description: 'General library notifications',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#FF231F7C',
-        sound: 'default',
-        enableVibrate: true,
-        showBadge: true,
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC, // Show on lock screen
-      });
-
-      // Create specific channels for different notification types
-      await Notifications.setNotificationChannelAsync('reservations', {
-        name: 'Book Reservations',
-        description: 'Notifications about book reservations',
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#007bff',
-        sound: 'default',
-        enableVibrate: true,
-        showBadge: true,
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      });
-
-      await Notifications.setNotificationChannelAsync('due_dates', {
-        name: 'Due Date Reminders',
-        description: 'Reminders about book due dates',
-        importance: Notifications.AndroidImportance.MAX, // MAX for urgent due dates
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#ffc107',
-        sound: 'default',
-        enableVibrate: true,
-        showBadge: true,
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      });
-
-      await Notifications.setNotificationChannelAsync('announcements', {
-        name: 'Library Announcements',
-        description: 'Important library announcements',
-        importance: Notifications.AndroidImportance.HIGH,
-        vibrationPattern: [0, 250, 250, 250],
-        lightColor: '#28a745',
-        sound: 'default',
-        enableVibrate: true,
-        showBadge: true,
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      });
-
-      await Notifications.setNotificationChannelAsync('urgent', {
-        name: 'Urgent Alerts',
-        description: 'Urgent and critical notifications',
-        importance: Notifications.AndroidImportance.MAX,
-        vibrationPattern: [0, 100, 100, 100, 100, 100],
-        lightColor: '#dc3545',
-        sound: 'default',
-        enableVibrate: true,
-        showBadge: true,
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
-      });
-    }
-
-    if (Device.isDevice) {
-      const { status: existingStatus } = await Notifications.getPermissionsAsync();
-      let finalStatus = existingStatus;
-
-      if (existingStatus !== 'granted') {
-        const { status } = await Notifications.requestPermissionsAsync();
-        finalStatus = status;
-      }
-
-      if (finalStatus !== 'granted') {
-        Alert.alert(
-          'Push Notifications',
-          'Failed to get push token for push notification!',
-          [
-            {
-              text: 'Settings',
-              onPress: () => {
-                if (Platform.OS === 'ios') {
-                  Notifications.openSettingsAsync();
-                }
-              }
-            },
-            { text: 'OK' }
-          ]
-        );
-        return;
-      }
-
-      // Get the token that identifies this installation
-      token = (await Notifications.getExpoPushTokenAsync({
-        projectId: Constants.expoConfig?.extra?.eas?.projectId,
-      })).data;
-
-    } else {
-      console.log('Must use physical device for Push Notifications');
-    }
-
-    return token;
+    console.log('📱 [Class Method] Delegating to standalone registerForPushNotificationsAsync function');
+    // Call the standalone function via stored reference to avoid recursion
+    // It has better production build support with multiple projectId fallbacks
+    return await _registerForPushNotificationsAsync();
   }
 
   // Set up notification listeners

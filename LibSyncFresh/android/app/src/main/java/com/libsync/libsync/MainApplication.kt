@@ -42,6 +42,23 @@ class MainApplication : Application(), ReactApplication {
 
   override fun onCreate() {
     super.onCreate()
+    
+    // Initialize Firebase using reflection (to avoid compilation errors if Firebase isn't available)
+    // The google-services plugin should auto-initialize, but we ensure it's initialized here
+    try {
+      val firebaseAppClass = Class.forName("com.google.firebase.FirebaseApp")
+      val getAppsMethod = firebaseAppClass.getMethod("getApps", android.content.Context::class.java)
+      val apps = getAppsMethod.invoke(null, this) as? Collection<*>
+      
+      if (apps == null || apps.isEmpty()) {
+        val initializeAppMethod = firebaseAppClass.getMethod("initializeApp", android.content.Context::class.java)
+        initializeAppMethod.invoke(null, this)
+      }
+    } catch (e: Exception) {
+      // Firebase classes might not be available - google-services plugin will handle it
+      android.util.Log.d("MainApplication", "Firebase initialization: ${e.message}")
+    }
+    
     DefaultNewArchitectureEntryPoint.releaseLevel = try {
       ReleaseLevel.valueOf(BuildConfig.REACT_NATIVE_RELEASE_LEVEL.uppercase())
     } catch (e: IllegalArgumentException) {
