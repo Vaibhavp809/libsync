@@ -137,8 +137,47 @@ export default function IssueBook() {
     }
 
     try {
-      const response = await api.get(`/users/search-usn/${partial}`);
-      setUsnSuggestions(response.data);
+      const upperPartial = partial.toUpperCase().trim();
+      
+      // Check if this looks like a complete USN (pattern: 2MM22CS084 - typically 10-11 characters)
+      // Complete USN pattern: 2MM + 2 digits (year) + 2-3 letters (dept) + 3 digits (roll)
+      const isCompleteUSN = /^2MM\d{2}[A-Z]{2,3}\d{3}$/i.test(upperPartial);
+      
+      if (isCompleteUSN && upperPartial.length >= 10) {
+        // For complete USN, fetch exact match only
+        try {
+          const exactResponse = await api.get(`/users/student/${upperPartial}`);
+          if (exactResponse.data && exactResponse.data.student) {
+            // Show only the exact match
+            setUsnSuggestions([{
+              studentID: exactResponse.data.student.studentID,
+              name: exactResponse.data.student.name,
+              email: exactResponse.data.student.email,
+              department: exactResponse.data.student.department || 'N/A',
+              _id: exactResponse.data.student._id
+            }]);
+          } else {
+            setUsnSuggestions([]);
+          }
+        } catch (exactError) {
+          // If exact match not found, show empty
+          setUsnSuggestions([]);
+        }
+        return;
+      }
+      
+      // For partial USN, use the search endpoint
+      const response = await api.get(`/users/search-usn/${upperPartial}`);
+      const suggestions = response.data || [];
+      
+      // Filter to only show suggestions that start with the entered value
+      // But exclude exact matches (we'll handle that separately)
+      const filtered = suggestions.filter(student => {
+        const studentUSN = (student.studentID || '').toUpperCase().trim();
+        return studentUSN.startsWith(upperPartial) && studentUSN !== upperPartial;
+      });
+      
+      setUsnSuggestions(filtered);
     } catch (error) {
       console.error('Error searching students by USN:', error);
       setUsnSuggestions([]);
