@@ -105,7 +105,7 @@ export default function Home() {
           <p className="hero-tagline">Smart Library Automation With Mobile + Admin Integration</p>
           <div className="hero-buttons">
             <a 
-              href="https://github.com/YOUR_REPO/releases/latest/download/libsync.apk" 
+              href="https://github.com/Vaibhavp809/LIBSYNC-APP-" 
               className="btn btn-primary"
               target="_blank"
               rel="noopener noreferrer"
@@ -232,13 +232,16 @@ export default function Home() {
           <h2 className="section-title">Get Started</h2>
           <p className="download-text">Download the LibSync mobile app to access all features</p>
           <a 
-            href="https://github.com/YOUR_REPO/releases/latest/download/libsync.apk" 
+            href="https://github.com/Vaibhavp809/LIBSYNC-APP-" 
             className="btn btn-large btn-primary"
             target="_blank"
             rel="noopener noreferrer"
           >
             📥 Download APK
           </a>
+          <p style={{ marginTop: '16px', fontSize: '14px', color: '#64748b' }}>
+            Visit our <a href="https://github.com/Vaibhavp809/LIBSYNC-APP-" target="_blank" rel="noopener noreferrer" style={{ color: '#667eea', textDecoration: 'underline' }}>GitHub repository</a> to download the APK file
+          </p>
         </div>
       </section>
 
@@ -246,35 +249,37 @@ export default function Home() {
       <section id="team" className="team-section">
         <div className="container">
           <h2 className="section-title">Our Team</h2>
-          <div className="team-grid">
-            {/* Founder */}
-            {/* To show creator photo, replace null with photo URL:
-                photoUrl="/images/team/vaibhav-parab.jpg" or photoUrl="https://example.com/vaibhav.jpg" */}
-            <TeamCard
-              name="Vaibhav Parab"
-              role="Founder"
-              photoUrl={null}
-              initials="VP"
-            />
-            {/* Co-founders */}
-            <TeamCard
-              name="Abhishek Patil"
-              role="Co-founder"
-              photoUrl={null}
-              initials="AP"
-            />
-            <TeamCard
-              name="Omkar Kurane"
-              role="Co-founder"
-              photoUrl={null}
-              initials="OK"
-            />
-            <TeamCard
-              name="Prachi Bhosle"
-              role="Co-founder"
-              photoUrl={null}
-              initials="PB"
-            />
+          <div className="team-container">
+            {/* Founder - Centered */}
+            <div className="team-founder">
+              <TeamCard
+                name="Vaibhav Parab"
+                role="Founder"
+                photoUrl="/images/team/vaibhav-parab.png"
+                initials="VP"
+              />
+            </div>
+            {/* Co-founders - Single Row */}
+            <div className="team-cofounders">
+              <TeamCard
+                name="Abhishek Patil"
+                role="Co-founder"
+                photoUrl={null}
+                initials="AP"
+              />
+              <TeamCard
+                name="Omkar Kurane"
+                role="Co-founder"
+                photoUrl={null}
+                initials="OK"
+              />
+              <TeamCard
+                name="Prachi Bhosale"
+                role="Co-founder"
+                photoUrl={null}
+                initials="PB"
+              />
+            </div>
           </div>
         </div>
       </section>
