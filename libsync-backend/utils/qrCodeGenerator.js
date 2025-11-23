@@ -10,27 +10,51 @@ const generateDailyToken = () => {
 // Get or create today's QR code
 const getTodayQRCode = async () => {
   try {
+    const Setting = require('../models/Setting');
+    
+    // Get settings for QR expiry
+    const settings = await Setting.findOne() || {};
+    const expiryHours = settings.attendanceQrExpiryHours || 24; // Default to 24 hours if not set
+    
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Start of day
     
-    // Check if today's code already exists
+    // Check if today's code already exists and is still valid
     let dailyCode = await DailyCode.findOne({ 
       date: { 
         $gte: today,
         $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-      }
+      },
+      isActive: true
     });
     
-    // If no code exists for today, create one
+    // If code exists, check if it's expired based on settings
+    if (dailyCode) {
+      const now = new Date();
+      const codeGeneratedAt = dailyCode.generatedAt || dailyCode.createdAt || dailyCode.date;
+      const codeAge = now - new Date(codeGeneratedAt);
+      const expiryMs = expiryHours * 60 * 60 * 1000;
+      
+      // If expired, mark as inactive and create new one
+      if (codeAge > expiryMs) {
+        dailyCode.isActive = false;
+        await dailyCode.save();
+        dailyCode = null; // Will create new one below
+        console.log(`QR code expired (${expiryHours} hours). Generating new code.`);
+      }
+    }
+    
+    // If no valid code exists, create one
     if (!dailyCode) {
       const token = generateDailyToken();
       dailyCode = new DailyCode({
         date: today,
         token: token,
-        isActive: true
+        isActive: true,
+        generatedAt: new Date()
       });
       await dailyCode.save();
-      console.log(`Generated new daily QR code for ${today.toDateString()}`);
+      console.log(`Generated new daily QR code for ${today.toDateString()} (valid for ${expiryHours} hours)`);
     }
     
     return dailyCode;

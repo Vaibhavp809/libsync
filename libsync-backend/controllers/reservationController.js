@@ -254,3 +254,78 @@ exports.deleteAllReservations = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
+// Send reservation ready notification
+exports.sendReservationReadyNotification = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const Setting = require('../models/Setting');
+    const Notification = require('../models/Notification');
+    const { sendPushNotificationForNotification } = require('../utils/pushNotifications');
+    
+    // Get reservation with populated data
+    const reservation = await Reservation.findById(id)
+      .populate('book')
+      .populate('student');
+    
+    if (!reservation) {
+      return res.status(404).json({ message: 'Reservation not found' });
+    }
+    
+    if (!reservation.student || !reservation.student._id) {
+      return res.status(400).json({ message: 'Student information is missing' });
+    }
+    
+    // Get settings for email template
+    const settings = await Setting.findOne() || {};
+    const reservationMessage = settings.emailTemplates?.reservationReady || 
+      `Your reserved book "${reservation.book?.title || 'Unknown'}" is ready for pickup. Please visit the library to collect it.`;
+    
+    // Create notification
+    const notification = new Notification({
+      title: `Reservation Ready: ${reservation.book?.title || 'Book'}`,
+      message: reservationMessage
+        .replace('{bookTitle}', reservation.book?.title || 'Unknown Book')
+        .replace('{accessionNumber}', reservation.book?.accessionNumber || 'N/A'),
+      type: 'reservation',
+      priority: 'high',
+      recipient: reservation.student._id,
+      broadcast: false,
+      recipients: 'specific',
+      targetUsers: [reservation.student._id],
+      data: {
+        reservationId: reservation._id,
+        bookId: reservation.book?._id,
+        accessionNumber: reservation.book?.accessionNumber
+      },
+      createdBy: req.user?._id || req.user?.id || null,
+      status: 'active'
+    });
+    
+    await notification.save();
+    
+    // Send push notification (non-blocking)
+    try {
+      const pushResult = await sendPushNotificationForNotification(notification);
+      if (pushResult.success) {
+        console.log(`✅ Push notification sent to ${reservation.student.name || reservation.student.studentID} for reservation ready`);
+      }
+    } catch (pushError) {
+      console.error('Failed to send push notification for reservation ready:', pushError);
+      // Continue even if push notification fails
+    }
+    
+    res.json({
+      message: 'Reservation ready notification sent successfully',
+      notification: {
+        _id: notification._id,
+        title: notification.title,
+        message: notification.message,
+        recipient: reservation.student.name || reservation.student.studentID
+      }
+    });
+  } catch (err) {
+    console.error('Error sending reservation ready notification:', err);
+    res.status(500).json({ message: err.message });
+  }
+};

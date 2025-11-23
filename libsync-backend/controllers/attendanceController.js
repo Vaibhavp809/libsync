@@ -32,6 +32,7 @@ exports.getTodayQRCode = async (req, res) => {
 exports.scanQRCode = async (req, res) => {
   try {
     const { token, studentId } = req.body;
+    const Setting = require('../models/Setting');
     
     if (!token || !studentId) {
       return res.status(400).json({
@@ -40,16 +41,14 @@ exports.scanQRCode = async (req, res) => {
       });
     }
     
-    // Verify the token is valid for today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    // Get settings for QR expiry
+    const settings = await Setting.findOne() || {};
+    const expiryHours = settings.attendanceQrExpiryHours || 24; // Default to 24 hours if not set
+    const expiryMs = expiryHours * 60 * 60 * 1000; // Convert hours to milliseconds
     
+    // Find the daily code by token
     const dailyCode = await DailyCode.findOne({
       token: token,
-      date: {
-        $gte: today,
-        $lt: new Date(today.getTime() + 24 * 60 * 60 * 1000)
-      },
       isActive: true
     });
     
@@ -57,6 +56,22 @@ exports.scanQRCode = async (req, res) => {
       return res.status(400).json({
         success: false,
         message: 'Invalid or expired QR code'
+      });
+    }
+    
+    // Check if QR code has expired based on settings
+    const now = new Date();
+    const codeGeneratedAt = dailyCode.generatedAt || dailyCode.createdAt || dailyCode.date;
+    const codeAge = now - new Date(codeGeneratedAt);
+    
+    if (codeAge > expiryMs) {
+      // Mark as inactive if expired
+      dailyCode.isActive = false;
+      await dailyCode.save();
+      
+      return res.status(400).json({
+        success: false,
+        message: 'QR code has expired. Please generate a new one.'
       });
     }
     
@@ -69,6 +84,10 @@ exports.scanQRCode = async (req, res) => {
       });
     }
     
+    // Get today's date for attendance tracking
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
     // Check for active session (logged in but not logged out) for today
     let attendance = await Attendance.findOne({
       student: studentId,
@@ -79,7 +98,6 @@ exports.scanQRCode = async (req, res) => {
       logoutTime: null // Only find active sessions (not logged out)
     });
     
-    const now = new Date();
     let action = '';
     
     if (!attendance) {

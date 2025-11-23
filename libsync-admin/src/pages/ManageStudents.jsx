@@ -13,12 +13,18 @@ export default function ManageStudents() {
   const [editing, setEditing] = useState(null);
   const [form, setForm] = useState({ name: '', email: '', password: '', studentID: '', department: '' });
   const [showDepartmentModal, setShowDepartmentModal] = useState(false);
-  const [newDepartment, setNewDepartment] = useState({ id: '', name: '' });
+  const [newDepartment, setNewDepartment] = useState({ id: '', name: '', studentIdCode: '' });
   const [searchTerm, setSearchTerm] = useState('');
   const [activeSearchTerm, setActiveSearchTerm] = useState(''); // The term actually used for search
   const [filteredStudents, setFilteredStudents] = useState([]);
   const [departments, setDepartments] = useState([]);
   const [loadingDepartments, setLoadingDepartments] = useState(true);
+  
+  // Advanced filtering and sorting state
+  const [selectedDepartment, setSelectedDepartment] = useState('');
+  const [selectedDepartmentCode, setSelectedDepartmentCode] = useState(''); // Filter by code from student ID (CS, EC, etc.)
+  const [sortBy, setSortBy] = useState('createdAt'); // Options: 'createdAt', 'studentID', 'year'
+  const [sortOrder, setSortOrder] = useState('desc'); // 'asc' or 'desc'
   
   // Pagination state
   const [currentPage, setCurrentPage] = useState(1);
@@ -26,17 +32,29 @@ export default function ManageStudents() {
   const [totalStudents, setTotalStudents] = useState(0);
   const [limit] = useState(50); // Students per page
 
-  const fetchStudents = async (page = currentPage, searchQuery = activeSearchTerm) => {
+  const fetchStudents = async (page = currentPage, searchQuery = activeSearchTerm, deptFilter = selectedDepartment, deptCodeFilter = selectedDepartmentCode, sort = sortBy, order = sortOrder) => {
     try {
       setLoading(true);
       const params = {
         page,
-        limit
+        limit,
+        sortBy: sort,
+        sortOrder: order
       };
       
       // Add search query if provided
       if (searchQuery && searchQuery.trim()) {
         params.q = searchQuery.trim();
+      }
+      
+      // Add department filter if provided
+      if (deptFilter && deptFilter !== 'all') {
+        params.department = deptFilter;
+      }
+      
+      // Add department code filter if provided (for filtering by student ID department code)
+      if (deptCodeFilter && deptCodeFilter !== 'all') {
+        params.departmentCode = deptCodeFilter;
       }
       
       const res = await api.get('/users', { params });
@@ -109,7 +127,7 @@ export default function ManageStudents() {
       return;
     }
     if (currentPage > 0) {
-      fetchStudents(currentPage, activeSearchTerm);
+      fetchStudents(currentPage, activeSearchTerm, selectedDepartment, selectedDepartmentCode, sortBy, sortOrder);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
@@ -122,9 +140,9 @@ export default function ManageStudents() {
     }
     // Reset to page 1 when searching
     setCurrentPage(1);
-    fetchStudents(1, activeSearchTerm);
+    fetchStudents(1, activeSearchTerm, selectedDepartment, selectedDepartmentCode, sortBy, sortOrder);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeSearchTerm]);
+  }, [activeSearchTerm, selectedDepartment, selectedDepartmentCode, sortBy, sortOrder]);
   
   // Update filtered students when students data changes (server already filters, but we show all on current page)
   useEffect(() => {
@@ -236,7 +254,7 @@ export default function ManageStudents() {
       }
       setShowForm(false);
       setEditing(null);
-      fetchStudents(currentPage, activeSearchTerm);
+      fetchStudents(currentPage, activeSearchTerm, selectedDepartment, selectedDepartmentCode, sortBy, sortOrder);
     } catch (err) {
       alert(err.response?.data?.message || 'Save failed');
     }
@@ -252,7 +270,7 @@ export default function ManageStudents() {
       console.log('Deleting student with ID:', id);
       await api.delete(`/users/${id}`);
       alert('Student deleted successfully!');
-      await fetchStudents(currentPage, activeSearchTerm);
+      await fetchStudents(currentPage, activeSearchTerm, selectedDepartment, selectedDepartmentCode, sortBy, sortOrder);
     } catch (err) {
       console.error('Failed to delete student:', err);
       alert('Delete failed: ' + (err.response?.data?.message || err.message || 'Unknown error'));
@@ -332,8 +350,8 @@ export default function ManageStudents() {
       />
 
       <Card
-        title="Student Search"
-        subtitle="Search students by name, email, USN, or department"
+        title="Student Search & Filters"
+        subtitle="Search students by name, email, USN, or department. Filter and sort options available below."
         icon="🔍"
         color="#3b82f6"
         style={styles.searchCard}
@@ -366,6 +384,95 @@ export default function ManageStudents() {
               style={styles.clearButton}
             >
               Clear
+            </button>
+          )}
+        </div>
+        
+        {/* Advanced Filters and Sorting */}
+        <div style={styles.filtersContainer}>
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>Filter by Department:</label>
+            <select
+              value={selectedDepartment}
+              onChange={(e) => {
+                setSelectedDepartment(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={styles.filterSelect}
+            >
+              <option value="all">All Departments</option>
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.name}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>Filter by ID Department Code:</label>
+            <select
+              value={selectedDepartmentCode}
+              onChange={(e) => {
+                setSelectedDepartmentCode(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={styles.filterSelect}
+            >
+              <option value="all">All Codes</option>
+              {departments
+                .filter(dept => dept.studentIdCode)
+                .map((dept) => (
+                  <option key={dept.studentIdCode} value={dept.studentIdCode}>
+                    {dept.studentIdCode} - {dept.name}
+                  </option>
+                ))}
+            </select>
+          </div>
+          
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>Sort By:</label>
+            <select
+              value={sortBy}
+              onChange={(e) => {
+                setSortBy(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={styles.filterSelect}
+            >
+              <option value="createdAt">Date Created (Latest First)</option>
+              <option value="studentID">Student ID</option>
+              <option value="year">Year of Admission</option>
+            </select>
+          </div>
+          
+          <div style={styles.filterGroup}>
+            <label style={styles.filterLabel}>Order:</label>
+            <select
+              value={sortOrder}
+              onChange={(e) => {
+                setSortOrder(e.target.value);
+                setCurrentPage(1);
+              }}
+              style={styles.filterSelect}
+            >
+              <option value="desc">Descending</option>
+              <option value="asc">Ascending</option>
+            </select>
+          </div>
+          
+          {(selectedDepartment !== '' || selectedDepartmentCode !== '' || sortBy !== 'createdAt' || sortOrder !== 'desc') && (
+            <button
+              onClick={() => {
+                setSelectedDepartment('');
+                setSelectedDepartmentCode('');
+                setSortBy('createdAt');
+                setSortOrder('desc');
+                setCurrentPage(1);
+              }}
+              style={styles.resetFiltersButton}
+            >
+              Reset Filters
             </button>
           )}
         </div>
@@ -570,7 +677,7 @@ export default function ManageStudents() {
               <div style={styles.addDeptSection}>
                 <h3 style={styles.sectionTitle}>Add New Department</h3>
                 <div style={styles.addDeptForm}>
-                  <input
+                      <input
                     type="text"
                     placeholder="Department ID (e.g., CSE)"
                     value={newDepartment.id}
@@ -585,6 +692,17 @@ export default function ManageStudents() {
                     onChange={(e) => setNewDepartment({ ...newDepartment, name: e.target.value })}
                     style={styles.modalInput}
                   />
+                  <input
+                    type="text"
+                    placeholder="Student ID Code (e.g., CS, EC, RI, ME) - Used in student ID format"
+                    value={newDepartment.studentIdCode || ''}
+                    onChange={(e) => setNewDepartment({ ...newDepartment, studentIdCode: e.target.value.toUpperCase() })}
+                    style={styles.modalInput}
+                    maxLength={5}
+                  />
+                  <small style={{ fontSize: '12px', color: '#64748b', marginTop: '-8px' }}>
+                    Example: For student ID "2MM22CS002", the code would be "CS"
+                  </small>
                   <button
                     onClick={async () => {
                       if (!newDepartment.id || !newDepartment.name) {
@@ -594,7 +712,7 @@ export default function ManageStudents() {
                       try {
                         await api.post('/departments', newDepartment);
                         alert('Department created successfully!');
-                        setNewDepartment({ id: '', name: '' });
+                        setNewDepartment({ id: '', name: '', studentIdCode: '' });
                         await fetchDepartments();
                       } catch (err) {
                         alert(err.response?.data?.message || 'Failed to create department');
@@ -614,22 +732,48 @@ export default function ManageStudents() {
                     <div key={dept.id} style={styles.deptItem}>
                       <div style={styles.deptInfo}>
                         <strong>{dept.id}</strong> - {dept.name}
+                        {dept.studentIdCode && (
+                          <span style={{ marginLeft: '8px', fontSize: '12px', color: '#64748b' }}>
+                            (ID Code: {dept.studentIdCode})
+                          </span>
+                        )}
                       </div>
-                      <button
-                        onClick={async () => {
-                          if (!window.confirm(`Are you sure you want to delete department "${dept.name}"? This action cannot be undone.`)) return;
-                          try {
-                            await api.delete(`/departments/${dept.id}`);
-                            alert('Department deleted successfully!');
-                            await fetchDepartments();
-                          } catch (err) {
-                            alert(err.response?.data?.message || 'Failed to delete department');
-                          }
-                        }}
-                        style={styles.deleteDeptButton}
-                      >
-                        Delete
-                      </button>
+                      <div style={{ display: 'flex', gap: '8px' }}>
+                        <button
+                          onClick={async () => {
+                            const newCode = prompt(`Enter student ID code for ${dept.name} (e.g., CS, EC, RI, ME):`, dept.studentIdCode || '');
+                            if (newCode !== null) {
+                              try {
+                                await api.put(`/departments/${dept.id}`, {
+                                  studentIdCode: newCode.trim().toUpperCase() || null
+                                });
+                                alert('Department updated successfully!');
+                                await fetchDepartments();
+                              } catch (err) {
+                                alert(err.response?.data?.message || 'Failed to update department');
+                              }
+                            }
+                          }}
+                          style={styles.editDeptButton}
+                        >
+                          Edit Code
+                        </button>
+                        <button
+                          onClick={async () => {
+                            if (!window.confirm(`Are you sure you want to delete department "${dept.name}"? This action cannot be undone.`)) return;
+                            try {
+                              await api.delete(`/departments/${dept.id}`);
+                              alert('Department deleted successfully!');
+                              await fetchDepartments();
+                            } catch (err) {
+                              alert(err.response?.data?.message || 'Failed to delete department');
+                            }
+                          }}
+                          style={styles.deleteDeptButton}
+                        >
+                          Delete
+                        </button>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -650,7 +794,58 @@ const styles = {
     display: 'flex',
     gap: '12px',
     alignItems: 'center',
-    maxWidth: '600px'
+    maxWidth: '600px',
+    marginBottom: '20px'
+  },
+  filtersContainer: {
+    display: 'flex',
+    flexWrap: 'wrap',
+    gap: '16px',
+    alignItems: 'flex-end',
+    paddingTop: '16px',
+    borderTop: '1px solid #e2e8f0',
+    marginTop: '16px'
+  },
+  filterGroup: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '6px',
+    minWidth: '180px'
+  },
+  filterLabel: {
+    fontSize: '12px',
+    fontWeight: '600',
+    color: '#475569'
+  },
+  filterSelect: {
+    padding: '10px 12px',
+    border: '1px solid #d1d5db',
+    borderRadius: '8px',
+    background: '#f9fafb',
+    fontSize: '13px',
+    cursor: 'pointer',
+    outline: 'none',
+    transition: 'all 0.2s ease',
+    ':focus': {
+      borderColor: '#3b82f6',
+      boxShadow: '0 0 0 3px rgba(59, 130, 246, 0.1)'
+    }
+  },
+  resetFiltersButton: {
+    padding: '10px 20px',
+    border: '1px solid #d1d5db',
+    borderRadius: '8px',
+    background: 'white',
+    color: '#374151',
+    fontSize: '13px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease',
+    whiteSpace: 'nowrap',
+    ':hover': {
+      background: '#f9fafb',
+      borderColor: '#9ca3af'
+    }
   },
   searchInputField: {
     flex: 1,
@@ -1037,6 +1232,16 @@ const styles = {
     borderRadius: '6px',
     background: 'white',
     color: '#ef4444',
+    fontSize: '12px',
+    fontWeight: '500',
+    cursor: 'pointer'
+  },
+  editDeptButton: {
+    padding: '6px 12px',
+    border: '1px solid #3b82f6',
+    borderRadius: '6px',
+    background: 'white',
+    color: '#3b82f6',
     fontSize: '12px',
     fontWeight: '500',
     cursor: 'pointer'

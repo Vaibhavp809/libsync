@@ -3,7 +3,7 @@ import api from '../utils/api';
 import Layout from '../components/Layout';
 
 export default function Settings() {
-  const [settings, setSettings] = useState({ loanDurationDays: 14, attendanceQrExpiryMinutes: 15, emailTemplates: { overdueReminder: '', reservationReady: '' } });
+  const [settings, setSettings] = useState({ loanDurationDays: 14, attendanceQrExpiryHours: 1, emailTemplates: { overdueReminder: '', reservationReady: '' } });
   const [loading, setLoading] = useState(true);
 
 
@@ -57,10 +57,13 @@ export default function Settings() {
               style={styles.input} />
           </div>
           <div style={styles.formGroup}>
-            <label style={styles.label}>Attendance QR Expiry (minutes)</label>
-            <input type="number" min="1" value={settings.attendanceQrExpiryMinutes}
-              onChange={(e) => setSettings({ ...settings, attendanceQrExpiryMinutes: Number(e.target.value) })}
+            <label style={styles.label}>Attendance QR Expiry (hours)</label>
+            <input type="number" min="1" step="0.5" value={settings.attendanceQrExpiryHours}
+              onChange={(e) => setSettings({ ...settings, attendanceQrExpiryHours: Number(e.target.value) })}
               style={styles.input} />
+            <small style={{ fontSize: '12px', color: '#64748b', marginTop: '4px' }}>
+              Duration for which the QR code remains valid (e.g., 1 = 1 hour, 2.5 = 2.5 hours)
+            </small>
           </div>
           <div style={{ ...styles.formGroup, gridColumn: '1 / -1' }}>
             <label style={styles.label}>Overdue Email Template</label>

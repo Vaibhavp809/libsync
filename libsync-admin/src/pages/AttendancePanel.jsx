@@ -81,6 +81,24 @@ export default function AttendancePanel() {
     });
   };
 
+  const formatDuration = (loginTime, logoutTime) => {
+    if (!loginTime || !logoutTime) return 'N/A';
+    
+    const login = new Date(loginTime);
+    const logout = new Date(logoutTime);
+    const durationMs = logout - login;
+    
+    if (durationMs < 0) return 'N/A';
+    
+    const hours = Math.floor(durationMs / (1000 * 60 * 60));
+    const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    if (hours > 0) {
+      return `${hours}h ${minutes}m`;
+    }
+    return `${minutes}m`;
+  };
+
   const getStatusBadge = (record) => {
     if (!record.logoutTime) {
       return { text: 'Present', color: '#10b981', bg: '#ecfdf5' };
@@ -266,7 +284,7 @@ export default function AttendancePanel() {
                       <div style={styles.durationInfo}>
                         <span style={styles.durationLabel}>⏱️ Duration:</span>
                         <span style={styles.durationValue}>
-                          {record.getFormattedDuration ? record.getFormattedDuration() : 'N/A'}
+                          {formatDuration(record.loginTime, record.logoutTime)}
                         </span>
                       </div>
                     )}

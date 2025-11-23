@@ -20,11 +20,24 @@ export default function IssueBook() {
   const [studentNotFound, setStudentNotFound] = useState(false);
   const navigate = useNavigate();
 
-  // Set default due date to 14 days from now
+  // Fetch settings and set default due date based on loan duration
   useEffect(() => {
-    const defaultDate = new Date();
-    defaultDate.setDate(defaultDate.getDate() + 14);
-    setDueDate(defaultDate.toISOString().split('T')[0]);
+    const fetchSettings = async () => {
+      try {
+        const res = await api.get('/settings');
+        const loanDurationDays = res.data?.loanDurationDays || 14;
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + loanDurationDays);
+        setDueDate(defaultDate.toISOString().split('T')[0]);
+      } catch (err) {
+        console.error('Failed to load settings, using default 14 days:', err);
+        // Fallback to 14 days if settings fetch fails
+        const defaultDate = new Date();
+        defaultDate.setDate(defaultDate.getDate() + 14);
+        setDueDate(defaultDate.toISOString().split('T')[0]);
+      }
+    };
+    fetchSettings();
   }, []);
 
   // Fetch student details by USN
@@ -534,7 +547,7 @@ export default function IssueBook() {
           <div style={styles.instructionStep}>
             <span style={styles.stepNumber}>3</span>
             <div>
-              <strong>Set Due Date:</strong> Choose when the book should be returned. Default is 14 days from today.
+              <strong>Set Due Date:</strong> Choose when the book should be returned. Default duration is set in Settings page.
             </div>
           </div>
           <div style={styles.instructionStep}>

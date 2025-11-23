@@ -25,6 +25,24 @@ const styles = {
       background: '#047857'
     }
   },
+  notifyButton: {
+    background: '#3b82f6',
+    color: 'white',
+    border: 'none',
+    borderRadius: '6px',
+    padding: '6px 12px',
+    fontSize: '12px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    transition: 'background-color 0.2s',
+    ':hover': {
+      background: '#2563eb'
+    },
+    ':disabled': {
+      background: '#9ca3af',
+      cursor: 'not-allowed'
+    }
+  },
   filterSelect: {
     padding: '8px 12px',
     borderRadius: '6px',
@@ -396,16 +414,38 @@ export default function ViewReservations() {
       render: (reservation) => (
         <div style={styles.actionButtons}>
           {reservation.status === 'Active' && (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                handleIssueBook(reservation);
-              }}
-              style={styles.issueButton}
-              disabled={loading}
-            >
-              {loading ? 'Processing...' : 'Issue Book'}
-            </button>
+            <>
+              <button
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    setLoading(true);
+                    await api.post(`/reservations/${reservation._id}/send-notification`);
+                    alert(`Notification sent successfully to ${getStudentLabel(reservation.student)}!`);
+                  } catch (error) {
+                    console.error('Error sending notification:', error);
+                    alert(error.response?.data?.message || 'Failed to send notification');
+                  } finally {
+                    setLoading(false);
+                  }
+                }}
+                style={styles.notifyButton}
+                disabled={loading}
+                title="Send notification to student that reservation is ready"
+              >
+                📧 Notify Ready
+              </button>
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleIssueBook(reservation);
+                }}
+                style={styles.issueButton}
+                disabled={loading}
+              >
+                {loading ? 'Processing...' : 'Issue Book'}
+              </button>
+            </>
           )}
         </div>
       )

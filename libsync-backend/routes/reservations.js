@@ -7,13 +7,16 @@ const {
   cancelReservation,
   getStudentReservations,
   getAllReservations,
-  deleteAllReservations
+  deleteAllReservations,
+  sendReservationReadyNotification,
+  fulfillReservation
 } = require("../controllers/reservationController");
 
 router.get("/", verifyToken, getAllReservations); 
 router.post("/reserve", verifyStudentOrAdmin, reserveBook);
 router.put("/cancel/:id", verifyStudentOrAdmin, cancelReservation);
-router.put("/:id/fulfill", verifyToken, require("../controllers/reservationController").fulfillReservation);
+router.put("/:id/fulfill", verifyToken, fulfillReservation);
+router.post("/:id/send-notification", verifyToken, require("../middleware/adminAuth"), sendReservationReadyNotification);
 router.get("/student/:studentId", verifyStudentOrAdmin, verifyStudentOwnership, getStudentReservations);
 router.delete("/all", verifyToken, require("../middleware/adminAuth"), deleteAllReservations);
 

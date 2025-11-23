@@ -11,6 +11,12 @@ const departmentSchema = new mongoose.Schema({
     type: String,
     required: true
   },
+  studentIdCode: {
+    type: String,
+    uppercase: true,
+    default: null,
+    sparse: true // Allows multiple nulls but unique when set
+  },
   isDeleted: {
     type: Boolean,
     default: false

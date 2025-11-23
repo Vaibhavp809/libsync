@@ -24,7 +24,8 @@ exports.getDepartments = async (req, res) => {
     const dbDeptsFormatted = dbDepartments.map(dept => ({
       _id: dept._id,
       id: dept.id,
-      name: dept.name
+      name: dept.name,
+      studentIdCode: dept.studentIdCode || null
     }));
     
     // Combine and remove duplicates (database takes precedence)
@@ -62,7 +63,7 @@ exports.getDepartments = async (req, res) => {
  */
 exports.createDepartment = async (req, res) => {
   try {
-    const { id, name } = req.body;
+    const { id, name, studentIdCode } = req.body;
     const deptId = id.toUpperCase();
 
     if (!id || !name) {
@@ -87,6 +88,9 @@ exports.createDepartment = async (req, res) => {
       // Restore it
       previouslyDeleted.isDeleted = false;
       previouslyDeleted.name = name.trim();
+      if (studentIdCode) {
+        previouslyDeleted.studentIdCode = studentIdCode.toUpperCase().trim();
+      }
       await previouslyDeleted.save();
       
       // Also remove from DeletedDepartment if it exists there
@@ -97,7 +101,8 @@ exports.createDepartment = async (req, res) => {
         department: {
           _id: previouslyDeleted._id,
           id: previouslyDeleted.id,
-          name: previouslyDeleted.name
+          name: previouslyDeleted.name,
+          studentIdCode: previouslyDeleted.studentIdCode
         }
       });
     }
@@ -108,7 +113,8 @@ exports.createDepartment = async (req, res) => {
     // Create new department
     const department = new Department({
       id: deptId,
-      name: name.trim()
+      name: name.trim(),
+      studentIdCode: studentIdCode ? studentIdCode.toUpperCase().trim() : null
     });
 
     await department.save();
@@ -118,7 +124,8 @@ exports.createDepartment = async (req, res) => {
       department: {
         _id: department._id,
         id: department.id,
-        name: department.name
+        name: department.name,
+        studentIdCode: department.studentIdCode
       }
     });
   } catch (err) {
@@ -126,6 +133,52 @@ exports.createDepartment = async (req, res) => {
     res.status(500).json({
       success: false,
       message: err.message || 'Failed to create department'
+    });
+  }
+};
+
+/**
+ * PUT /api/departments/:id
+ * Update a department (Admin only)
+ */
+exports.updateDepartment = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { name, studentIdCode } = req.body;
+    const deptId = id.toUpperCase();
+
+    const department = await Department.findOne({ id: deptId, isDeleted: { $ne: true } });
+    if (!department) {
+      return res.status(404).json({
+        success: false,
+        message: 'Department not found'
+      });
+    }
+
+    // Update fields if provided
+    if (name !== undefined) {
+      department.name = name.trim();
+    }
+    if (studentIdCode !== undefined) {
+      department.studentIdCode = studentIdCode ? studentIdCode.toUpperCase().trim() : null;
+    }
+
+    await department.save();
+
+    res.json({
+      success: true,
+      department: {
+        _id: department._id,
+        id: department.id,
+        name: department.name,
+        studentIdCode: department.studentIdCode
+      }
+    });
+  } catch (err) {
+    console.error('Error updating department:', err);
+    res.status(500).json({
+      success: false,
+      message: err.message || 'Failed to update department'
     });
   }
 };

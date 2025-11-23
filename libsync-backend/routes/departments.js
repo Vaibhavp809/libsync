@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const { getDepartments, createDepartment, deleteDepartment } = require('../controllers/departmentController');
+const { getDepartments, createDepartment, updateDepartment, deleteDepartment } = require('../controllers/departmentController');
 const verifyToken = require('../middleware/auth');
 const verifyAdmin = require('../middleware/adminAuth');
 
@@ -16,6 +16,12 @@ router.get('/', getDepartments);
  * Create a new department (Admin only)
  */
 router.post('/', verifyToken, verifyAdmin, createDepartment);
+
+/**
+ * PUT /api/departments/:id
+ * Update a department (Admin only)
+ */
+router.put('/:id', verifyToken, verifyAdmin, updateDepartment);
 
 /**
  * DELETE /api/departments/:id
