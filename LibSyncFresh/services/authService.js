@@ -135,15 +135,34 @@ class AuthService {
         // Send push token to server after successful login
         try {
           const { notificationService } = require('./notificationService');
-          const savedToken = await notificationService.getSavedPushToken();
+          let savedToken = await notificationService.getSavedPushToken();
+          
+          // If no saved token, try to get a new one
+          if (!savedToken) {
+            console.log('📱 No saved push token found, requesting new one...');
+            try {
+              savedToken = await notificationService.registerForPushNotificationsAsync();
+              if (savedToken) {
+                await notificationService.savePushTokenToStorage(savedToken);
+                console.log('✅ New push token obtained after login');
+              }
+            } catch (tokenError) {
+              console.warn('⚠️ Could not get push token:', tokenError.message);
+            }
+          }
+          
+          // Send token to server if we have one
           if (savedToken) {
+            console.log('📤 Sending push token to server after login...');
             await notificationService.sendPushTokenToServer(savedToken);
             console.log('✅ Push token sent to server after login');
           } else {
-            console.log('ℹ️ No saved push token found, will be sent when notification service initializes');
+            console.warn('⚠️ No push token available - user may need to grant notification permissions');
+            console.warn('⚠️ Push notifications will not work until permissions are granted');
           }
         } catch (pushError) {
-          console.warn('⚠️ Failed to send push token after login:', pushError.message);
+          console.error('❌ Failed to send push token after login:', pushError.message);
+          console.error('❌ Error details:', pushError);
           // Don't fail login if push token send fails
         }
       } else {

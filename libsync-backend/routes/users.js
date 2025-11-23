@@ -80,13 +80,20 @@ router.get('/student/:studentID', async (req, res) => {
 router.post('/push-token', async (req, res) => {
   try {
     const { pushToken } = req.body;
-    const userId = req.user.id || req.user._id;
+    const userId = req.user?.id || req.user?._id;
 
     if (!pushToken) {
+      console.error('❌ Push token is required but not provided');
       return res.status(400).json({ message: 'Push token is required' });
     }
 
+    if (!userId) {
+      console.error('❌ User ID not found in request');
+      return res.status(401).json({ message: 'User not authenticated' });
+    }
+
     console.log(`📱 Saving push token for user: ${userId}`);
+    console.log(`📱 Token preview: ${pushToken.substring(0, 30)}...`);
 
     // Update user's push token
     const updatedUser = await User.findByIdAndUpdate(
@@ -96,13 +103,16 @@ router.post('/push-token', async (req, res) => {
         pushTokenUpdatedAt: new Date()
       },
       { new: true }
-    ).select('name studentID pushToken');
+    ).select('name studentID email pushToken pushTokenUpdatedAt');
 
     if (!updatedUser) {
+      console.error(`❌ User not found with ID: ${userId}`);
       return res.status(404).json({ message: 'User not found' });
     }
 
-    console.log(`✅ Push token saved for user: ${updatedUser.name || updatedUser.studentID || userId}`);
+    console.log(`✅ Push token saved for user: ${updatedUser.name || updatedUser.studentID || updatedUser.email || userId}`);
+    console.log(`✅ Token saved at: ${updatedUser.pushTokenUpdatedAt}`);
+    console.log(`✅ Has push token: ${!!updatedUser.pushToken}`);
 
     res.json({ 
       message: 'Push token saved successfully',
@@ -111,11 +121,14 @@ router.post('/push-token', async (req, res) => {
         id: updatedUser._id,
         name: updatedUser.name,
         studentID: updatedUser.studentID,
-        hasPushToken: !!updatedUser.pushToken
+        email: updatedUser.email,
+        hasPushToken: !!updatedUser.pushToken,
+        pushTokenUpdatedAt: updatedUser.pushTokenUpdatedAt
       }
     });
   } catch (err) {
     console.error('❌ Error saving push token:', err);
+    console.error('❌ Error stack:', err.stack);
     res.status(500).json({ message: err.message });
   }
 });
