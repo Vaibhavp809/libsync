@@ -35,6 +35,18 @@ export default function BookListScreen() {
   const [totalBooks, setTotalBooks] = useState(0);
   const [isSearching, setIsSearching] = useState(false);
   
+  // Advanced search/filter state
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
+  const [selectedTitle, setSelectedTitle] = useState('');
+  const [selectedEdition, setSelectedEdition] = useState('');
+  const [titleInput, setTitleInput] = useState('');
+  const [editionInput, setEditionInput] = useState('');
+  const [showTitleDropdown, setShowTitleDropdown] = useState(false);
+  const [showEditionDropdown, setShowEditionDropdown] = useState(false);
+  const [availableTitles, setAvailableTitles] = useState([]);
+  const [availableEditions, setAvailableEditions] = useState([]);
+  const [filtersLoading, setFiltersLoading] = useState(false);
+  
   // Statistics state
   const [statistics, setStatistics] = useState({
     totalBooks: 0,
@@ -177,11 +189,37 @@ export default function BookListScreen() {
   // Search functionality - now only triggers on submit or search button
   const [searchInputValue, setSearchInputValue] = useState('');
   
+  // Fetch available titles and editions for filters
+  const fetchBookFilters = async () => {
+    setFiltersLoading(true);
+    try {
+      const filters = await apiService.getBookFilters();
+      setAvailableTitles(filters.titles || []);
+      setAvailableEditions(filters.editions || []);
+    } catch (error) {
+      console.error('Failed to fetch book filters:', error);
+    } finally {
+      setFiltersLoading(false);
+    }
+  };
+  
   const handleSearchSubmit = async (query = searchInputValue) => {
     setSearchQuery(query);
     
-    if (!query.trim()) {
-      // If search query is empty, reset to paginated view
+    // Build search params
+    const searchParams = {};
+    if (query.trim()) {
+      searchParams.q = query.trim();
+    }
+    if (selectedTitle) {
+      searchParams.title = selectedTitle;
+    }
+    if (selectedEdition) {
+      searchParams.edition = selectedEdition;
+    }
+    
+    // If no search query and no filters, reset to paginated view
+    if (!query.trim() && !selectedTitle && !selectedEdition) {
       setIsSearching(false);
       setCurrentPage(1);
       setHasNextPage(true);
@@ -193,13 +231,36 @@ export default function BookListScreen() {
     setIsSearching(true);
     
     try {
-      const data = await apiService.searchBooks(query);
-      // Handle both array response and paginated response
       let booksData = [];
-      if (Array.isArray(data)) {
-        booksData = data;
-      } else if (data && data.books && Array.isArray(data.books)) {
-        booksData = data.books;
+      
+      // If we have filters but no query, use getBooks with filters
+      if (!query.trim() && (selectedTitle || selectedEdition)) {
+        const params = {
+          page: 1,
+          limit: 100,
+          ...(selectedTitle && { search: selectedTitle }),
+          ...(selectedEdition && { search: selectedEdition })
+        };
+        const response = await apiService.getBooks(params);
+        booksData = response.books || [];
+      } else if (query.trim()) {
+        // Use searchBooks endpoint
+        const data = await apiService.searchBooks(query);
+        // Handle both array response and paginated response
+        if (Array.isArray(data)) {
+          booksData = data;
+        } else if (data && data.books && Array.isArray(data.books)) {
+          booksData = data.books;
+        }
+      }
+      
+      // Apply additional filters if needed
+      if (selectedTitle || selectedEdition) {
+        booksData = booksData.filter(book => {
+          if (selectedTitle && book.title !== selectedTitle) return false;
+          if (selectedEdition && book.edition !== selectedEdition) return false;
+          return true;
+        });
       }
       
       // Filter out null/invalid items
@@ -219,6 +280,19 @@ export default function BookListScreen() {
     } finally {
       setSearchLoading(false);
     }
+  };
+  
+  const handleClearFilters = () => {
+    setSelectedTitle('');
+    setSelectedEdition('');
+    setTitleInput('');
+    setEditionInput('');
+    setSearchInputValue('');
+    setSearchQuery('');
+    setIsSearching(false);
+    setCurrentPage(1);
+    setHasNextPage(true);
+    fetchBooks(1, true);
   };
   
   const handleSearchInputChange = (value) => {
@@ -247,6 +321,7 @@ export default function BookListScreen() {
     loadStudentData();
     fetchBooks(1);
     fetchStatistics();
+    fetchBookFilters();
   }, []);
 
   const renderItem = ({ item }) => {
@@ -265,7 +340,15 @@ export default function BookListScreen() {
           <View style={styles.bookInfo}>
             <Text style={styles.bookTitle}>{item.title || 'Untitled Book'}</Text>
             <Text style={styles.bookAuthor}>by {item.author || 'Unknown Author'}</Text>
-            <Text style={styles.bookISBN}>Acc. No: {item.accessionNumber || 'N/A'}</Text>
+            <Text style={styles.bookISBN}>
+              Acc. No: {item.accessionNumber || 'N/A'}
+              {item.edition && ` • Edition: ${item.edition}`}
+              {item.copiesAvailable !== undefined && (
+                <Text style={styles.copiesAvailable}>
+                  {' • '}({item.copiesAvailable} copies available)
+                </Text>
+              )}
+            </Text>
             <Text style={styles.bookCategory}>{item.category || 'Uncategorized'}</Text>
           </View>
         </View>
@@ -346,6 +429,133 @@ export default function BookListScreen() {
               <Text style={styles.searchButtonText}>Search</Text>
             </TouchableOpacity>
           </View>
+          
+          {/* Advanced Search Toggle */}
+          <TouchableOpacity
+            style={styles.advancedSearchToggle}
+            onPress={() => {
+              setShowAdvancedSearch(!showAdvancedSearch);
+              if (!showAdvancedSearch) {
+                fetchBookFilters();
+              }
+            }}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.advancedSearchToggleText}>
+              {showAdvancedSearch ? '▼' : '▶'} Advanced Search / Filter
+            </Text>
+          </TouchableOpacity>
+          
+          {/* Advanced Search Panel */}
+          {showAdvancedSearch && (
+            <View style={styles.advancedSearchPanel}>
+              <View style={styles.filterRow}>
+                <Text style={styles.filterLabel}>Title:</Text>
+                <View style={styles.filterSelectContainer}>
+                  <TextInput
+                    style={styles.filterSelect}
+                    placeholder="Select or type title..."
+                    placeholderTextColor={colors.textSecondary}
+                    value={titleInput}
+                    onChangeText={(text) => {
+                      setTitleInput(text);
+                      setShowTitleDropdown(text.length > 0);
+                      if (text.length === 0) {
+                        setSelectedTitle('');
+                      }
+                    }}
+                    onFocus={() => setShowTitleDropdown(titleInput.length > 0)}
+                    onBlur={() => setTimeout(() => setShowTitleDropdown(false), 200)}
+                  />
+                  {showTitleDropdown && availableTitles.length > 0 && (
+                    <View style={styles.filterDropdown}>
+                      <FlatList
+                        data={availableTitles
+                          .filter(title => title.toLowerCase().includes(titleInput.toLowerCase()))
+                          .slice(0, 5)}
+                        keyExtractor={(item, index) => `title-${index}`}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            style={styles.filterDropdownItem}
+                            onPress={() => {
+                              setSelectedTitle(item);
+                              setTitleInput(item);
+                              setShowTitleDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.filterDropdownText}>{item}</Text>
+                          </TouchableOpacity>
+                        )}
+                        nestedScrollEnabled={true}
+                      />
+                    </View>
+                  )}
+                </View>
+              </View>
+              
+              <View style={styles.filterRow}>
+                <Text style={styles.filterLabel}>Edition:</Text>
+                <View style={styles.filterSelectContainer}>
+                  <TextInput
+                    style={styles.filterSelect}
+                    placeholder="Select or type edition..."
+                    placeholderTextColor={colors.textSecondary}
+                    value={editionInput}
+                    onChangeText={(text) => {
+                      setEditionInput(text);
+                      setShowEditionDropdown(text.length > 0);
+                      if (text.length === 0) {
+                        setSelectedEdition('');
+                      }
+                    }}
+                    onFocus={() => setShowEditionDropdown(editionInput.length > 0)}
+                    onBlur={() => setTimeout(() => setShowEditionDropdown(false), 200)}
+                  />
+                  {showEditionDropdown && availableEditions.length > 0 && (
+                    <View style={styles.filterDropdown}>
+                      <FlatList
+                        data={availableEditions
+                          .filter(edition => edition.toLowerCase().includes(editionInput.toLowerCase()))
+                          .slice(0, 5)}
+                        keyExtractor={(item, index) => `edition-${index}`}
+                        renderItem={({ item }) => (
+                          <TouchableOpacity
+                            style={styles.filterDropdownItem}
+                            onPress={() => {
+                              setSelectedEdition(item);
+                              setEditionInput(item);
+                              setShowEditionDropdown(false);
+                            }}
+                          >
+                            <Text style={styles.filterDropdownText}>{item}</Text>
+                          </TouchableOpacity>
+                        )}
+                        nestedScrollEnabled={true}
+                      />
+                    </View>
+                  )}
+                </View>
+              </View>
+              
+              <View style={styles.filterActions}>
+                <TouchableOpacity
+                  style={styles.filterApplyButton}
+                  onPress={() => handleSearchSubmit()}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.filterApplyButtonText}>Apply Filters</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.filterClearButton}
+                  onPress={handleClearFilters}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.filterClearButtonText}>Clear All</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+          
           {(searchLoading || loading) && (
             <View style={styles.searchLoader}>
               <ActivityIndicator size="small" color={colors.primary} />
@@ -357,8 +567,8 @@ export default function BookListScreen() {
           {isSearching && !searchLoading && (
             <Text style={styles.searchResultsText}>
               {books.length > 0 
-                ? `Found ${books.length} result${books.length === 1 ? '' : 's'} for "${searchQuery}"`
-                : `No results for "${searchQuery}"`
+                ? `Found ${books.length} result${books.length === 1 ? '' : 's'}${searchQuery ? ` for "${searchQuery}"` : ''}${selectedTitle ? ` (Title: ${selectedTitle})` : ''}${selectedEdition ? ` (Edition: ${selectedEdition})` : ''}`
+                : `No results found${searchQuery ? ` for "${searchQuery}"` : ''}`
               }
             </Text>
           )}
@@ -638,6 +848,12 @@ const styles = StyleSheet.create({
     marginBottom: spacing.xs,
   },
   
+  copiesAvailable: {
+    ...typography.bodySmall,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  
   bookCategory: {
     ...typography.labelMedium,
     color: colors.primary,
@@ -745,5 +961,118 @@ const styles = StyleSheet.create({
     color: colors.textTertiary,
     textAlign: 'center',
     fontStyle: 'italic',
+  },
+  
+  advancedSearchToggle: {
+    marginTop: spacing.sm,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    backgroundColor: colors.gray100,
+    borderRadius: borderRadius.medium,
+    alignItems: 'center',
+  },
+  
+  advancedSearchToggleText: {
+    ...typography.bodyMedium,
+    color: colors.primary,
+    fontWeight: '600',
+  },
+  
+  advancedSearchPanel: {
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.medium,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  
+  filterRow: {
+    marginBottom: spacing.md,
+  },
+  
+  filterLabel: {
+    ...typography.labelMedium,
+    color: colors.textPrimary,
+    marginBottom: spacing.xs,
+    fontWeight: '600',
+  },
+  
+  filterSelectContainer: {
+    position: 'relative',
+  },
+  
+  filterSelect: {
+    backgroundColor: colors.surface,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: borderRadius.medium,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    ...typography.bodyMedium,
+    color: colors.textPrimary,
+  },
+  
+  filterDropdown: {
+    position: 'absolute',
+    top: '100%',
+    left: 0,
+    right: 0,
+    backgroundColor: colors.surface,
+    borderRadius: borderRadius.medium,
+    borderWidth: 1,
+    borderColor: colors.border,
+    marginTop: spacing.xs,
+    maxHeight: 150,
+    zIndex: 1000,
+    ...shadows.medium,
+  },
+  
+  filterDropdownItem: {
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+  },
+  
+  filterDropdownText: {
+    ...typography.bodyMedium,
+    color: colors.textPrimary,
+  },
+  
+  filterActions: {
+    flexDirection: 'row',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  
+  filterApplyButton: {
+    flex: 1,
+    backgroundColor: colors.primary,
+    borderRadius: borderRadius.medium,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+  },
+  
+  filterApplyButtonText: {
+    ...typography.buttonMedium,
+    color: colors.textInverse,
+    fontWeight: '600',
+  },
+  
+  filterClearButton: {
+    flex: 1,
+    backgroundColor: colors.gray200,
+    borderRadius: borderRadius.medium,
+    paddingVertical: spacing.sm,
+    paddingHorizontal: spacing.md,
+    alignItems: 'center',
+  },
+  
+  filterClearButtonText: {
+    ...typography.buttonMedium,
+    color: colors.textPrimary,
+    fontWeight: '600',
   },
 });

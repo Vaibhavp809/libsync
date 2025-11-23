@@ -205,6 +205,9 @@ exports.deleteBook = async (req, res) => {
 };
 
 exports.getBooks = async (req, res) => {
+  const Loan = require("../models/Loan");
+  const Reservation = require("../models/Reservation");
+  
   try {
     // Extract pagination and filter parameters
     const page = parseInt(req.query.page) || 1;
@@ -270,11 +273,12 @@ exports.getBooks = async (req, res) => {
 
     // Get paginated books with custom sorting for accession numbers
     let sortQuery = {};
+    let books = [];
     
     if (sortBy === 'accessionNumber') {
       // For accession numbers, we want to sort numerically if they're numeric
       // First try to sort them as numbers, fallback to string sort
-      const books = await Book.aggregate([
+      books = await Book.aggregate([
         { $match: filter },
         {
           $addFields: {
@@ -302,30 +306,65 @@ exports.getBooks = async (req, res) => {
           }
         }
       ]);
-      
-      // Return early for accession number sorting
-      res.json({
-        books,
-        pagination: {
-          currentPage: page,
-          totalPages,
-          totalBooks,
-          hasNextPage: page < totalPages,
-          hasPrevPage: page > 1,
-          limit
-        }
-      });
-      return;
     } else {
       // Regular sorting for other fields
       sortQuery[sortBy] = sortOrder;
+      books = await Book.find(filter)
+        .sort(sortQuery)
+        .skip(skip)
+        .limit(limit)
+        .lean(); // Use lean() for better performance when we don't need mongoose documents
     }
     
-    const books = await Book.find(filter)
-      .sort(sortQuery)
-      .skip(skip)
-      .limit(limit)
-      .lean(); // Use lean() for better performance when we don't need mongoose documents
+    // Calculate copy counts for books
+    if (books.length > 0) {
+      const bookIds = books.map(book => book._id).filter(id => id !== null && id !== undefined);
+      
+      // Get all issued books (status: 'Issued')
+      const issuedBooks = await Loan.find({
+        book: { $in: bookIds },
+        status: 'Issued'
+      }).select('book').lean();
+      
+      // Get all active reservations
+      const activeReservations = await Reservation.find({
+        book: { $in: bookIds },
+        status: 'Active'
+      }).select('book').lean();
+      
+      const issuedBookIds = new Set(issuedBooks.map(loan => loan.book.toString()));
+      const reservedBookIds = new Set(activeReservations.map(res => res.book.toString()));
+      
+      // Group books by title and edition to calculate counts
+      const bookGroups = {};
+      for (const book of books) {
+        const key = `${book.title}|||${book.edition}`;
+        if (!bookGroups[key]) {
+          bookGroups[key] = {
+            totalCopies: 0,
+            availableCopies: 0
+          };
+        }
+        bookGroups[key].totalCopies++;
+        if (book._id) {
+          const bookIdStr = book._id.toString();
+          if (!issuedBookIds.has(bookIdStr) && !reservedBookIds.has(bookIdStr)) {
+            bookGroups[key].availableCopies++;
+          }
+        }
+      }
+      
+      // Add copy counts to each book
+      books = books.map(book => {
+        const key = `${book.title}|||${book.edition}`;
+        const group = bookGroups[key] || { totalCopies: 1, availableCopies: 0 };
+        return {
+          ...book,
+          copiesAvailable: group.availableCopies,
+          totalCopies: group.totalCopies
+        };
+      });
+    }
 
     res.json({
       books,
@@ -652,6 +691,9 @@ exports.getCountToReset = async (req, res) => {
 
 exports.searchBooks = async (req, res) => {
   const query = req.query.q || req.query.query;
+  const Loan = require("../models/Loan");
+  const Reservation = require("../models/Reservation");
+  
   try {
     if (!query) {
       return res.status(400).json({ message: "Search query is required" });
@@ -668,13 +710,13 @@ exports.searchBooks = async (req, res) => {
         { accessionNumber: { $regex: `^${query.trim()}$`, $options: 'i' } },
         ...(normalizedQuery !== query.trim() ? [{ accessionNumber: { $regex: `^${normalizedQuery}$`, $options: 'i' } }] : [])
       ]
-    }).limit(10);
+    }).limit(10).lean();
     
     // Then, get books that start with the query in title (medium priority)
     const titleStartMatch = await Book.find({
       title: { $regex: `^${query.trim()}`, $options: 'i' },
       _id: { $nin: exactAccessionMatch.map(book => book._id) } // Exclude already matched
-    }).limit(20);
+    }).limit(20).lean();
     
     // Finally, get other matches (lowest priority)
     const otherMatches = await Book.find({
@@ -688,13 +730,65 @@ exports.searchBooks = async (req, res) => {
       _id: { $nin: [...exactAccessionMatch.map(book => book._id), ...titleStartMatch.map(book => book._id)] }
     })
     .sort({ title: 1 }) // Sort alphabetically by title for consistency
-    .limit(70); // Remaining slots
+    .limit(70) // Remaining slots
+    .lean();
     
     // Combine results with priority order
-    const books = [...exactAccessionMatch, ...titleStartMatch, ...otherMatches];
+    const allBooks = [...exactAccessionMatch, ...titleStartMatch, ...otherMatches];
     
-    res.json(books);
+    // Group books by title and edition, and calculate available copies
+    const bookGroups = {};
+    const bookIds = allBooks.map(book => book._id);
+    
+    // Get all issued books (status: 'Issued')
+    const issuedBooks = await Loan.find({
+      book: { $in: bookIds },
+      status: 'Issued'
+    }).select('book').lean();
+    
+    // Get all active reservations
+    const activeReservations = await Reservation.find({
+      book: { $in: bookIds },
+      status: 'Active'
+    }).select('book').lean();
+    
+    const issuedBookIds = new Set(issuedBooks.map(loan => loan.book.toString()));
+    const reservedBookIds = new Set(activeReservations.map(res => res.book.toString()));
+    
+    // Group books and calculate counts
+    for (const book of allBooks) {
+      const key = `${book.title}|||${book.edition}`;
+      if (!bookGroups[key]) {
+        bookGroups[key] = {
+          title: book.title,
+          edition: book.edition,
+          totalCopies: 0,
+          availableCopies: 0,
+          books: []
+        };
+      }
+      bookGroups[key].totalCopies++;
+      const bookIdStr = book._id.toString();
+      if (!issuedBookIds.has(bookIdStr) && !reservedBookIds.has(bookIdStr)) {
+        bookGroups[key].availableCopies++;
+      }
+      bookGroups[key].books.push(book);
+    }
+    
+    // Add copy count to each book
+    const booksWithCounts = allBooks.map(book => {
+      const key = `${book.title}|||${book.edition}`;
+      const group = bookGroups[key];
+      return {
+        ...book,
+        copiesAvailable: group ? group.availableCopies : 0,
+        totalCopies: group ? group.totalCopies : 1
+      };
+    });
+    
+    res.json(booksWithCounts);
   } catch (err) {
+    console.error('Error in searchBooks:', err);
     res.status(500).json({ message: err.message });
   }
 };
@@ -947,6 +1041,22 @@ exports.getBookStatistics = async (req, res) => {
     res.json(formattedStats);
   } catch (err) {
     console.error('Error getting book statistics:', err);
+    res.status(500).json({ message: err.message });
+  }
+};
+
+// Get unique titles and editions for advanced search filters
+exports.getBookFilters = async (req, res) => {
+  try {
+    const titles = await Book.distinct('title').sort();
+    const editions = await Book.distinct('edition').sort();
+    
+    res.json({
+      titles: titles.filter(t => t && t.trim().length > 0),
+      editions: editions.filter(e => e && e.trim().length > 0)
+    });
+  } catch (err) {
+    console.error('Error getting book filters:', err);
     res.status(500).json({ message: err.message });
   }
 };

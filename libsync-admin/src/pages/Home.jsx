@@ -252,33 +252,33 @@ export default function Home() {
           <div className="team-container">
             {/* Founder - Centered */}
             <div className="team-founder">
-              <TeamCard
-                name="Vaibhav Parab"
-                role="Founder"
+            <TeamCard
+              name="Vaibhav Parab"
+              role="Founder"
                 photoUrl="/images/team/vaibhav-parab.png"
-                initials="VP"
-              />
+              initials="VP"
+            />
             </div>
             {/* Co-founders - Single Row */}
             <div className="team-cofounders">
-              <TeamCard
-                name="Abhishek Patil"
-                role="Co-founder"
-                photoUrl={null}
-                initials="AP"
-              />
-              <TeamCard
-                name="Omkar Kurane"
-                role="Co-founder"
-                photoUrl={null}
-                initials="OK"
-              />
-              <TeamCard
+            <TeamCard
+              name="Abhishek Patil"
+              role="Co-founder"
+              photoUrl={null}
+              initials="AP"
+            />
+            <TeamCard
+              name="Omkar Kurane"
+              role="Co-founder"
+              photoUrl={null}
+              initials="OK"
+            />
+            <TeamCard
                 name="Prachi Bhosale"
-                role="Co-founder"
-                photoUrl={null}
-                initials="PB"
-              />
+              role="Co-founder"
+              photoUrl={null}
+              initials="PB"
+            />
             </div>
           </div>
         </div>

@@ -149,6 +149,11 @@ class ApiService {
     return await this.get('/books/statistics');
   }
 
+  // Get book filters (titles and editions) for advanced search
+  async getBookFilters() {
+    return await this.get('/books/filters');
+  }
+
   // Reservations API
   async getReservations(studentId) {
     // Use the new student-accessible endpoint

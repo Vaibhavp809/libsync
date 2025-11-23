@@ -38,6 +38,47 @@ export default function HomeScreen({ navigation }) {
         
         if (data) {
           setUser(JSON.parse(data));
+          
+          // After user data is loaded, check and register push token
+          // This ensures push token is registered when user reaches home screen
+          setTimeout(async () => {
+            try {
+              const { notificationService } = require('../services/notificationService');
+              const { authService } = require('../services/authService');
+              
+              // Check if user is authenticated
+              if (authService.isAuthenticated()) {
+                // Check if we already have a push token
+                const savedToken = await notificationService.getSavedPushToken();
+                
+                // If no token or token might be outdated, request a new one
+                console.log('📱 Home screen: Checking push token registration...');
+                
+                try {
+                  const newToken = await notificationService.registerForPushNotificationsAsync();
+                  if (newToken) {
+                    await notificationService.savePushTokenToStorage(newToken);
+                    notificationService.expoPushToken = newToken;
+                    console.log('✅ Push token obtained on home screen:', newToken.substring(0, 30) + '...');
+                    
+                    // Send token to server
+                    try {
+                      await notificationService.sendPushTokenToServer(newToken);
+                      console.log('✅ Push token sent to server from home screen');
+                    } catch (serverError) {
+                      console.warn('⚠️ Failed to send push token to server:', serverError.message);
+                    }
+                  } else if (!savedToken) {
+                    console.warn('⚠️ No push token obtained - user may need to grant notification permissions');
+                  }
+                } catch (tokenError) {
+                  console.warn('⚠️ Error requesting push token on home screen:', tokenError.message);
+                }
+              }
+            } catch (error) {
+              console.warn('⚠️ Error checking push token on home screen:', error.message);
+            }
+          }, 2000); // Wait 2 seconds for home screen to fully render
         }
       } catch (error) {
         console.error('Failed to load user data:', error);

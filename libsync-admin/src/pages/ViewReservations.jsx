@@ -435,16 +435,16 @@ export default function ViewReservations() {
               >
                 📧 Notify Ready
               </button>
-              <button
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleIssueBook(reservation);
-                }}
-                style={styles.issueButton}
-                disabled={loading}
-              >
-                {loading ? 'Processing...' : 'Issue Book'}
-              </button>
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                handleIssueBook(reservation);
+              }}
+              style={styles.issueButton}
+              disabled={loading}
+            >
+              {loading ? 'Processing...' : 'Issue Book'}
+            </button>
             </>
           )}
         </div>

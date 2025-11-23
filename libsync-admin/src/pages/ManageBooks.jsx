@@ -313,8 +313,8 @@ export default function ManageBooks() {
           console.log('Multiple books created:', response.data);
         } else {
           // Single book creation
-          response = await api.post('/books', bookData);
-          console.log('Book created:', response.data);
+        response = await api.post('/books', bookData);
+        console.log('Book created:', response.data);
         }
       }
 
@@ -775,7 +775,7 @@ export default function ManageBooks() {
                     {advancedMode && !editingBook && (
                       <div style={styles.hintBox}>
                         ℹ️ System will create consecutive accession numbers starting from this number
-                      </div>
+                  </div>
                     )}
                   </div>
                   {advancedMode && !editingBook && (

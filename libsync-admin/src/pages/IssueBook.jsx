@@ -32,9 +32,9 @@ export default function IssueBook() {
       } catch (err) {
         console.error('Failed to load settings, using default 14 days:', err);
         // Fallback to 14 days if settings fetch fails
-        const defaultDate = new Date();
-        defaultDate.setDate(defaultDate.getDate() + 14);
-        setDueDate(defaultDate.toISOString().split('T')[0]);
+    const defaultDate = new Date();
+    defaultDate.setDate(defaultDate.getDate() + 14);
+    setDueDate(defaultDate.toISOString().split('T')[0]);
       }
     };
     fetchSettings();

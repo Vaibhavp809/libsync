@@ -100,6 +100,41 @@ function App() {
           if (authData && authData.token && authData.user) {
             authState = true;
             console.log('✅ Auth service initialized - user is logged in');
+            
+            // If user is already logged in (auto-login), register push token
+            // Wait a bit for app to settle, then request permissions
+            setTimeout(async () => {
+              try {
+                const { notificationService } = require('./services/notificationService');
+                
+                // Check if we already have a push token
+                const savedToken = await notificationService.getSavedPushToken();
+                
+                // Always try to get a fresh token after app loads (user is logged in)
+                // This ensures push tokens are registered even after auto-login
+                console.log('📱 Checking push token registration for auto-logged-in user...');
+                
+                const newToken = await notificationService.registerForPushNotificationsAsync();
+                if (newToken) {
+                  await notificationService.savePushTokenToStorage(newToken);
+                  notificationService.expoPushToken = newToken;
+                  console.log('✅ Push token obtained after auto-login:', newToken.substring(0, 30) + '...');
+                  
+                  // Send token to server
+                  try {
+                    await notificationService.sendPushTokenToServer(newToken);
+                    console.log('✅ Push token sent to server after auto-login');
+                  } catch (serverError) {
+                    console.warn('⚠️ Failed to send push token to server:', serverError.message);
+                  }
+                } else if (!savedToken) {
+                  console.warn('⚠️ No push token obtained - user may need to grant notification permissions');
+                  console.warn('⚠️ Push notifications will not work until permissions are granted');
+                }
+              } catch (tokenError) {
+                console.warn('⚠️ Error registering push token after auto-login:', tokenError.message);
+              }
+            }, 3000); // Wait 3 seconds for app to fully load and home screen to appear
           } else {
             console.log('✅ Auth service initialized - user is not logged in');
           }

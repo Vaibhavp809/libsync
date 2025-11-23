@@ -37,7 +37,8 @@ const {
   searchBooks,
   deleteBook,
   bulkImportBooks,
-  getBookStatistics
+  getBookStatistics,
+  getBookFilters
 } = require("../controllers/bookController");
 
 // 📚 Existing routes with authentication
@@ -46,6 +47,7 @@ router.post("/multiple", verifyToken, verifyAdmin, addMultipleBooks);
 router.post("/bulk-import", verifyToken, upload.single('file'), bulkImportBooks);
 router.get("/", verifyStudentOrAdmin, getBooks);
 router.get("/statistics", verifyStudentOrAdmin, getBookStatistics);
+router.get("/filters", verifyStudentOrAdmin, getBookFilters);
 router.get("/search", verifyStudentOrAdmin, searchBooks);
 // IMPORTANT: Specific routes must come before parameterized routes (/:id)
 router.get("/count-to-reset", verifyToken, verifyAdmin, getCountToReset);

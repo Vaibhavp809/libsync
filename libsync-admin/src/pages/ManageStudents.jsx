@@ -138,8 +138,8 @@ export default function ManageStudents() {
     if (isInitialMount.current) {
       return;
     }
-    // Reset to page 1 when searching
-    setCurrentPage(1);
+      // Reset to page 1 when searching
+      setCurrentPage(1);
     fetchStudents(1, activeSearchTerm, selectedDepartment, selectedDepartmentCode, sortBy, sortOrder);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeSearchTerm, selectedDepartment, selectedDepartmentCode, sortBy, sortOrder]);
@@ -359,8 +359,8 @@ export default function ManageStudents() {
         <div style={styles.searchContainer}>
           <input
             type="text"
-            placeholder="Search students by name, email, USN, or department..."
-            value={searchTerm}
+          placeholder="Search students by name, email, USN, or department..."
+          value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
@@ -368,7 +368,7 @@ export default function ManageStudents() {
               }
             }}
             style={styles.searchInputField}
-          />
+        />
           <button
             onClick={() => setActiveSearchTerm(searchTerm.trim())}
             style={styles.searchButton}
@@ -677,7 +677,7 @@ export default function ManageStudents() {
               <div style={styles.addDeptSection}>
                 <h3 style={styles.sectionTitle}>Add New Department</h3>
                 <div style={styles.addDeptForm}>
-                      <input
+                  <input
                     type="text"
                     placeholder="Department ID (e.g., CSE)"
                     value={newDepartment.id}
@@ -758,21 +758,21 @@ export default function ManageStudents() {
                         >
                           Edit Code
                         </button>
-                        <button
-                          onClick={async () => {
-                            if (!window.confirm(`Are you sure you want to delete department "${dept.name}"? This action cannot be undone.`)) return;
-                            try {
-                              await api.delete(`/departments/${dept.id}`);
-                              alert('Department deleted successfully!');
-                              await fetchDepartments();
-                            } catch (err) {
-                              alert(err.response?.data?.message || 'Failed to delete department');
-                            }
-                          }}
-                          style={styles.deleteDeptButton}
-                        >
-                          Delete
-                        </button>
+                      <button
+                        onClick={async () => {
+                          if (!window.confirm(`Are you sure you want to delete department "${dept.name}"? This action cannot be undone.`)) return;
+                          try {
+                            await api.delete(`/departments/${dept.id}`);
+                            alert('Department deleted successfully!');
+                            await fetchDepartments();
+                          } catch (err) {
+                            alert(err.response?.data?.message || 'Failed to delete department');
+                          }
+                        }}
+                        style={styles.deleteDeptButton}
+                      >
+                        Delete
+                      </button>
                       </div>
                     </div>
                   ))}

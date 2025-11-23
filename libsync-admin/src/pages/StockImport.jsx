@@ -337,54 +337,54 @@ export default function StockImport() {
 
       // If single accession number, use the old endpoint for backward compatibility
       if (normalizedNumbers.length === 1) {
-        const response = await api.post('/stock/import/single', {
+      const response = await api.post('/stock/import/single', {
           accessionNumber: normalizedNumbers[0],
-          status: singleStatus
-        });
+        status: singleStatus
+      });
 
-        // Show success toast (simple alert for now, can be replaced with toast library)
-        if (response.data.updated) {
-          // Success - add to results
-          const newResult = {
-            summary: {
-              updated: (results?.summary?.updated || 0) + 1,
-              notFound: results?.summary?.notFound || 0,
-              errors: results?.summary?.errors || 0,
-              totalProcessed: (results?.summary?.totalProcessed || 0) + 1
-            },
-            results: {
-              updated: [...(results?.results?.updated || []), {
+      // Show success toast (simple alert for now, can be replaced with toast library)
+      if (response.data.updated) {
+        // Success - add to results
+        const newResult = {
+          summary: {
+            updated: (results?.summary?.updated || 0) + 1,
+            notFound: results?.summary?.notFound || 0,
+            errors: results?.summary?.errors || 0,
+            totalProcessed: (results?.summary?.totalProcessed || 0) + 1
+          },
+          results: {
+            updated: [...(results?.results?.updated || []), {
                 accessionNumber: normalizedNumbers[0],
-                status: singleStatus
-              }],
-              notFound: results?.results?.notFound || [],
-              errors: results?.results?.errors || []
-            }
-          };
-          setResults(newResult);
+              status: singleStatus
+            }],
+            notFound: results?.results?.notFound || [],
+            errors: results?.results?.errors || []
+          }
+        };
+        setResults(newResult);
           setAccessionList([{ id: 1, value: '' }]);
-          setSingleStatus('Verified');
-          // Show success message
+        setSingleStatus('Verified');
+        // Show success message
           alert(`Imported successfully: ${normalizedNumbers[0]}`);
-        } else if (response.data.notFound) {
-          // Not found - add to results
-          const newResult = {
-            summary: {
-              updated: results?.summary?.updated || 0,
-              notFound: (results?.summary?.notFound || 0) + 1,
-              errors: results?.summary?.errors || 0,
-              totalProcessed: (results?.summary?.totalProcessed || 0) + 1
-            },
-            results: {
-              updated: results?.results?.updated || [],
+      } else if (response.data.notFound) {
+        // Not found - add to results
+        const newResult = {
+          summary: {
+            updated: results?.summary?.updated || 0,
+            notFound: (results?.summary?.notFound || 0) + 1,
+            errors: results?.summary?.errors || 0,
+            totalProcessed: (results?.summary?.totalProcessed || 0) + 1
+          },
+          results: {
+            updated: results?.results?.updated || [],
               notFound: [...(results?.results?.notFound || []), normalizedNumbers[0]],
-              errors: results?.results?.errors || []
-            }
-          };
-          setResults(newResult);
+            errors: results?.results?.errors || []
+          }
+        };
+        setResults(newResult);
           setAccessionList([{ id: 1, value: '' }]);
-          setSingleStatus('Verified');
-          // Show not found message
+        setSingleStatus('Verified');
+        // Show not found message
           alert(`Book not found: ${normalizedNumbers[0]}`);
         }
       } else {
@@ -493,22 +493,22 @@ export default function StockImport() {
                   <label style={styles.label}>Accession Number(s) *</label>
                   {accessionList.map((item, index) => (
                     <div key={item.id} style={styles.accessionRow}>
-                      <input
-                        type="text"
+                  <input
+                    type="text"
                         value={item.value}
-                        onChange={(e) => {
+                    onChange={(e) => {
                           handleUpdateAccession(item.id, e.target.value);
-                          setSingleError('');
-                        }}
+                      setSingleError('');
+                    }}
                         placeholder={`Accession number ${index + 1} (e.g., 1, 123)`}
-                        disabled={singleImporting}
-                        style={styles.input}
-                      />
+                    disabled={singleImporting}
+                    style={styles.input}
+                  />
                       {item.value && (
-                        <div style={styles.previewText}>
+                    <div style={styles.previewText}>
                           Preview: <strong>{normalizeAccessionNumber(item.value) || 'Invalid'}</strong>
-                        </div>
-                      )}
+                    </div>
+                  )}
                       {accessionList.length > 1 && (
                         <button
                           type="button"
