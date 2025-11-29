@@ -35,7 +35,6 @@ export default function ReturnBook() {
       const response = await api.get(`/books/search-accession/${partial}`);
       setAccessionSuggestions(response.data);
     } catch (error) {
-      console.error('Error searching accession numbers:', error);
       setAccessionSuggestions([]);
     }
   };
@@ -100,7 +99,6 @@ export default function ReturnBook() {
       setAccessionNumber('');
       
     } catch (error) {
-      console.error('Return book error:', error);
       const errorMessage = error.response?.data?.message || 'Failed to return book';
       alert(errorMessage);
     } finally {

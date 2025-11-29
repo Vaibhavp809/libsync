@@ -24,7 +24,6 @@ export default function Notifications() {
         setList([]);
       }
     } catch (err) {
-      console.error('Failed to load notifications:', err);
       alert('Failed to load notifications');
       setList([]);
     } finally {
@@ -41,7 +40,6 @@ export default function Notifications() {
         setDepartments(res.data.departments);
       }
     } catch (err) {
-      console.error('Failed to load departments:', err);
       // Fallback to hardcoded list if API fails
       setDepartments([
         { id: 'CSE', name: 'Computer Science Engineering' },

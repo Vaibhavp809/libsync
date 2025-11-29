@@ -24,15 +24,6 @@ export default function OverdueBooks() {
 
   useEffect(() => { fetchOverdue(); }, []);
 
-  /* Debug: log loans array after fetch
-  useEffect(() => {
-    if (loans && loans.length > 0) {
-      console.log('DEBUG OverdueBooks loans:', loans);
-      loans.forEach((l, idx) => {
-        console.log(`Loan[${idx}] _id:`, l._id);
-      });
-    }
-  }, [loans]);*/
 
   const daysOverdue = (dueDate) => {
     if (!dueDate) return 0;

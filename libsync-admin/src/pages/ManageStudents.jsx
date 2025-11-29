@@ -81,7 +81,6 @@ export default function ManageStudents() {
       setStudents(studentData);
       setFilteredStudents(studentData);
     } catch (err) {
-      console.error('Failed to load students:', err);
       alert('Failed to load students');
     } finally {
       setLoading(false);
@@ -97,7 +96,6 @@ export default function ManageStudents() {
         setDepartments(res.data.departments);
       }
     } catch (err) {
-      console.error('Failed to load departments:', err);
       // Fallback to hardcoded list if API fails
       setDepartments([
         { id: 'CSE', name: 'Computer Science Engineering' },
@@ -157,14 +155,12 @@ export default function ManageStudents() {
 
   const openEdit = (stu) => {
     if (!stu || !stu._id) {
-      console.warn('Tried to edit invalid student:', stu);
       alert('Invalid student data');
       return;
     }
 
     // Validate required student fields
     if (!stu.name || !stu.email || !stu.studentID) {
-      console.warn('Student missing required fields:', stu);
       alert('Student data is incomplete');
       return;
     }
@@ -172,12 +168,10 @@ export default function ManageStudents() {
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(stu.email)) {
-      console.warn('Invalid email format:', stu.email);
       alert('Invalid email format');
       return;
     }
 
-    console.log('Opening edit for student:', stu);
     setEditing(stu);
     setForm({
       name: stu.name.trim(),
@@ -229,7 +223,6 @@ export default function ManageStudents() {
           updateData.password = form.password.trim();
         }
 
-        console.log('Updating student with data:', { ...updateData, password: updateData.password ? '***' : 'not changed' });
         await api.put(`/users/${editing._id}`, updateData);
         alert(`Student "${form.name.trim()}" updated successfully!${form.password && form.password.trim() ? ' Password has been reset.' : ''}`);
       } else {
@@ -248,7 +241,6 @@ export default function ManageStudents() {
           role: 'student'
         };
 
-        console.log('Creating student with data:', { ...newStudent, password: '***' });
         const response = await api.post('/users', newStudent);
         alert('Student created successfully!');
       }
@@ -262,17 +254,14 @@ export default function ManageStudents() {
 
   const deleteStudent = async (id) => {
     if (!id) {
-      console.warn('Tried to delete student with invalid ID:', id);
       return;
     }
     if (!window.confirm('Are you sure you want to delete this student?')) return;
     try {
-      console.log('Deleting student with ID:', id);
       await api.delete(`/users/${id}`);
       alert('Student deleted successfully!');
       await fetchStudents(currentPage, activeSearchTerm, selectedDepartment, selectedDepartmentCode, sortBy, sortOrder);
     } catch (err) {
-      console.error('Failed to delete student:', err);
       alert('Delete failed: ' + (err.response?.data?.message || err.message || 'Unknown error'));
     }
   };
@@ -288,7 +277,6 @@ export default function ManageStudents() {
       render: (student) => {
         // Validate student object
         if (!student || !student._id) {
-          console.warn('Invalid student object in table row:', student);
           return <div>Invalid data</div>;
         }
 
@@ -299,8 +287,6 @@ export default function ManageStudents() {
                 e.stopPropagation();
                 if (student && student._id) {
                   openEdit(student);
-                } else {
-                  console.warn('Cannot edit: Invalid student data', student);
                 }
               }}
               style={styles.editButton}
@@ -312,8 +298,6 @@ export default function ManageStudents() {
                 e.stopPropagation();
                 if (student && student._id) {
                   deleteStudent(student._id);
-                } else {
-                  console.warn('Cannot delete: Invalid student data', student);
                 }
               }}
               style={styles.deleteButton}

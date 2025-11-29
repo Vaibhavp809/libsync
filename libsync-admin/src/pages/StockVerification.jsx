@@ -63,10 +63,7 @@ export default function StockVerification() {
       const queryString = new URLSearchParams(params).toString();
       const res = await api.get(`/books?${queryString}`);
       
-      console.log('Paginated API Response:', res);
-      
       if (!res.data) {
-        console.error('No data received from books API');
         setBooks([]);
         return;
       }
@@ -81,7 +78,6 @@ export default function StockVerification() {
         booksData = responseData; // Fallback for old API
       }
       
-      console.log(`Loaded ${booksData.length} books for stock verification (page ${page})`);
       setBooks(booksData);
       
       // Update pagination info
@@ -94,7 +90,6 @@ export default function StockVerification() {
       }
       
     } catch (err) {
-      console.error('Failed to load books:', err);
       alert('Failed to load books. Please try refreshing the page.');
       setBooks([]);
     } finally {
@@ -119,7 +114,6 @@ export default function StockVerification() {
         });
       }
     } catch (err) {
-      console.error('Failed to load statistics:', err);
       // Don't show error to user for statistics as it's not critical
     }
   };
@@ -228,7 +222,6 @@ export default function StockVerification() {
       }
       return 0;
     } catch (err) {
-      console.error('Failed to fetch reset-all count:', err);
       setResetAllCount(0);
       return 0;
     } finally {

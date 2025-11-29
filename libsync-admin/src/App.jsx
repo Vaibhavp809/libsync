@@ -19,8 +19,6 @@ import IssueBook from './pages/IssueBook';
 import ReturnBook from './pages/ReturnBook';
 import EResourcesPage from './pages/EResourcesPage';
 import LibraryUpdatesPage from './pages/LibraryUpdatesPage';
-import PushNotificationLogs from './pages/PushNotificationLogs';
-
 function App() {
   return (
     <Router>
@@ -43,7 +41,6 @@ function App() {
         <Route path="/return-book" element={<ProtectedRoute><ReturnBook /></ProtectedRoute>} />
         <Route path="/eresources" element={<ProtectedRoute><EResourcesPage /></ProtectedRoute>} />
         <Route path="/library-updates" element={<ProtectedRoute><LibraryUpdatesPage /></ProtectedRoute>} />
-        <Route path="/push-notification-logs" element={<ProtectedRoute><PushNotificationLogs /></ProtectedRoute>} />
       </Routes>
     </Router>
   );

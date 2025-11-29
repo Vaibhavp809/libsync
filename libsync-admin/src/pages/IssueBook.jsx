@@ -30,7 +30,6 @@ export default function IssueBook() {
         defaultDate.setDate(defaultDate.getDate() + loanDurationDays);
         setDueDate(defaultDate.toISOString().split('T')[0]);
       } catch (err) {
-        console.error('Failed to load settings, using default 14 days:', err);
         // Fallback to 14 days if settings fetch fails
     const defaultDate = new Date();
     defaultDate.setDate(defaultDate.getDate() + 14);
@@ -56,9 +55,7 @@ export default function IssueBook() {
       setStudentDetails(response.data);
       setSelectedStudent(response.data.student);
       setStudentNotFound(false);
-      console.log('✅ Student found:', response.data.student.name);
     } catch (error) {
-      console.error('Error fetching student details:', error);
       setStudentDetails(null);
       setSelectedStudent(null);
       
@@ -66,13 +63,11 @@ export default function IssueBook() {
         // Only show "not found" for complete-looking USNs
         if (usn.length >= 10) {
           setStudentNotFound(true);
-          console.log('Student not found for USN:', usn);
         } else {
           setStudentNotFound(false);
         }
       } else if (error.response?.status === 403 || error.response?.status === 401) {
         setStudentNotFound(false);
-        console.error('Authentication error. Please login again.');
         alert('Authentication error. Please login again.');
       } else {
         setStudentNotFound(false);
@@ -125,7 +120,6 @@ export default function IssueBook() {
         );
       }));
     } catch (error) {
-      console.error('Error searching books:', error);
       setBookSuggestions([]);
     }
   };
@@ -179,7 +173,6 @@ export default function IssueBook() {
       
       setUsnSuggestions(filtered);
     } catch (error) {
-      console.error('Error searching students by USN:', error);
       setUsnSuggestions([]);
     }
   };
@@ -353,7 +346,6 @@ export default function IssueBook() {
       // Navigate to loans page
       navigate('/loans');
     } catch (error) {
-      console.error('Issue book error:', error);
       const errorMessage = error.response?.data?.message || 'Failed to issue book';
       alert(errorMessage);
     } finally {

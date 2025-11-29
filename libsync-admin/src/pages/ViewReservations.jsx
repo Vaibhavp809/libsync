@@ -165,7 +165,6 @@ export default function ViewReservations() {
       
       setReservations(reservationData);
     } catch (error) {
-      console.error('Error loading reservations:', error);
       alert("Error loading reservations. Please check your authentication.");
     } finally {
       setLoading(false);
@@ -253,8 +252,6 @@ export default function ViewReservations() {
       await fetchReservations(currentPage, selectedStatus);
       alert('Book issued successfully');
     } catch (error) {
-      console.error('Error issuing book:', error);
-      console.error('Error response:', error.response?.data);
       const errorMessage = error.response?.data?.message || 'Failed to issue book';
       alert(errorMessage);
     } finally {
@@ -276,7 +273,6 @@ export default function ViewReservations() {
       setCurrentPage(1);
       await fetchReservations(1, selectedStatus);
     } catch (error) {
-      console.error('Error deleting all reservations:', error);
       alert(error.response?.data?.message || 'Failed to delete all reservations');
     } finally {
       setLoading(false);
@@ -312,7 +308,6 @@ export default function ViewReservations() {
         setReservations(reservationData);
         setSettings(settingsRes.data || { loanDurationDays: 14 });
       } catch (error) {
-        console.error('Error loading data:', error);
         alert("Error loading data. Please check your authentication.");
       } finally {
         setLoading(false);
@@ -423,7 +418,6 @@ export default function ViewReservations() {
                     await api.post(`/reservations/${reservation._id}/send-notification`);
                     alert(`Notification sent successfully to ${getStudentLabel(reservation.student)}!`);
                   } catch (error) {
-                    console.error('Error sending notification:', error);
                     alert(error.response?.data?.message || 'Failed to send notification');
                   } finally {
                     setLoading(false);

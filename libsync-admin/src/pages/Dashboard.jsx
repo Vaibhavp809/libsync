@@ -35,7 +35,6 @@ export default function Dashboard() {
           overdueBooks: statsData.overdueBooks || 0
         });
       } catch (error) {
-        console.error('Error fetching dashboard stats:', error);
         // If authentication fails, redirect to login
         if (error.response?.status === 401 || error.response?.status === 403) {
           localStorage.removeItem('adminToken');
@@ -71,7 +70,7 @@ export default function Dashboard() {
               overdueBooks: loans.filter(l => l.status === 'Issued' && new Date(l.dueDate) < new Date()).length
             });
           } catch (fallbackError) {
-            console.error('Fallback stats fetch also failed:', fallbackError);
+            // Fallback failed silently
           }
         }
       } finally {

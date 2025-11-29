@@ -39,7 +39,7 @@ export default function AttendancePanel() {
       setStats(statsRes.data.data);
       
     } catch (err) {
-      console.error('Failed to fetch attendance data:', err);
+      // Error handled silently
     } finally {
       setLoading(false);
     }
@@ -54,7 +54,7 @@ export default function AttendancePanel() {
       const res = await api.get(`/attendance/range?startDate=${startDate}&endDate=${endDate}`);
       setAttendance(res.data.data);
     } catch (err) {
-      console.error('Failed to fetch attendance for date:', err);
+      // Error handled silently
     }
   };
 

@@ -111,7 +111,6 @@ export default function EResourcesPage() {
       setResources(response.data.resources || []);
       setTotalCount(response.data.pagination?.totalResources || 0);
     } catch (error) {
-      console.error('Error fetching e-resources:', error);
       showNotification('Failed to fetch e-resources', 'error');
     } finally {
       setLoading(false);
@@ -150,7 +149,6 @@ export default function EResourcesPage() {
       resetForm();
       fetchResources();
     } catch (error) {
-      console.error('Error saving e-resource:', error);
       showNotification(error.response?.data?.message || 'Failed to save e-resource', 'error');
     }
   };
@@ -166,7 +164,6 @@ export default function EResourcesPage() {
       setResourceToDelete(null);
       fetchResources();
     } catch (error) {
-      console.error('Error deleting e-resource:', error);
       showNotification('Failed to delete e-resource', 'error');
     }
   };

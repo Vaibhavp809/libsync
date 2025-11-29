@@ -105,7 +105,6 @@ export default function ViewLoans() {
       
       setLoans(loanData);
     } catch (error) {
-      console.error('Error loading loans:', error);
       alert("Error loading loans. Please check your authentication.");
     } finally {
       setLoading(false);
@@ -163,7 +162,6 @@ export default function ViewLoans() {
         setLoans(loanData);
         setSettings(settingsRes.data || { finePerDay: 10 });
       } catch (error) {
-        console.error('Error loading loans:', error);
         alert("Error loading loans. Please check your authentication.");
       } finally {
         setLoading(false);
@@ -212,7 +210,6 @@ export default function ViewLoans() {
       setCurrentPage(1);
       await fetchLoans(1, filter);
     } catch (error) {
-      console.error('Error deleting all loans:', error);
       alert(error.response?.data?.message || 'Failed to delete all loans');
     } finally {
       setLoading(false);

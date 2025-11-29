@@ -102,7 +102,6 @@ export default function LibraryUpdatesPage() {
       setUpdateItems(response.data.updates || []);
       setTotalCount(response.data.pagination?.totalUpdates || 0);
     } catch (error) {
-      console.error('Error fetching library updates:', error);
       showNotification('Failed to fetch library updates', 'error');
     } finally {
       setLoading(false);
@@ -130,8 +129,6 @@ export default function LibraryUpdatesPage() {
           delete updateData[key];
         }
       });
-      
-      console.log('Sending update data:', updateData);
 
       if (isEditing) {
         // Use the api instance which automatically adds authentication token
@@ -147,7 +144,6 @@ export default function LibraryUpdatesPage() {
       resetForm();
       fetchUpdates();
     } catch (error) {
-      console.error('Error saving library update:', error);
       showNotification(error.response?.data?.message || 'Failed to save library update', 'error');
     }
   };
@@ -163,7 +159,6 @@ export default function LibraryUpdatesPage() {
       setUpdateToDelete(null);
       fetchUpdates();
     } catch (error) {
-      console.error('Error deleting library update:', error);
       showNotification('Failed to delete library update', 'error');
     }
   };

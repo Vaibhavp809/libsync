@@ -12,11 +12,10 @@ self.addEventListener('install', (event) => {
   event.waitUntil(
     caches.open(CACHE_NAME)
       .then((cache) => {
-        console.log('Service Worker: Caching files');
         return cache.addAll(urlsToCache);
       })
       .catch((error) => {
-        console.error('Service Worker: Cache failed', error);
+        // Cache failed silently
       })
   );
   self.skipWaiting();
@@ -29,7 +28,6 @@ self.addEventListener('activate', (event) => {
       return Promise.all(
         cacheNames.map((cacheName) => {
           if (cacheName !== CACHE_NAME) {
-            console.log('Service Worker: Deleting old cache', cacheName);
             return caches.delete(cacheName);
           }
         })
@@ -93,7 +91,7 @@ self.addEventListener('fetch', (event) => {
                   cache.put(event.request, responseToCache);
                 })
                 .catch((error) => {
-                  console.error('Service Worker: Failed to cache', error);
+                  // Failed to cache silently
                 });
             }
 

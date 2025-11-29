@@ -129,7 +129,7 @@ export default function Reports() {
           }));
         }
       } catch (err) {
-        console.error('Failed to fetch latest import:', err);
+        // Error handled silently
       }
     };
     fetchLatestImport();
@@ -398,7 +398,6 @@ export default function Reports() {
                     alert('Failed to delete attendance records.');
                   }
                 } catch (error) {
-                  console.error('Error resetting attendance:', error);
                   alert(error.response?.data?.message || 'Failed to reset attendance data.');
                 } finally {
                   setResetting(false);

@@ -37,14 +37,6 @@ export default function ManageBooks() {
         throw new Error('Book is missing required fields');
       }
 
-      // Log the book data we're about to edit
-      console.log('Opening edit panel for book:', {
-        id: book._id,
-        accessionNumber: book.accessionNumber,
-        title: book.title,
-        author: book.author
-      });
-
       // Set the form data first with proper validation
       // Convert all values to strings to avoid trim() errors on numbers
       const formData = {
@@ -70,7 +62,6 @@ export default function ManageBooks() {
       }, 0);
 
     } catch (err) {
-      console.error('Error in handleEditBook:', err);
       alert('Failed to open edit panel: ' + err.message);
     }
   };
@@ -101,7 +92,6 @@ export default function ManageBooks() {
       alert('Book deleted successfully!');
       fetchBooks(currentPage, itemsPerPage, searchTerm, selectedCategory, sortBy, sortOrder);
     } catch (err) {
-      console.error('Error deleting book:', err);
       const errorMessage = err.response?.data?.message || 'Failed to delete book';
       alert(errorMessage);
     }
@@ -169,10 +159,7 @@ export default function ManageBooks() {
       const queryString = new URLSearchParams(params).toString();
       const res = await api.get(`/books?${queryString}`);
 
-      console.log('Paginated API Response:', res);
-
       if (!res.data) {
-        console.error('No data received from books API');
         setBooks([]);
         setFilteredBooks([]);
         return;
@@ -183,14 +170,11 @@ export default function ManageBooks() {
       const validBooks = Array.isArray(responseData.books)
         ? responseData.books.filter(book => {
           if (!book || typeof book !== 'object' || !book._id) {
-            console.warn('Invalid book data:', book);
             return false;
           }
           return true;
         })
         : [];
-
-      console.log(`Fetched ${validBooks.length} books for page ${page}`);
       
       // Update state
       setBooks(validBooks);
@@ -206,7 +190,6 @@ export default function ManageBooks() {
       }
       
     } catch (err) {
-      console.error('Failed to load books:', err);
       if (err.response?.status === 401) {
         alert('Authentication failed. Please login again.');
       } else {
@@ -230,7 +213,6 @@ export default function ManageBooks() {
         });
       }
     } catch (err) {
-      console.error('Failed to load statistics:', err);
       // Don't show error to user for statistics as it's not critical
     }
   };
@@ -290,17 +272,10 @@ export default function ManageBooks() {
         price: priceValue
       };
 
-      console.log('Processing book data:', {
-        ...bookData,
-        action: editingBook ? 'update' : 'create',
-        bookId: editingBook?._id
-      });
-
       let response;
       if (editingBook?._id) {
         // Editing mode - single book update only
         response = await api.put(`/books/${editingBook._id}`, bookData);
-        console.log('Book updated:', response.data);
       } else {
         // Create mode - check if multiple copies
         if (advancedMode && numberOfCopies > 1) {
@@ -310,11 +285,9 @@ export default function ManageBooks() {
             numberOfCopies: numberOfCopies,
             startingAccessionNumber: accessionNumber
           });
-          console.log('Multiple books created:', response.data);
         } else {
           // Single book creation
         response = await api.post('/books', bookData);
-        console.log('Book created:', response.data);
         }
       }
 
@@ -350,7 +323,6 @@ export default function ManageBooks() {
         throw new Error('No response from server');
       }
     } catch (err) {
-      console.error('Failed to save book:', err);
       alert(err.response?.data?.message || err.message || 'Failed to save book. Please try again.');
     }
   };
@@ -400,7 +372,6 @@ export default function ManageBooks() {
       await fetchBooks(1, itemsPerPage, searchTerm, selectedCategory, sortBy, sortOrder);
       
     } catch (error) {
-      console.error('Bulk import error:', error);
       setImportProgress(null);
       alert('Import failed: ' + error.message);
     }
@@ -553,15 +524,10 @@ export default function ManageBooks() {
       key: 'actions',
       header: 'Actions',
       render: (book) => {
-        console.log('Rendering actions for book:', book);
-        
         // Validate book data
         if (!book || !book._id) {
-          console.warn('Invalid book data received in actions column:', book);
           return <div style={{color: 'red', fontSize: '12px'}}>Invalid Data</div>;
         }
-
-        console.log('Book has valid _id, rendering buttons for:', book._id);
 
         return (
           <div style={{
@@ -588,7 +554,6 @@ export default function ManageBooks() {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                console.log('Edit button clicked for book:', book._id);
                 handleEditBook(book);
               }}
               title="Edit book details"
@@ -613,13 +578,11 @@ export default function ManageBooks() {
                 e.stopPropagation();
                 try {
                   if (window.confirm('Are you sure you want to delete this book?')) {
-                    console.log('Deleting book:', book._id);
                     await api.delete(`/books/${book._id}`);
                     alert('Book deleted successfully');
                     await fetchBooks(currentPage, itemsPerPage, searchTerm, selectedCategory, sortBy, sortOrder); // Refresh the list
                   }
                 } catch (err) {
-                  console.error('Delete failed:', err);
                   alert('Failed to delete book: ' + (err.response?.data?.message || err.message));
                 }
               }}
@@ -1208,8 +1171,6 @@ export default function ManageBooks() {
       >
         {(() => {
           const tableData = filteredBooks.filter(b => b && typeof b === 'object' && b._id);
-          console.log('Final table data being passed to Table component:', tableData);
-          console.log('Table columns:', tableColumns);
           return (
             <div>
               <Table

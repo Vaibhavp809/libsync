@@ -10,6 +10,7 @@ export default function Login() {
   const [rememberMe, setRememberMe] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
   const navigate = useNavigate();
 
   // Utility function to decode JWT token
@@ -229,7 +230,17 @@ export default function Login() {
               </div>
 
               <div style={styles.inputGroup}>
-                <label style={styles.label}>Password</label>
+                <div style={styles.passwordLabelContainer}>
+                  <label style={styles.label}>Password</label>
+                  <button
+                    type="button"
+                    onClick={() => setShowForgotPassword(true)}
+                    style={styles.forgotPasswordButton}
+                    className="forgot-password-button"
+                  >
+                    Forgot Password?
+                  </button>
+                </div>
                 <div style={styles.inputContainer}>
                   <span style={styles.inputIcon}>🔒</span>
                   <input
@@ -279,6 +290,64 @@ export default function Login() {
           </div>
         </div>
       </div>
+
+      {/* Forgot Password Modal */}
+      {showForgotPassword && (
+        <div style={styles.modalOverlay} onClick={() => setShowForgotPassword(false)}>
+          <div style={styles.modalContent} className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div style={styles.modalHeader}>
+              <h2 style={styles.modalTitle}>Forgot Password?</h2>
+              <button
+                onClick={() => setShowForgotPassword(false)}
+                style={styles.modalCloseButton}
+                className="modal-close-button"
+              >
+                ✕
+              </button>
+            </div>
+            <div style={styles.modalBody}>
+              <p style={styles.modalDescription}>
+                Please contact the web administrator for password recovery assistance.
+              </p>
+              <div style={styles.contactBox}>
+                <div style={styles.contactItem}>
+                  <span style={styles.contactLabel}>Contact Web Admin:</span>
+                  <span style={styles.contactValue}>Vaibhav Parab</span>
+                </div>
+                <div style={styles.contactItem}>
+                  <span style={styles.contactLabel}>Email:</span>
+                  <a 
+                    href="mailto:vaibhavparab20589@gmail.com" 
+                    style={styles.contactLink}
+                    className="contact-link"
+                  >
+                    vaibhavparab20589@gmail.com
+                  </a>
+                </div>
+                <div style={styles.contactItem}>
+                  <span style={styles.contactLabel}>Phone:</span>
+                  <a 
+                    href="tel:8088037293" 
+                    style={styles.contactLink}
+                    className="contact-link"
+                  >
+                    8088037293
+                  </a>
+                </div>
+              </div>
+            </div>
+            <div style={styles.modalFooter}>
+              <button
+                onClick={() => setShowForgotPassword(false)}
+                style={styles.modalOkButton}
+                className="modal-ok-button"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -549,5 +618,130 @@ const styles = {
   },
   homeButtonText: {
     transition: 'opacity 0.3s ease'
+  },
+  passwordLabelContainer: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center'
+  },
+  forgotPasswordButton: {
+    background: 'none',
+    border: 'none',
+    color: '#3b82f6',
+    fontSize: '14px',
+    fontWeight: '500',
+    cursor: 'pointer',
+    padding: 0,
+    textDecoration: 'underline',
+    transition: 'color 0.2s ease'
+  },
+  modalOverlay: {
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    background: 'rgba(0, 0, 0, 0.5)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10000,
+    backdropFilter: 'blur(4px)'
+  },
+  modalContent: {
+    background: 'white',
+    borderRadius: '16px',
+    maxWidth: '500px',
+    width: '90%',
+    boxShadow: '0 20px 25px rgba(0, 0, 0, 0.15)',
+    overflow: 'hidden',
+    animation: 'fadeIn 0.3s ease-out'
+  },
+  modalHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: '24px',
+    borderBottom: '1px solid #e5e7eb',
+    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+    color: 'white'
+  },
+  modalTitle: {
+    fontSize: '24px',
+    fontWeight: '700',
+    margin: 0
+  },
+  modalCloseButton: {
+    background: 'rgba(255, 255, 255, 0.2)',
+    border: 'none',
+    color: 'white',
+    fontSize: '24px',
+    width: '32px',
+    height: '32px',
+    borderRadius: '8px',
+    cursor: 'pointer',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    transition: 'background 0.2s ease'
+  },
+  modalBody: {
+    padding: '32px 24px'
+  },
+  modalDescription: {
+    fontSize: '16px',
+    color: '#64748b',
+    margin: '0 0 24px 0',
+    lineHeight: '1.6'
+  },
+  contactBox: {
+    background: '#f8fafc',
+    border: '2px solid #e2e8f0',
+    borderRadius: '12px',
+    padding: '24px',
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '20px'
+  },
+  contactItem: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: '8px'
+  },
+  contactLabel: {
+    fontSize: '14px',
+    fontWeight: '600',
+    color: '#64748b',
+    textTransform: 'uppercase',
+    letterSpacing: '0.5px'
+  },
+  contactValue: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#1e293b'
+  },
+  contactLink: {
+    fontSize: '18px',
+    fontWeight: '600',
+    color: '#3b82f6',
+    textDecoration: 'none',
+    transition: 'color 0.2s ease'
+  },
+  modalFooter: {
+    padding: '16px 24px',
+    borderTop: '1px solid #e5e7eb',
+    display: 'flex',
+    justifyContent: 'flex-end'
+  },
+  modalOkButton: {
+    background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+    color: 'white',
+    border: 'none',
+    borderRadius: '8px',
+    padding: '12px 24px',
+    fontSize: '16px',
+    fontWeight: '600',
+    cursor: 'pointer',
+    transition: 'all 0.2s ease'
   }
 };

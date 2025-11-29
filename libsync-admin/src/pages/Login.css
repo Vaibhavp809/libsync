@@ -211,3 +211,67 @@
   }
 }
 
+/* Forgot Password Button Hover Effects */
+.forgot-password-button:hover {
+  color: #1d4ed8 !important;
+  text-decoration: none !important;
+}
+
+.forgot-password-button:active {
+  color: #1e40af !important;
+}
+
+/* Modal Close Button Hover */
+.modal-close-button:hover {
+  background: rgba(255, 255, 255, 0.3) !important;
+}
+
+/* Modal OK Button Hover */
+.modal-ok-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+}
+
+.modal-ok-button:active {
+  transform: translateY(0);
+}
+
+/* Contact Link Hover */
+.contact-link:hover {
+  color: #1d4ed8 !important;
+  text-decoration: underline !important;
+}
+
+/* Modal Responsive Styles */
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95% !important;
+    max-width: 100% !important;
+    margin: 20px !important;
+  }
+  
+  .modal-header {
+    padding: 20px !important;
+  }
+  
+  .modal-body {
+    padding: 24px 20px !important;
+  }
+  
+  .contact-box {
+    padding: 20px !important;
+  }
+}
+
+/* Modal Animation */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+

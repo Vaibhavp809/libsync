@@ -44,7 +44,7 @@ export async function registerForPushNotificationsAsync() {
         const hasPermission = await PermissionsAndroid.check(
           PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS
         );
-        
+
         if (!hasPermission) {
           const status = await PermissionsAndroid.request(
             PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS,
@@ -55,7 +55,7 @@ export async function registerForPushNotificationsAsync() {
               buttonNegative: 'Deny',
             }
           );
-          
+
           if (status !== PermissionsAndroid.RESULTS.GRANTED) {
             console.warn('❌ POST_NOTIFICATIONS permission denied on Android 13+');
             console.warn('❌ Permission status:', status);
@@ -105,28 +105,79 @@ export async function registerForPushNotificationsAsync() {
       return null;
     }
 
-    // Step 4: Configure Android notification channel (required for Android 8.0+)
+    // Step 4: Configure Android notification channels (required for Android 8.0+)
     if (Platform.OS === 'android') {
-      // Main default channel - MAX importance for lock screen visibility
+      // Main default channel
       await Notifications.setNotificationChannelAsync('default', {
-        name: 'LibSync Notifications',
+        name: 'General Notifications',
         description: 'General library notifications',
-        importance: Notifications.AndroidImportance.MAX, // Highest priority - shows on lock screen
+        importance: Notifications.AndroidImportance.MAX,
         vibrationPattern: [0, 250, 250, 250],
         lightColor: '#FF231F7C',
         sound: 'default',
         enableVibrate: true,
         showBadge: true,
-        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC, // Show on lock screen
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
       });
-      console.log('✅ Android notification channel configured with lock screen visibility');
+
+      // Reservations channel
+      await Notifications.setNotificationChannelAsync('reservations', {
+        name: 'Reservations',
+        description: 'Notifications about your book reservations',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+
+      // Due Dates channel
+      await Notifications.setNotificationChannelAsync('due_dates', {
+        name: 'Due Dates',
+        description: 'Reminders about book due dates',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 500, 250, 500], // Distinct vibration
+        lightColor: '#FFCC0000', // Red light
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+
+      // Announcements channel
+      await Notifications.setNotificationChannelAsync('announcements', {
+        name: 'Announcements',
+        description: 'Library announcements and news',
+        importance: Notifications.AndroidImportance.HIGH,
+        vibrationPattern: [0, 250, 250, 250],
+        lightColor: '#FF231F7C',
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+
+      // Urgent channel
+      await Notifications.setNotificationChannelAsync('urgent', {
+        name: 'Urgent',
+        description: 'Urgent notifications and alerts',
+        importance: Notifications.AndroidImportance.MAX,
+        vibrationPattern: [0, 500, 500, 500], // Long vibration
+        lightColor: '#FFFF0000', // Red light
+        sound: 'default',
+        enableVibrate: true,
+        showBadge: true,
+        lockscreenVisibility: Notifications.AndroidNotificationVisibility.PUBLIC,
+      });
+
+      console.log('✅ Android notification channels configured with lock screen visibility');
     }
 
     // Step 5: Get Expo push token
-    // In production builds, Constants.expoConfig might not be available
-    // Try multiple ways to get the projectId
     let projectId = null;
-    
+
     // Method 1: Try Constants.expoConfig (works in Expo Go and some builds)
     if (Constants.expoConfig?.extra?.eas?.projectId) {
       projectId = Constants.expoConfig.extra.eas.projectId;
@@ -152,7 +203,7 @@ export async function registerForPushNotificationsAsync() {
       projectId = '0d387a65-833c-4eb2-b131-5896a3437bfb';
       console.log('📱 Using hardcoded projectId (fallback):', projectId);
     }
-    
+
     // Debug: Log all available Constants data
     console.log('🔍 Debug Constants:', {
       appOwnership: Constants.appOwnership,
@@ -162,7 +213,7 @@ export async function registerForPushNotificationsAsync() {
       hasManifest2: !!Constants.manifest2,
       projectId: projectId
     });
-    
+
     if (!projectId) {
       console.error('❌ Project ID not found anywhere. Please ensure extra.eas.projectId is set in app.json.');
       console.error('❌ Available Constants:', {
@@ -174,7 +225,7 @@ export async function registerForPushNotificationsAsync() {
     }
 
     console.log('📱 Registering for push notifications with projectId:', projectId);
-    
+
     try {
       const tokenData = await Notifications.getExpoPushTokenAsync({
         projectId: projectId,
@@ -182,7 +233,7 @@ export async function registerForPushNotificationsAsync() {
 
       const token = tokenData.data;
       console.log('✅ Expo push token obtained:', token);
-      
+
       return token;
     } catch (tokenError) {
       console.error('❌ Error getting Expo push token:', tokenError);
@@ -222,7 +273,7 @@ class NotificationService {
           body: notification.request.content.body,
           data: notification.request.content.data
         });
-        
+
         // Always show notifications, even when app is in foreground
         // This ensures notifications appear in the system tray
         return {
@@ -234,7 +285,7 @@ class NotificationService {
         };
       },
     });
-    
+
     console.log('✅ Notification handler configured - notifications will appear in tray');
   }
 
@@ -244,10 +295,10 @@ class NotificationService {
     try {
       // Always configure notification handler first
       this.configure();
-      
+
       // Set up notification listeners (for receiving notifications)
       this.setupNotificationListeners();
-      
+
       // Check if we already have a saved token (from previous session)
       const savedToken = await this.getSavedPushToken();
       if (savedToken) {
@@ -257,10 +308,10 @@ class NotificationService {
       } else {
         console.log('ℹ️ No saved push token - will request after login');
       }
-      
+
       // DO NOT request permissions here - wait until after login
       // This prevents permission requests before user understands the app
-      
+
       this.isInitialized = true;
       console.log('✅ Notification service initialized (permissions will be requested after login)');
 
@@ -305,13 +356,13 @@ class NotificationService {
   // Handle notification received while app is in foreground
   handleNotificationReceived(notification) {
     const { title, body, data } = notification.request.content;
-    
+
     // You can customize behavior based on notification type
     const notificationType = data?.type || 'general';
-    
+
     // Update badge count
     this.updateBadgeCount();
-    
+
     // Log for debugging
     console.log(`Received ${notificationType} notification:`, { title, body, data });
   }
@@ -320,9 +371,9 @@ class NotificationService {
   handleNotificationResponse(response) {
     const { notification } = response;
     const { data } = notification.request.content;
-    
+
     console.log('User interacted with notification:', data);
-    
+
     // Navigate to specific screen based on notification type
     this.handleNotificationNavigation(data);
   }
@@ -384,7 +435,7 @@ class NotificationService {
 
       // Get auth token from AsyncStorage for the request
       const authToken = await AsyncStorage.getItem('token') || await AsyncStorage.getItem('auth_token');
-      
+
       if (!authToken) {
         console.error('❌ No auth token found - cannot send push token to server');
         throw new Error('User not authenticated - please log in again');
@@ -421,17 +472,17 @@ class NotificationService {
       console.log('✅ Push token sent to server successfully');
       console.log('✅ Response status:', response.status);
       console.log('✅ Server response:', JSON.stringify(response.data, null, 2));
-      
+
       if (response.data && response.data.success) {
         console.log('✅ Push token saved in database');
         console.log('✅ User:', response.data.user?.name || response.data.user?.studentID || 'Unknown');
         console.log('✅ Has push token:', response.data.user?.hasPushToken);
       }
-      
+
       return response.data;
     } catch (error) {
       console.error('❌ Failed to send push token to server:', error.message);
-      
+
       // Log detailed error information
       if (error.response) {
         console.error('❌ Server error response:', {
@@ -451,7 +502,7 @@ class NotificationService {
         console.error('❌ Error setting up request:', error.message);
         console.error('❌ Error stack:', error.stack);
       }
-      
+
       // Re-throw so caller knows it failed
       throw error;
     }
@@ -482,12 +533,12 @@ class NotificationService {
       console.log('Notification service not initialized, skipping badge update');
       return;
     }
-    
+
     try {
       // Get unread notification count from API
       const response = await apiService.getUnreadNotificationCount();
       const unreadCount = response.unreadCount || 0;
-      
+
       // Set badge count
       await Notifications.setBadgeCountAsync(unreadCount);
     } catch (error) {
@@ -507,7 +558,7 @@ class NotificationService {
   // Schedule local notification (for testing or offline scenarios)
   async scheduleLocalNotification(title, body, data = {}, delaySeconds = 0) {
     try {
-      const schedulingOptions = delaySeconds > 0 
+      const schedulingOptions = delaySeconds > 0
         ? { seconds: delaySeconds }
         : undefined;
 

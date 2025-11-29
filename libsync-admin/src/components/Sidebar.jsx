@@ -28,7 +28,6 @@ const Sidebar = ({ isMobileOpen, onClose }) => {
     { path: '/eresources', label: 'E-Resources', icon: '💾', color: '#8b5cf6' },
     { path: '/library-updates', label: 'Library Updates', icon: '📚', color: '#06b6d4' },
     { path: '/notifications', label: 'Notifications', icon: '🔔', color: '#f97316' },
-    { path: '/push-notification-logs', label: 'Push Notification Logs', icon: '📱', color: '#8b5cf6' },
     { path: '/settings', label: 'Settings', icon: '⚙️', color: '#6b7280' }
   ];
 

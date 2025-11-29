@@ -16,7 +16,7 @@ const pushNotificationLogSchema = new mongoose.Schema({
   },
   notificationType: {
     type: String,
-    enum: ['reservation', 'due_date', 'announcement', 'placement', 'general', 'urgent'],
+    enum: ['reservation', 'due_date', 'announcement', 'placement', 'general', 'urgent', 'app'],
     default: 'general'
   },
   priority: {

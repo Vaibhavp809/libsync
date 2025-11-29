@@ -276,7 +276,7 @@ export default function Home() {
             <TeamCard
                 name="Prachi Bhosale"
               role="Co-founder"
-              photoUrl={null}
+              photoUrl="/images/team/prachi.png"
               initials="PB"
             />
             </div>

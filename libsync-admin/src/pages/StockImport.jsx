@@ -263,7 +263,6 @@ export default function StockImport() {
       setPreview(null);
     } catch (err) {
       setError(err.response?.data?.message || err.message || 'Import failed');
-      console.error('Import error:', err);
     } finally {
       setImporting(false);
     }
